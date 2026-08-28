@@ -1,0 +1,9 @@
+-- Intentionally minimal.
+--
+-- Extensions are declared in apps/api/prisma/schema.prisma (datasource
+-- `extensions = [pgcrypto, vector]`) and created by Prisma migrations.
+-- Creating them here as well makes Prisma report schema drift and demand a
+-- reset on every fresh database, so this file must not touch them.
+--
+-- This runs once, only on first container start, only when the pgdata volume
+-- is empty.

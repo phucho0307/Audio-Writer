@@ -1,0 +1,19 @@
+{
+  "name": "audio-writer",
+  "private": true,
+  "version": "0.0.1",
+  "workspaces": ["apps/*", "packages/*"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "dev:api": "npm run dev -w @aw/api",
+    "dev:web": "npm run dev -w @aw/web",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "up": "docker compose -f infra/docker-compose.yml up -d",
+    "down": "docker compose -f infra/docker-compose.yml down",
+    "logs": "docker compose -f infra/docker-compose.yml logs -f",
+    "db:migrate": "npm run db:migrate -w @aw/api",
+    "db:studio": "npm run db:studio -w @aw/api"
+  }
+}

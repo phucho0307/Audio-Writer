@@ -1,0 +1,393 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgcrypto, vector]
+}
+
+// ---------------------------------------------------------------------------
+// Identity
+// ---------------------------------------------------------------------------
+
+model User {
+  id           String  @id @default(uuid()) @db.Uuid
+  email        String  @unique
+  handle       String  @unique
+  displayName  String
+  passwordHash String? // null for OAuth-only accounts
+  googleSub    String? @unique
+  avatarUrl    String?
+  locale       String  @default("vi")
+
+  // Bring-your-own-key: lets heavy users skip the shared free-tier queue.
+  // Encrypted at rest by the app layer, never returned to the client.
+  byokProvider  String?
+  byokKeyCipher String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stories       Story[]
+  branches      Branch[]
+  contributions Contribution[]
+  sessions      Session[]
+  entitlements  Entitlement[]
+  renderJobs    RenderJob[]
+  unlocks       StoryUnlock[]
+  ledger        LedgerEntry[]
+
+  @@map("users")
+}
+
+// Refresh-token allowlist. Redis holds the hot copy for revocation checks;
+// this table is the durable record so a Redis flush does not log everyone out.
+model Session {
+  id          String    @id @default(uuid()) @db.Uuid
+  userId      String    @db.Uuid
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshHash String    @unique
+  userAgent   String?
+  ip          String?
+  expiresAt   DateTime
+  revokedAt   DateTime?
+  rotatedFrom String?   @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, revokedAt])
+  @@map("sessions")
+}
+
+// ---------------------------------------------------------------------------
+// Stories: the git-shaped part
+// ---------------------------------------------------------------------------
+
+enum StoryStatus {
+  DRAFTING
+  COMPLETE
+  ARCHIVED
+}
+
+enum Visibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+model Story {
+  id         String      @id @default(uuid()) @db.Uuid
+  ownerId    String      @db.Uuid
+  owner      User        @relation(fields: [ownerId], references: [id])
+  title      String
+  synopsis   String?
+  /// Cover art. Local path in dev, object-store URL in production.
+  coverUrl   String?
+  genres     String[]
+  language   String      @default("vi")
+  status     StoryStatus @default(DRAFTING)
+  visibility Visibility  @default(PUBLIC)
+
+  // Denormalised for the feed. Recomputed on write, never read-modify-write.
+  contributionCount Int @default(0)
+  branchCount       Int @default(1)
+  wordCount         Int @default(0)
+  viewCount         Int @default(0)
+
+  /// Chapters below this depth are readable by anyone, forever. The story
+  /// keeps spreading after it is monetised - gating discovery would cap the
+  /// story's reach at exactly the moment it starts working.
+  freeChapters Int @default(3)
+
+  /// Credits to unlock everything beyond the free chapters. 0 leaves the
+  /// whole story open, which is the default until the writer opts in.
+  unlockPrice Int @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  branches Branch[]
+  unlocks  StoryUnlock[]
+
+  @@index([visibility, status, updatedAt])
+  @@index([genres], type: Gin)
+  @@map("stories")
+}
+
+model Branch {
+  id      String @id @default(uuid()) @db.Uuid
+  storyId String @db.Uuid
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  ownerId String @db.Uuid
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  name   String  @default("main")
+  isRoot Boolean @default(false)
+
+  // Copy-on-write forking. `lineage` is the ordered list of ancestor branch ids
+  // (root first, excluding self). Reading a forked branch = this branch's own
+  // contributions, plus ancestors' contributions up to `forkedAtDepth`.
+  // A fork copies zero rows.
+  forkedFromBranchId String?  @db.Uuid
+  forkedFromBranch   Branch?  @relation("BranchForks", fields: [forkedFromBranchId], references: [id])
+  forks              Branch[] @relation("BranchForks")
+  forkedAtDepth      Int?
+  lineage            String[] @default([])
+
+  headContributionId String? @db.Uuid
+  depth              Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contributions Contribution[]
+  scenes        Scene[]
+  renderJobs    RenderJob[]
+
+  @@index([storyId])
+  @@index([lineage], type: Gin)
+  @@map("branches")
+}
+
+enum AuthorType {
+  HUMAN
+  AI
+}
+
+/// IMMUTABLE. Never UPDATE or DELETE a row in this table - that is the whole
+/// point of the model. Corrections are new contributions; removals are new
+/// branches. Reading a branch is one indexed query ordered by `depth`.
+model Contribution {
+  id       String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  parentId String?        @db.Uuid
+  parent   Contribution?  @relation("Chain", fields: [parentId], references: [id])
+  children Contribution[] @relation("Chain")
+
+  depth Int
+
+  /// Chapter heading. Optional - a writer committing a paragraph mid-session
+  /// should not be forced to name it, so the contents page falls back to the
+  /// opening line.
+  title String?
+
+  authorId   String?    @db.Uuid
+  author     User?      @relation(fields: [authorId], references: [id])
+  authorType AuthorType
+
+  // TipTap/ProseMirror document for THIS chunk only, not the whole story.
+  content   Json
+  textPlain String
+  wordCount Int
+
+  // Provenance for AI turns - which driver and model actually produced this.
+  modelProvider String?
+  modelName     String?
+
+  createdAt DateTime @default(now())
+
+  audio AudioClip[]
+
+  @@unique([branchId, depth])
+  @@index([branchId, depth])
+  @@map("contributions")
+}
+
+/// Narration for one chapter, cached.
+///
+/// Kept out of `contributions` because that table is immutable - and because
+/// audio is derived data that can be regenerated, deleted, or produced in
+/// several voices without the chapter itself changing.
+///
+/// Unique on (contribution, voice) so asking twice costs one synthesis. That
+/// matters more than usual here: the free TTS tier is metered per request.
+model AudioClip {
+  id             String       @id @default(uuid()) @db.Uuid
+  contributionId String       @db.Uuid
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+
+  voice      String
+  provider   String
+  url        String
+  durationMs Int?
+  bytes      Int?
+
+  createdAt DateTime @default(now())
+
+  @@unique([contributionId, voice])
+  @@index([contributionId])
+  @@map("audio_clips")
+}
+
+// ---------------------------------------------------------------------------
+// Media pipeline
+// ---------------------------------------------------------------------------
+
+model Scene {
+  id       String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  ord         Int
+  text        String
+  imagePrompt String?
+  imageUrl    String?
+  audioUrl    String?
+  durationMs  Int?
+
+  // Sentence-level narration timings. Subtitle cues are derived from these,
+  // so no forced-alignment pass is needed.
+  cues Json?
+
+  createdAt DateTime @default(now())
+
+  @@unique([branchId, ord])
+  @@map("scenes")
+}
+
+enum RenderKind {
+  AUDIO
+  VIDEO_PREVIEW
+  VIDEO_FULL
+}
+
+enum RenderStatus {
+  QUEUED
+  RUNNING
+  COMPLETE
+  FAILED
+  CANCELLED
+}
+
+model RenderJob {
+  id       String @id @default(uuid()) @db.Uuid
+  branchId String @db.Uuid
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  userId   String @db.Uuid
+  user     User   @relation(fields: [userId], references: [id])
+
+  kind   RenderKind
+  status RenderStatus @default(QUEUED)
+
+  // Current pipeline stage, e.g. "scenes" | "tts" | "concat" | "images" | "render".
+  // Every worker checks this before doing work so a redelivered Kafka message
+  // is a no-op rather than a second bill.
+  stage    String?
+  progress Int     @default(0)
+
+  // Derived from (branchId, headContributionId, kind). Makes at-least-once
+  // delivery safe.
+  idempotencyKey String @unique
+
+  outputUrl String?
+  costCents Int     @default(0)
+  error     String?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  @@index([userId, createdAt])
+  @@index([status, updatedAt])
+  @@map("render_jobs")
+}
+
+// ---------------------------------------------------------------------------
+// Money
+// ---------------------------------------------------------------------------
+
+enum EntitlementKind {
+  VIDEO_EXPORT
+  NEURAL_VOICE
+  /// Extra AI turns beyond the free daily allowance.
+  AI_CREDITS
+  /// Spent unlocking other writers' paid chapters.
+  READ_CREDITS
+}
+
+model Entitlement {
+  id     String          @id @default(uuid()) @db.Uuid
+  userId String          @db.Uuid
+  user   User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind   EntitlementKind
+
+  // Credit-pack model: granted many, consumed one render at a time.
+  granted  Int
+  consumed Int @default(0)
+
+  orderId   String?
+  expiresAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, kind])
+  @@map("entitlements")
+}
+
+/// One reader has paid for one story, permanently. Unique on (story, user) so
+/// a double-click or a retried request cannot charge twice.
+model StoryUnlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  storyId   String   @db.Uuid
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pricePaid Int
+  createdAt DateTime @default(now())
+
+  @@unique([storyId, userId])
+  @@index([userId, createdAt])
+  @@map("story_unlocks")
+}
+
+enum LedgerKind {
+  /// A reader unlocked this writer's story.
+  UNLOCK_EARNING
+  /// Writer withdrew a balance. Negative amount.
+  PAYOUT
+  /// Manual correction - refunds, disputes.
+  ADJUSTMENT
+}
+
+/// Append-only record of what a writer has earned.
+///
+/// A balance column would be a running total someone eventually has to
+/// reconcile; a ledger is summed on demand and can always be explained line by
+/// line, which is what you want the first time a writer disputes a number.
+model LedgerEntry {
+  id       String     @id @default(uuid()) @db.Uuid
+  userId   String     @db.Uuid
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind     LedgerKind
+  /// Credits. Positive is earned, negative is paid out.
+  amount   Int
+  storyId  String?    @db.Uuid
+  /// Free-text explanation shown to the writer.
+  note     String?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@map("ledger_entries")
+}
+
+// ---------------------------------------------------------------------------
+// Transactional outbox - the bridge from Postgres to Kafka/Redpanda.
+// Written in the same transaction as the state change it describes, so a job
+// can never exist without its event, or an event without its job.
+// ---------------------------------------------------------------------------
+
+model OutboxEvent {
+  id          BigInt    @id @default(autoincrement())
+  aggregateId String    @db.Uuid
+  topic       String
+  payload     Json
+  publishedAt DateTime?
+  attempts    Int       @default(0)
+  createdAt   DateTime  @default(now())
+
+  @@index([publishedAt, id])
+  @@map("outbox_events")
+}
