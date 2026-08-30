@@ -123,3 +123,16 @@ export class GrantCreditsDto {
   @Max(10000)
   amount?: number;
 }
+
+/** Both optional: renaming a chapter and rewriting it are separate acts. */
+export class EditContributionDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  textPlain?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+}

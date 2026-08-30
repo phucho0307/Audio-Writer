@@ -16,6 +16,7 @@ import { PaywallService } from './paywall.service';
 import {
   CommitContributionDto,
   CreateStoryDto,
+  EditContributionDto,
   ForkBranchDto,
   GrantCreditsDto,
   UpdateStoryDto,
@@ -85,6 +86,21 @@ export class StoriesController {
   }
 
   /** The resolved reading view: inherited contributions plus this branch's own. */
+  /** Owner-only, and only while nobody has forked from this chapter. */
+  @Patch('contributions/:id')
+  editChapter(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: EditContributionDto,
+  ) {
+    return this.stories.editChapter(id, dto);
+  }
+
+  /** The last chapter of a branch. Repeat to remove more. */
+  @Delete('contributions/:id')
+  deleteChapter(@Param('id', ParseUUIDPipe) id: string) {
+    return this.stories.deleteChapter(id);
+  }
+
   @Get('branches/:id')
   readBranch(@Param('id', ParseUUIDPipe) id: string) {
     return this.stories.readBranch(id);

@@ -201,6 +201,22 @@ export const api = {
 
   readBranch: (id: string) => call<BranchRead>(`/branches/${id}`),
 
+  /** Owner-only, and refused once someone has forked from this chapter. */
+  editChapter: (
+    contributionId: string,
+    body: { textPlain?: string; title?: string },
+  ) =>
+    call<Contribution>(`/contributions/${contributionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  /** Only the last chapter of a branch. */
+  deleteChapter: (contributionId: string) =>
+    call<{ deleted: boolean; id: string }>(`/contributions/${contributionId}`, {
+      method: 'DELETE',
+    }),
+
   commit: (
     branchId: string,
     body: {

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -19,6 +20,7 @@ import { PaywallService } from './paywall.service';
 import type {
   CommitContributionDto,
   CreateStoryDto,
+  EditContributionDto,
   ForkBranchDto,
   UpdateStoryDto,
 } from './dto';
@@ -230,6 +232,144 @@ export class StoriesService {
       select: { viewCount: true },
     });
     return updated;
+  }
+
+  // -------------------------------------------------------------------------
+  // Editing a chapter
+  //
+  // Contributions are immutable because forks inherit them by reference - a
+  // fork copies no rows. Rewriting a chapter someone has already built on
+  // would change their story underneath them, and removing one would leave a
+  // hole in the depth sequence that `@@unique([branchId, depth])` and the
+  // parent chain both depend on.
+  //
+  // That is a reason to refuse when somebody depends on it, not a reason to
+  // refuse always. A writer fixing a typo in a chapter nobody has touched is
+  // the common case, and the model should not be the thing that stops them.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Loads a chapter and proves it is safe to change.
+   *
+   * Only direct children need checking: a grandchild's slice of this branch is
+   * bounded by its parent's `forkedAtDepth`, and that parent is a direct child.
+   */
+  private async editableChapter(id: string) {
+    const user = await this.currentUser.current();
+
+    const chapter = await this.prisma.contribution.findUnique({
+      where: { id },
+      include: { branch: true },
+    });
+    if (!chapter) throw new NotFoundException(`Chapter ${id} not found`);
+
+    if (chapter.branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_OWNER',
+        message: 'Chỉ chủ sở hữu nhánh mới sửa được chương này.',
+      });
+    }
+
+    const dependent = await this.prisma.branch.findFirst({
+      where: {
+        forkedFromBranchId: chapter.branchId,
+        forkedAtDepth: { gte: chapter.depth },
+      },
+      select: { id: true },
+    });
+    if (dependent) {
+      throw new ConflictException({
+        code: 'CHAPTER_INHERITED',
+        message:
+          'Đã có người rẽ nhánh từ chương này, nên không sửa được nữa. Hãy viết một chương mới để chỉnh lại.',
+      });
+    }
+
+    return { chapter, branch: chapter.branch };
+  }
+
+  async editChapter(id: string, dto: EditContributionDto) {
+    const { chapter, branch } = await this.editableChapter(id);
+    const words = countWords(dto.textPlain ?? chapter.textPlain);
+    const delta = words - chapter.wordCount;
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.contribution.update({
+        where: { id },
+        data: {
+          ...(dto.title !== undefined ? { title: dto.title } : {}),
+          ...(dto.textPlain !== undefined
+            ? {
+                textPlain: dto.textPlain,
+                content: { type: 'doc', text: dto.textPlain } as never,
+                wordCount: words,
+              }
+            : {}),
+        },
+      });
+
+      // Narration read the old text, so it is now wrong. Deleting the clips
+      // makes the next play regenerate rather than quietly playing a version
+      // of the chapter that no longer exists.
+      if (dto.textPlain !== undefined) {
+        await tx.audioClip.deleteMany({ where: { contributionId: id } });
+      }
+
+      if (branch.isRoot && delta !== 0) {
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: { wordCount: { increment: delta } },
+        });
+      }
+      return updated;
+    });
+  }
+
+  /**
+   * Removes the last chapter of a branch.
+   *
+   * The tip only. Deleting from the middle would renumber everything after it,
+   * which breaks forks pointing at those depths, audio clips keyed by depth,
+   * and the parent chain - for a convenience that "delete twice" already
+   * covers.
+   */
+  async deleteChapter(id: string) {
+    const { chapter, branch } = await this.editableChapter(id);
+
+    if (chapter.depth !== branch.depth || branch.headContributionId !== id) {
+      throw new ConflictException({
+        code: 'NOT_LAST_CHAPTER',
+        message: 'Chỉ xoá được chương cuối cùng.',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.contribution.delete({ where: { id } });
+
+      await tx.branch.update({
+        where: { id: branch.id },
+        data: {
+          headContributionId: chapter.parentId,
+          // Back to the fork point when the branch is empty again, so the next
+          // commit resumes where it did before anything was written.
+          depth: chapter.parentId
+            ? chapter.depth - 1
+            : (branch.forkedAtDepth ?? 0),
+        },
+      });
+
+      if (branch.isRoot) {
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: {
+            contributionCount: { decrement: 1 },
+            wordCount: { decrement: chapter.wordCount },
+          },
+        });
+      }
+
+      return { deleted: true, id };
+    });
   }
 
   // -------------------------------------------------------------------------

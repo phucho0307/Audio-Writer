@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AudioPlayer from './AudioPlayer';
 import PublishPanel from './PublishPanel';
+import Chapter from './Chapter';
 import {
   ApiError,
   api,
@@ -433,33 +434,16 @@ export default function StoryPage({
             Chưa có gì. Viết đoạn đầu tiên, hoặc để AI mở đầu giúp bạn.
           </p>
         )}
-        {read.contributions.map((c) => {
-          const inherited = c.branchId !== branchId;
-          return (
-            <div
-              key={c.id}
-              id={`chuong-${c.depth + 1}`}
-              className="flex scroll-mt-6 flex-col gap-1.5"
-            >
-              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[var(--color-muted)]">
-                <span>#{c.depth}</span>
-                <span
-                  className={
-                    c.authorType === 'AI'
-                      ? 'text-[var(--color-accent)]'
-                      : undefined
-                  }
-                >
-                  {c.authorType === 'AI' ? `AI · ${c.modelName ?? ''}` : 'bạn'}
-                </span>
-                {inherited && <span className="opacity-60">· kế thừa</span>}
-              </div>
-              <p className="whitespace-pre-wrap font-serif text-[17px] leading-[1.75]">
-                {c.textPlain}
-              </p>
-            </div>
-          );
-        })}
+        {read.contributions.map((c, i) => (
+          <Chapter
+            key={c.id}
+            chapter={c}
+            inherited={c.branchId !== branchId}
+            isLast={i === read.contributions.length - 1}
+            canEdit={read.access.isOwner}
+            onChange={refresh}
+          />
+        ))}
       </article>
 
       {/* ---- locked chapters ---- */}
@@ -610,33 +594,6 @@ export default function StoryPage({
             >
               {showPricing ? 'đóng' : 'đặt giá'}
             </button>
-            {confirmDelete ? (
-              <span className="flex items-center gap-2">
-                <span className="text-red-600 dark:text-red-400">
-                  Xoá vĩnh viễn cả {story.contributionCount} chương?
-                </span>
-                <button
-                  onClick={remove}
-                  disabled={busy !== null}
-                  className="rounded border border-red-500 px-2 py-0.5 text-red-600 hover:bg-red-500 hover:text-white disabled:opacity-40 dark:text-red-400"
-                >
-                  {busy === 'delete' ? 'đang xoá…' : 'xoá'}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="underline"
-                >
-                  huỷ
-                </button>
-              </span>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="underline hover:text-red-600 dark:hover:text-red-400"
-              >
-                xoá truyện
-              </button>
-            )}
             {(wallet?.balance ?? 0) > 0 && (
               <span className="text-[var(--color-accent)]">
                 đã kiếm {wallet?.balance} credit
@@ -695,6 +652,48 @@ export default function StoryPage({
 
       {read.access.isOwner && (
         <PublishPanel story={story} onChange={loadStory} />
+      )}
+
+      {/* Its own block rather than a link among the pricing controls, where it
+          was both hard to find and one slip away from an accidental click. */}
+      {read.access.isOwner && (
+        <section className="flex flex-col gap-3 rounded-lg border border-red-500/40 bg-[var(--color-surface)] p-4">
+          <div>
+            <div className="text-[13px] font-medium">Xoá truyện</div>
+            <p className="text-[12px] text-[var(--color-muted)]">
+              Xoá cả {story.contributionCount} chương, mọi nhánh và giọng đọc.
+              Không khôi phục được.
+            </p>
+          </div>
+
+          {confirmDelete ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[13px] text-red-600 dark:text-red-400">
+                Chắc chắn xoá “{story.title}”?
+              </span>
+              <button
+                onClick={remove}
+                disabled={busy !== null}
+                className="rounded-md bg-red-600 px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+              >
+                {busy === 'delete' ? 'đang xoá…' : 'xoá vĩnh viễn'}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="font-mono text-[12px] text-[var(--color-muted)] underline"
+              >
+                huỷ
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              className="self-start rounded-md border border-red-500/60 px-3 py-1.5 font-mono text-[12px] text-red-600 transition-colors hover:bg-red-600 hover:text-white dark:text-red-400"
+            >
+              xoá truyện
+            </button>
+          )}
+        </section>
       )}
 
       {/* ---- composer ---- */}
