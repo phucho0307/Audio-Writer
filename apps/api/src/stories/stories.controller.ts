@@ -6,6 +6,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   Delete,
   UseGuards,
 } from '@nestjs/common';
@@ -27,9 +28,10 @@ export class StoriesController {
     private readonly paywall: PaywallService,
   ) {}
 
+  /** The public shelf, or your own workspace with ?mine=true. */
   @Get('stories')
-  list() {
-    return this.stories.list();
+  list(@Query('mine') mine?: string) {
+    return this.stories.list(mine === 'true');
   }
 
   @Post('stories')

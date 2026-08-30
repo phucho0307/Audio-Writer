@@ -166,7 +166,11 @@ async function call<T>(
 }
 
 export const api = {
+  /** The public shelf: PUBLIC stories only, works signed out. */
   listStories: () => call<Story[]>('/stories'),
+
+  /** Your own workspace: every story you own, drafts included. */
+  myStories: () => call<Story[]>('/stories?mine=true'),
 
   getStory: (id: string) => call<Story>(`/stories/${id}`),
 

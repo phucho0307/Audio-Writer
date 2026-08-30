@@ -20,8 +20,8 @@ export default function Home() {
 
   useEffect(() => {
     api
-      .listStories()
-      .then((all) => setStories(all.filter((s) => s.owner?.handle !== 'admin')))
+      .myStories()
+      .then(setStories)
       .catch((e: Error) => setError(e.message));
   }, []);
 

@@ -69,11 +69,20 @@ export class StoriesService {
    * "reachable by link, not in the feed", which is what someone sharing a
    * draft with friends wants. PRIVATE is owner-only everywhere.
    */
-  private listVisibility(user: User | null) {
-    if (user?.role === Role.ADMIN) return {};
-    return user
-      ? { OR: [{ visibility: Visibility.PUBLIC }, { ownerId: user.id }] }
-      : { visibility: Visibility.PUBLIC };
+  /**
+   * Two different questions, so two different filters.
+   *
+   * The shelf is discovery: only PUBLIC, for everybody including admins - a
+   * moderator's view of every draft on the platform is a different feature,
+   * and folding it in here would put strangers' private work on the browse
+   * page. "Mine" is the workspace, where your own drafts are the point.
+   */
+  private listVisibility(user: User | null, mine: boolean) {
+    if (mine) {
+      // Signed out, nothing is yours. `id: ''` never matches a uuid.
+      return { ownerId: user?.id ?? '' };
+    }
+    return { visibility: Visibility.PUBLIC };
   }
 
   /** Throws 404 - not 403 - when a private story is fetched by a stranger. */
@@ -122,13 +131,13 @@ export class StoriesService {
     });
   }
 
-  async list() {
-    // `optional`, not `current`: browsing is public. Signed out you see the
-    // public shelf; signed in you also see your own drafts.
+  /** `mine` switches from the public shelf to the caller's own workspace. */
+  async list(mine = false) {
+    // `optional`, not `current`: browsing is public and must work signed out.
     const viewer = await this.currentUser.optional();
 
     return this.prisma.story.findMany({
-      where: this.listVisibility(viewer),
+      where: this.listVisibility(viewer, mine),
       orderBy: { updatedAt: 'desc' },
       include: {
         owner: { select: { handle: true, displayName: true } },
