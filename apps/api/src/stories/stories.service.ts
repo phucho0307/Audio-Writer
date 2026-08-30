@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import {
   AuthorType,
+  Role,
   Visibility,
   type Branch,
   type Contribution,
@@ -39,13 +40,20 @@ export class StoriesService {
   // callers the way it just had, with `update` quietly enforcing nothing.
   // -------------------------------------------------------------------------
 
-  /** The story, or 403 if the caller does not own it. */
+  /**
+   * The story, or 403 unless the caller owns it or is an admin.
+   *
+   * Admin exists because the seeded sample stories belong to an account with
+   * no googleSub - nobody can sign in as it, so without this they would be
+   * permanently unmanageable. The role is set by hand in the database; there
+   * is no endpoint that grants it.
+   */
   private async ownedStory(id: string): Promise<{ story: Story; user: User }> {
     const user = await this.currentUser.current();
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) throw new NotFoundException(`Story ${id} not found`);
 
-    if (story.ownerId !== user.id) {
+    if (story.ownerId !== user.id && user.role !== Role.ADMIN) {
       throw new ForbiddenException({
         code: 'NOT_OWNER',
         message: 'Chỉ chủ sở hữu truyện mới làm được việc này.',
@@ -61,16 +69,21 @@ export class StoriesService {
    * "reachable by link, not in the feed", which is what someone sharing a
    * draft with friends wants. PRIVATE is owner-only everywhere.
    */
-  private listVisibility(userId: string | null) {
-    return userId
-      ? { OR: [{ visibility: Visibility.PUBLIC }, { ownerId: userId }] }
+  private listVisibility(user: User | null) {
+    if (user?.role === Role.ADMIN) return {};
+    return user
+      ? { OR: [{ visibility: Visibility.PUBLIC }, { ownerId: user.id }] }
       : { visibility: Visibility.PUBLIC };
   }
 
   /** Throws 404 - not 403 - when a private story is fetched by a stranger. */
-  private assertReadable(story: { visibility: Visibility; ownerId: string }, userId: string | null): void {
+  private assertReadable(
+    story: { visibility: Visibility; ownerId: string },
+    user: User | null,
+  ): void {
     if (story.visibility !== Visibility.PRIVATE) return;
-    if (story.ownerId === userId) return;
+    if (story.ownerId === user?.id) return;
+    if (user?.role === Role.ADMIN) return;
     // Confirming it exists would leak the id of every private draft to anyone
     // willing to guess. Say nothing.
     throw new NotFoundException('Story not found');
@@ -115,7 +128,7 @@ export class StoriesService {
     const viewer = await this.currentUser.optional();
 
     return this.prisma.story.findMany({
-      where: this.listVisibility(viewer?.id ?? null),
+      where: this.listVisibility(viewer),
       orderBy: { updatedAt: 'desc' },
       include: {
         owner: { select: { handle: true, displayName: true } },
@@ -146,16 +159,34 @@ export class StoriesService {
     if (!story) throw new NotFoundException(`Story ${id} not found`);
 
     const viewer = await this.currentUser.optional();
-    this.assertReadable(story, viewer?.id ?? null);
+    this.assertReadable(story, viewer);
     return story;
   }
 
   /**
    * Owner-only. Covers publishing (`visibility`), marking a story finished
    * (`status`), whether others may fork it, and the paywall knobs.
+   *
+   * Publishing is the one place the fork policy has to be answered. A story
+   * whose `allowForks` is still null cannot leave PRIVATE - otherwise the
+   * writer inherits a default they never saw, on the single decision that
+   * determines whether strangers can take their story somewhere else.
    */
   async update(id: string, dto: UpdateStoryDto) {
-    await this.ownedStory(id);
+    const { story } = await this.ownedStory(id);
+
+    const visibility = dto.visibility ?? story.visibility;
+    const allowForks =
+      dto.allowForks !== undefined ? dto.allowForks : story.allowForks;
+
+    if (visibility !== Visibility.PRIVATE && allowForks === null) {
+      throw new BadRequestException({
+        code: 'FORK_POLICY_REQUIRED',
+        message:
+          'Hãy chọn cho phép rẽ nhánh hay không trước khi đăng truyện.',
+      });
+    }
+
     return this.prisma.story.update({ where: { id }, data: dto });
   }
 
@@ -348,14 +379,17 @@ export class StoriesService {
 
       // The owner can always fork their own work - the switch is about what
       // other people may do, not a lock the writer can shut themselves out of.
-      if (!story.allowForks && story.ownerId !== user.id) {
+      // `null` is undeclared, not permitted. A story in that state should be
+      // private anyway, but the fork path must not be the one place that
+      // treats "never answered" as yes.
+      if (story.allowForks !== true && story.ownerId !== user.id) {
         throw new ForbiddenException({
           code: 'FORKS_DISABLED',
           message: 'Tác giả đã tắt tính năng rẽ nhánh cho truyện này.',
         });
       }
 
-      this.assertReadable(story, user.id);
+      this.assertReadable(story, user);
 
       const maxDepth = await this.paywall.readableDepth(story, user.id);
       if (dto.atDepth > maxDepth) {

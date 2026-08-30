@@ -13,6 +13,13 @@ datasource db {
 // Identity
 // ---------------------------------------------------------------------------
 
+enum Role {
+  USER
+  /// Can act on any story, not just their own. Assigned by hand in the
+  /// database - there is deliberately no endpoint that grants it.
+  ADMIN
+}
+
 model User {
   id           String  @id @default(uuid()) @db.Uuid
   email        String  @unique
@@ -22,6 +29,7 @@ model User {
   googleSub    String? @unique
   avatarUrl    String?
   locale       String  @default("vi")
+  role         Role    @default(USER)
 
   // Bring-your-own-key: lets heavy users skip the shared free-tier queue.
   // Encrypted at rest by the app layer, never returned to the client.
@@ -88,7 +96,9 @@ model Story {
   genres     String[]
   language   String      @default("vi")
   status     StoryStatus @default(DRAFTING)
-  visibility Visibility  @default(PUBLIC)
+  /// Starts private. A story becomes visible only through an explicit publish,
+  /// which is also where the fork policy has to be answered.
+  visibility Visibility  @default(PRIVATE)
 
   // Denormalised for the feed. Recomputed on write, never read-modify-write.
   contributionCount Int @default(0)
@@ -103,11 +113,12 @@ model Story {
 
   /// Whether anyone other than the owner may fork this story.
   ///
-  /// Forking is the point of the platform, so this defaults to on. Turning it
-  /// off is for a writer who wants their ending to stand - it blocks new
+  /// Null means undeclared, and a story cannot leave PRIVATE while it is - so
+  /// publishing forces the writer to answer the question rather than
+  /// inheriting a default they never saw. Turning it off later blocks new
   /// forks only; branches that already exist keep working, because retracting
   /// someone's published work is a different and much heavier decision.
-  allowForks Boolean @default(true)
+  allowForks Boolean?
 
   /// Credits to unlock everything beyond the free chapters. 0 leaves the
   /// whole story open, which is the default until the writer opts in.

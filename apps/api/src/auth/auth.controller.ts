@@ -12,6 +12,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
+import type { Role } from '@prisma/client';
 import { AuthService, type GoogleProfile } from './auth.service';
 import { CurrentUserService } from './current-user.service';
 import { OAuthFailureFilter } from './oauth-failure.filter';
@@ -173,6 +174,7 @@ export class AuthController {
     email: string;
     avatarUrl: string | null;
     locale: string;
+    role: Role;
   }) {
     return {
       id: user.id,
@@ -181,6 +183,7 @@ export class AuthController {
       email: user.email,
       avatarUrl: user.avatarUrl,
       locale: user.locale,
+      role: user.role,
     };
   }
 }

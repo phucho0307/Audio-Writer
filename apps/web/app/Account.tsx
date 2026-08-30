@@ -112,8 +112,21 @@ export default function Account() {
             <div className="truncate text-[13px] font-medium">
               {user.displayName}
             </div>
-            <div className="truncate font-mono text-[11px] text-[var(--color-muted)]">
-              @{user.handle}
+            <div className="flex items-center gap-2">
+              <span className="truncate font-mono text-[11px] text-[var(--color-muted)]">
+                @{user.handle}
+              </span>
+              {/* Admin is worth calling out because it changes what the buttons
+                  on the page will do; plain membership is not news. */}
+              {user.role === 'ADMIN' ? (
+                <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-1.5 py-px font-mono text-[9px] uppercase tracking-wide text-white">
+                  admin
+                </span>
+              ) : (
+                <span className="shrink-0 font-mono text-[9px] uppercase tracking-wide text-[var(--color-muted)]">
+                  thành viên
+                </span>
+              )}
             </div>
           </div>
           <button

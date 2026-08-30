@@ -7,6 +7,7 @@ export type AuthUser = {
   email: string;
   avatarUrl: string | null;
   locale: string;
+  role: 'USER' | 'ADMIN';
 };
 
 export type Providers = { google: boolean; devUser: boolean };

@@ -4,6 +4,7 @@ import { use, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import AudioPlayer from './AudioPlayer';
+import PublishPanel from './PublishPanel';
 import {
   ApiError,
   api,
@@ -639,6 +640,10 @@ export default function StoryPage({
             </div>
           )}
         </section>
+      )}
+
+      {read.access.isOwner && (
+        <PublishPanel story={story} onChange={loadStory} />
       )}
 
       {/* ---- composer ---- */}
