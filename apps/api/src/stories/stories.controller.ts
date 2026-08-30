@@ -7,8 +7,10 @@ import {
   Patch,
   Post,
   Delete,
+  UseGuards,
 } from '@nestjs/common';
 import { StoriesService } from './stories.service';
+import { DevOnlyGuard } from '../auth/dev-only.guard';
 import { PaywallService } from './paywall.service';
 import {
   CommitContributionDto,
@@ -75,6 +77,7 @@ export class StoriesController {
 
   /** Stands in for checkout. Must not survive into production. */
   @Post('me/credits/grant')
+  @UseGuards(DevOnlyGuard)
   grantCredits(@Body() dto: GrantCreditsDto) {
     return this.paywall.grantReadCredits(dto.amount ?? 20);
   }

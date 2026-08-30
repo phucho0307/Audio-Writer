@@ -11,6 +11,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CurrentUserService } from './current-user.service';
+import { DevOnlyGuard } from './dev-only.guard';
 import { GoogleStrategy } from './google.strategy';
 import { OAuthFailureFilter } from './oauth-failure.filter';
 import { RequestContextMiddleware } from './request-context.middleware';
@@ -56,9 +57,10 @@ const GOOGLE_STRATEGY = {
     AuthService,
     OAuthFailureFilter,
     SessionCleanupService,
+    DevOnlyGuard,
     GOOGLE_STRATEGY,
   ],
-  exports: [CurrentUserService, TokenService],
+  exports: [CurrentUserService, TokenService, DevOnlyGuard],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -11,7 +12,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { AuthorType } from '@prisma/client';
+import { AuthorType, Visibility, StoryStatus } from '@prisma/client';
 
 export class CreateStoryDto {
   @IsString()
@@ -65,6 +66,21 @@ export class UpdateStoryDto {
   @Min(0)
   @Max(1000)
   unlockPrice?: number;
+
+  /** Publishing. PRIVATE is owner-only; UNLISTED is by-link but unlisted. */
+  @IsOptional()
+  @IsEnum(Visibility)
+  visibility?: Visibility;
+
+  /** DRAFTING while it is being written, COMPLETE when the writer says so. */
+  @IsOptional()
+  @IsEnum(StoryStatus)
+  status?: StoryStatus;
+
+  /** Whether other people may fork this story. */
+  @IsOptional()
+  @IsBoolean()
+  allowForks?: boolean;
 }
 
 export class CommitContributionDto {

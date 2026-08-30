@@ -17,6 +17,8 @@ export type Story = {
   viewCount: number;
   freeChapters: number;
   unlockPrice: number;
+  visibility: 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
+  allowForks: boolean;
   updatedAt: string;
   owner?: { handle: string; displayName: string };
   branches: BranchSummary[];
@@ -178,6 +180,9 @@ export const api = {
       title?: string;
       freeChapters?: number;
       unlockPrice?: number;
+      visibility?: 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
+      status?: 'DRAFTING' | 'COMPLETE' | 'ARCHIVED';
+      allowForks?: boolean;
     },
   ) =>
     call<Story>(`/stories/${id}`, {

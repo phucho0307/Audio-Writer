@@ -4,7 +4,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuthorType, type Branch, type Contribution } from '@prisma/client';
+import {
+  AuthorType,
+  Visibility,
+  type Branch,
+  type Contribution,
+  type Story,
+  type User,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { PaywallService } from './paywall.service';
@@ -22,6 +29,52 @@ export class StoriesService {
     private readonly currentUser: CurrentUserService,
     private readonly paywall: PaywallService,
   ) {}
+
+  // -------------------------------------------------------------------------
+  // Permissions
+  //
+  // Ownership is the only role here. There is no admin, no moderator and no
+  // collaborator yet, so every rule reduces to "is this your story" - and
+  // keeping that in three named helpers means the answer cannot drift between
+  // callers the way it just had, with `update` quietly enforcing nothing.
+  // -------------------------------------------------------------------------
+
+  /** The story, or 403 if the caller does not own it. */
+  private async ownedStory(id: string): Promise<{ story: Story; user: User }> {
+    const user = await this.currentUser.current();
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    if (!story) throw new NotFoundException(`Story ${id} not found`);
+
+    if (story.ownerId !== user.id) {
+      throw new ForbiddenException({
+        code: 'NOT_OWNER',
+        message: 'Chỉ chủ sở hữu truyện mới làm được việc này.',
+      });
+    }
+    return { story, user };
+  }
+
+  /**
+   * Prisma filter for stories a given viewer is allowed to see listed.
+   *
+   * UNLISTED is deliberately absent rather than hidden-but-fetchable: it means
+   * "reachable by link, not in the feed", which is what someone sharing a
+   * draft with friends wants. PRIVATE is owner-only everywhere.
+   */
+  private listVisibility(userId: string | null) {
+    return userId
+      ? { OR: [{ visibility: Visibility.PUBLIC }, { ownerId: userId }] }
+      : { visibility: Visibility.PUBLIC };
+  }
+
+  /** Throws 404 - not 403 - when a private story is fetched by a stranger. */
+  private assertReadable(story: { visibility: Visibility; ownerId: string }, userId: string | null): void {
+    if (story.visibility !== Visibility.PRIVATE) return;
+    if (story.ownerId === userId) return;
+    // Confirming it exists would leak the id of every private draft to anyone
+    // willing to guess. Say nothing.
+    throw new NotFoundException('Story not found');
+  }
 
   // -------------------------------------------------------------------------
   // Stories
@@ -57,7 +110,12 @@ export class StoriesService {
   }
 
   async list() {
+    // `optional`, not `current`: browsing is public. Signed out you see the
+    // public shelf; signed in you also see your own drafts.
+    const viewer = await this.currentUser.optional();
+
     return this.prisma.story.findMany({
+      where: this.listVisibility(viewer?.id ?? null),
       orderBy: { updatedAt: 'desc' },
       include: {
         owner: { select: { handle: true, displayName: true } },
@@ -86,11 +144,18 @@ export class StoriesService {
       },
     });
     if (!story) throw new NotFoundException(`Story ${id} not found`);
+
+    const viewer = await this.currentUser.optional();
+    this.assertReadable(story, viewer?.id ?? null);
     return story;
   }
 
+  /**
+   * Owner-only. Covers publishing (`visibility`), marking a story finished
+   * (`status`), whether others may fork it, and the paywall knobs.
+   */
   async update(id: string, dto: UpdateStoryDto) {
-    await this.get(id);
+    await this.ownedStory(id);
     return this.prisma.story.update({ where: { id }, data: dto });
   }
 
@@ -99,14 +164,7 @@ export class StoriesService {
    * contributions, scenes and unlocks do the rest.
    */
   async remove(id: string) {
-    const user = await this.currentUser.current();
-    const story = await this.prisma.story.findUnique({ where: { id } });
-    if (!story) throw new NotFoundException(`Story ${id} not found`);
-
-    if (story.ownerId !== user.id) {
-      throw new ForbiddenException('Only the owner can delete this story.');
-    }
-
+    await this.ownedStory(id);
     await this.prisma.story.delete({ where: { id } });
     return { deleted: true, id };
   }
@@ -287,6 +345,18 @@ export class StoriesService {
       const story = await tx.story.findUniqueOrThrow({
         where: { id: parent.storyId },
       });
+
+      // The owner can always fork their own work - the switch is about what
+      // other people may do, not a lock the writer can shut themselves out of.
+      if (!story.allowForks && story.ownerId !== user.id) {
+        throw new ForbiddenException({
+          code: 'FORKS_DISABLED',
+          message: 'Tác giả đã tắt tính năng rẽ nhánh cho truyện này.',
+        });
+      }
+
+      this.assertReadable(story, user.id);
+
       const maxDepth = await this.paywall.readableDepth(story, user.id);
       if (dto.atDepth > maxDepth) {
         throw new ForbiddenException({

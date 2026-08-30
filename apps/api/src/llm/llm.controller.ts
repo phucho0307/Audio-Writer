@@ -6,11 +6,13 @@ import {
   ParseUUIDPipe,
   Post,
   Res,
+  UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
 import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import type { Paragraphs, Pov } from '@aw/shared';
 import { LlmService } from './llm.service';
+import { DevOnlyGuard } from '../auth/dev-only.guard';
 
 class SeedDto {
   @IsOptional()
@@ -72,6 +74,7 @@ export class LlmController {
    * checkout exists. Must not survive into production.
    */
   @Post('quota/grant')
+  @UseGuards(DevOnlyGuard)
   grant(@Body() dto: GrantDto) {
     return this.llm.grantCredits(dto.amount ?? 10);
   }

@@ -101,6 +101,14 @@ model Story {
   /// story's reach at exactly the moment it starts working.
   freeChapters Int @default(3)
 
+  /// Whether anyone other than the owner may fork this story.
+  ///
+  /// Forking is the point of the platform, so this defaults to on. Turning it
+  /// off is for a writer who wants their ending to stand - it blocks new
+  /// forks only; branches that already exist keep working, because retracting
+  /// someone's published work is a different and much heavier decision.
+  allowForks Boolean @default(true)
+
   /// Credits to unlock everything beyond the free chapters. 0 leaves the
   /// whole story open, which is the default until the writer opts in.
   unlockPrice Int @default(0)
