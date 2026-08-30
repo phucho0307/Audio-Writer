@@ -1,5 +1,7 @@
-export const API =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+import { API } from './env';
+import { getToken, refresh } from './auth';
+
+export { API };
 
 export type Story = {
   id: string;
@@ -117,12 +119,38 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  const token = getToken();
+  return {
+    'content-type': 'application/json',
+    ...(token ? { authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
+
+/**
+ * `retry` guards against a loop: if the refreshed token is also rejected,
+ * something is wrong that another round trip will not fix.
+ */
+async function call<T>(
+  path: string,
+  init?: RequestInit,
+  retry = true,
+): Promise<T> {
   const res = await fetch(API + path, {
     ...init,
-    headers: { 'content-type': 'application/json', ...init?.headers },
+    headers: authHeaders(init?.headers),
+    credentials: 'include',
     cache: 'no-store',
   });
+
+  // The access token lasts fifteen minutes and is gone after any page load, so
+  // a 401 is the expected state rather than an error. Renew and repeat once;
+  // the caller never sees it.
+  if (res.status === 401 && retry) {
+    const token = await refresh();
+    if (token) return call<T>(path, init, false);
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -251,12 +279,21 @@ export async function streamProse(
   path: string,
   body: unknown,
   onChunk: (text: string) => void,
+  retry = true,
 ): Promise<void> {
   const res = await fetch(API + path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: authHeaders(),
+    credentials: 'include',
     body: JSON.stringify(body),
   });
+
+  // Safe to repeat: nothing has been read off the stream yet, and no
+  // contribution is written until the prose comes back.
+  if (res.status === 401 && retry) {
+    const token = await refresh();
+    if (token) return streamProse(path, body, onChunk, false);
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

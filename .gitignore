@@ -30,3 +30,6 @@ venv/
 *.mp3
 *.mp4
 *.wav
+
+# typescript incremental build cache
+*.tsbuildinfo
