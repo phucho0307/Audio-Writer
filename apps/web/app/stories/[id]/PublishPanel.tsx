@@ -1,21 +1,38 @@
 'use client';
 
 import { useState } from 'react';
-import { ApiError, api, type Story } from '@/lib/api';
+import { api, type Story } from '@/lib/api';
 
-type Visibility = Story['visibility'];
-
-const LABEL: Record<Visibility, string> = {
-  PRIVATE: 'Riêng tư',
-  UNLISTED: 'Chỉ qua link',
-  PUBLIC: 'Công khai',
-};
-
-const BLURB: Record<Visibility, string> = {
-  PRIVATE: 'Chỉ mình bạn thấy truyện này.',
-  UNLISTED: 'Ai có link đều đọc được, nhưng truyện không xuất hiện ở Khám phá.',
-  PUBLIC: 'Truyện hiện ở Khám phá, ai cũng đọc được.',
-};
+function Switch({
+  on,
+  onChange,
+  disabled,
+  label,
+}: {
+  on: boolean;
+  onChange: (next: boolean) => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  return (
+    <button
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      disabled={disabled}
+      onClick={() => onChange(!on)}
+      className={`relative h-[22px] w-[38px] flex-none rounded-full transition-colors disabled:opacity-40 ${
+        on ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-line)]'
+      }`}
+    >
+      <span
+        className={`absolute top-[3px] h-4 w-4 rounded-full bg-white shadow transition-all ${
+          on ? 'left-[19px]' : 'left-[3px]'
+        }`}
+      />
+    </button>
+  );
+}
 
 export default function PublishPanel({
   story,
@@ -24,153 +41,116 @@ export default function PublishPanel({
   story: Story;
   onChange: () => Promise<void> | void;
 }) {
-  // Undeclared until the writer answers. Pre-selecting "cho phép" here would
-  // reintroduce exactly the silent default the API now refuses to accept.
-  const [forks, setForks] = useState<boolean | null>(story.allowForks);
-  const [busy, setBusy] = useState<Visibility | null>(null);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Only appears on the way out of private, which is the one moment the answer
+  // is actually needed.
+  const [asking, setAsking] = useState(false);
 
-  const isPrivate = story.visibility === 'PRIVATE';
-  const undeclared = forks === null;
+  const isPublic = story.visibility !== 'PRIVATE';
 
-  async function apply(visibility: Visibility) {
-    setBusy(visibility);
+  async function save(patch: Parameters<typeof api.updateStory>[1]) {
+    setBusy(true);
     setError(null);
     try {
-      await api.updateStory(story.id, {
-        visibility,
-        // Only send it when the writer actually chose, so unpublishing does not
-        // quietly commit them to a policy they never picked.
-        ...(forks !== null ? { allowForks: forks } : {}),
-      });
+      await api.updateStory(story.id, patch);
       await onChange();
+      setAsking(false);
     } catch (e) {
-      setError(
-        e instanceof ApiError ? e.message : (e as Error).message,
-      );
+      setError((e as Error).message);
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   }
 
-  async function setForkPolicy(next: boolean) {
-    setForks(next);
-    setError(null);
-    // Already published: this is a live setting, so save it immediately.
-    if (!isPrivate) {
-      try {
-        await api.updateStory(story.id, { allowForks: next });
-        await onChange();
-      } catch (e) {
-        setForks(story.allowForks);
-        setError((e as Error).message);
-      }
-    }
+  function togglePublic(next: boolean) {
+    if (!next) return void save({ visibility: 'PRIVATE' });
+
+    // Going public needs a fork policy. Ask only if it was never answered.
+    if (story.allowForks === null) return setAsking(true);
+    void save({ visibility: 'PUBLIC' });
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="text-[13px] font-medium">
-              {LABEL[story.visibility]}
-            </span>
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                isPrivate ? 'bg-[var(--color-muted)]' : 'bg-emerald-500'
-              }`}
-              aria-hidden
-            />
+    <section className="flex flex-col gap-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+      <div className="flex items-start gap-3">
+        <Switch
+          on={isPublic}
+          disabled={busy}
+          onChange={togglePublic}
+          label="Công khai"
+        />
+        <div className="min-w-0">
+          <div className="text-[13px] font-medium">Công khai</div>
+          <p className="text-[12px] text-[var(--color-muted)]">
+            {isPublic
+              ? 'Truyện đang hiện ở Khám phá, ai cũng đọc được.'
+              : 'Chỉ mình bạn thấy. Truyện nằm yên ở đây cho tới khi bạn đăng.'}
+          </p>
+        </div>
+      </div>
+
+      {/* A private story has no audience, so there is nobody to allow or
+          refuse. The question only means something once it is published. */}
+      {isPublic && (
+        <div className="flex items-start gap-3 border-t border-[var(--color-line)] pt-4">
+          <Switch
+            on={story.allowForks === true}
+            disabled={busy}
+            onChange={(next) => void save({ allowForks: next })}
+            label="Cho phép rẽ nhánh"
+          />
+          <div className="min-w-0">
+            <div className="text-[13px] font-medium">Cho phép rẽ nhánh</div>
+            <p className="text-[12px] text-[var(--color-muted)]">
+              {story.allowForks
+                ? 'Người đọc có thể viết tiếp theo hướng của họ. Bản của bạn không đổi.'
+                : 'Chỉ bạn viết tiếp. Các nhánh đã có vẫn giữ nguyên.'}
+            </p>
           </div>
-          <p className="mt-0.5 text-[12px] text-[var(--color-muted)]">
-            {BLURB[story.visibility]}
-          </p>
         </div>
-      </div>
-
-      <div className="border-t border-[var(--color-line)] pt-3">
-        <p className="mb-2 font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
-          rẽ nhánh
-        </p>
-
-        <div className="flex flex-col gap-1.5">
-          {[
-            {
-              value: true,
-              title: 'Cho phép người khác rẽ nhánh',
-              hint: 'Người đọc có thể viết tiếp theo hướng của họ.',
-            },
-            {
-              value: false,
-              title: 'Không cho phép',
-              hint: 'Chỉ bạn viết tiếp. Các nhánh đã có vẫn giữ nguyên.',
-            },
-          ].map((opt) => (
-            <label
-              key={String(opt.value)}
-              className={`flex cursor-pointer gap-2.5 rounded-md border p-2.5 transition-colors ${
-                forks === opt.value
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)]'
-                  : 'border-[var(--color-line)] hover:border-[var(--color-muted)]'
-              }`}
-            >
-              <input
-                type="radio"
-                name={`forks-${story.id}`}
-                checked={forks === opt.value}
-                onChange={() => void setForkPolicy(opt.value)}
-                className="mt-0.5 accent-[var(--color-accent)]"
-              />
-              <span>
-                <span className="block text-[13px]">{opt.title}</span>
-                <span className="block text-[11px] text-[var(--color-muted)]">
-                  {opt.hint}
-                </span>
-              </span>
-            </label>
-          ))}
-        </div>
-
-        {undeclared && (
-          <p className="mt-2 font-mono text-[11px] text-amber-600">
-            chọn một mục để đăng truyện
-          </p>
-        )}
-      </div>
-
-      <div className="flex flex-wrap gap-2 border-t border-[var(--color-line)] pt-3">
-        {isPrivate ? (
-          <>
-            <button
-              onClick={() => void apply('PUBLIC')}
-              disabled={undeclared || busy !== null}
-              className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 font-mono text-[12px] text-white transition-opacity disabled:opacity-40"
-            >
-              {busy === 'PUBLIC' ? 'đang đăng…' : 'đăng công khai'}
-            </button>
-            <button
-              onClick={() => void apply('UNLISTED')}
-              disabled={undeclared || busy !== null}
-              className="rounded-md border border-[var(--color-line)] px-3 py-1.5 font-mono text-[12px] transition-colors hover:border-[var(--color-accent)] disabled:opacity-40"
-            >
-              {busy === 'UNLISTED' ? 'đang đăng…' : 'chỉ qua link'}
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => void apply('PRIVATE')}
-            disabled={busy !== null}
-            className="rounded-md border border-[var(--color-line)] px-3 py-1.5 font-mono text-[12px] text-[var(--color-muted)] transition-colors hover:border-amber-500 hover:text-[var(--color-ink)] disabled:opacity-40"
-          >
-            {busy === 'PRIVATE' ? 'đang gỡ…' : 'gỡ xuống'}
-          </button>
-        )}
-      </div>
-
-      {error && (
-        <p className="font-mono text-[11px] text-red-500">{error}</p>
       )}
+
+      {asking && (
+        <div className="flex flex-col gap-2.5 rounded-md border border-[var(--color-accent)] bg-[var(--color-accent-soft)] p-3">
+          <p className="text-[13px]">
+            Cho người khác rẽ nhánh truyện này?
+          </p>
+          <p className="text-[12px] text-[var(--color-muted)]">
+            Họ viết tiếp theo hướng riêng, bản của bạn giữ nguyên. Đổi lại lúc
+            nào cũng được.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              disabled={busy}
+              onClick={() =>
+                void save({ visibility: 'PUBLIC', allowForks: true })
+              }
+              className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+            >
+              đăng · cho phép
+            </button>
+            <button
+              disabled={busy}
+              onClick={() =>
+                void save({ visibility: 'PUBLIC', allowForks: false })
+              }
+              className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 font-mono text-[12px] disabled:opacity-40"
+            >
+              đăng · không cho phép
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => setAsking(false)}
+              className="px-2 py-1.5 font-mono text-[12px] text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+            >
+              huỷ
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && <p className="font-mono text-[11px] text-red-500">{error}</p>}
     </section>
   );
 }

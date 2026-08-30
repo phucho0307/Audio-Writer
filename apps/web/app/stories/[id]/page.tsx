@@ -379,6 +379,53 @@ export default function StoryPage({
         </div>
       )}
 
+      {/* ---- contents ---- */}
+      {read.contributions.length > 1 && (
+        <section className="flex flex-col">
+          <h2 className="border-b border-[var(--color-line)] pb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)]">
+            Mục lục
+          </h2>
+
+          <ol className="flex flex-col">
+            {read.contributions.map((c) => (
+              <li key={c.id}>
+                {/* An anchor, not a route: the chapters are already on this
+                    page, and navigating away would lose the editor state. */}
+                <a
+                  href={`#chuong-${c.depth + 1}`}
+                  className="group flex items-baseline gap-4 border-b border-[var(--color-line)] py-2.5 transition-colors"
+                >
+                  <span className="w-7 flex-none font-mono text-[12px] tabular-nums text-[var(--color-muted)]">
+                    {c.depth + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[14px] transition-colors group-hover:text-[var(--color-accent)]">
+                    {c.title ?? c.textPlain.split('\n')[0].slice(0, 60)}
+                  </span>
+                  <span className="flex flex-none items-baseline gap-3 font-mono text-[10.5px] text-[var(--color-muted)]">
+                    {c.authorType === 'AI' && (
+                      <span className="text-[var(--color-accent)]">AI</span>
+                    )}
+                    {c.branchId !== branchId && (
+                      <span className="opacity-60">kế thừa</span>
+                    )}
+                    <span className="opacity-60">{c.wordCount} từ</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+
+            {read.access.lockedCount > 0 && (
+              <li className="flex items-baseline gap-4 border-b border-[var(--color-line)] py-2.5 opacity-50">
+                <span className="w-7 flex-none font-mono text-[12px]">🔒</span>
+                <span className="flex-1 text-[14px] text-[var(--color-muted)]">
+                  Còn {read.access.lockedCount} chương chưa mở khoá
+                </span>
+              </li>
+            )}
+          </ol>
+        </section>
+      )}
+
       {/* ---- the story ---- */}
       <article className="flex flex-col gap-5">
         {empty && (
@@ -389,7 +436,11 @@ export default function StoryPage({
         {read.contributions.map((c) => {
           const inherited = c.branchId !== branchId;
           return (
-            <div key={c.id} className="flex flex-col gap-1.5">
+            <div
+              key={c.id}
+              id={`chuong-${c.depth + 1}`}
+              className="flex scroll-mt-6 flex-col gap-1.5"
+            >
               <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[var(--color-muted)]">
                 <span>#{c.depth}</span>
                 <span
