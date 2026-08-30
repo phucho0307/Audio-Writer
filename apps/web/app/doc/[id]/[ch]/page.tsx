@@ -4,6 +4,8 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { api, type BranchRead, type Story } from '@/lib/api';
+import { useAuth } from '@/lib/useAuth';
+import { signIn } from '@/lib/auth';
 import ChapterNarration from './ChapterNarration';
 
 /**
@@ -22,6 +24,7 @@ export default function Reader({
 }: {
   params: Promise<{ id: string; ch: string }>;
 }) {
+  const { user, ready } = useAuth();
   const { id, ch } = use(params);
   const wantedBranch = useSearchParams().get('branch');
 
@@ -184,11 +187,18 @@ export default function Reader({
           thay đổi.
         </p>
         <button
-          onClick={forkHere}
+          onClick={ready && !user ? signIn : forkHere}
           disabled={forking}
           className="self-start text-[14px] font-medium text-[var(--color-accent)] hover:underline disabled:opacity-50"
         >
-          {forking ? 'Đang tạo nhánh…' : '⑂ Viết một kết cục khác →'}
+          {forking
+            ? 'Đang tạo nhánh…'
+            : ready && !user
+              // Inline rather than a card: this sits at the end of a chapter,
+              // and a sign-in box between the last line and the next-chapter
+              // arrows would read as the end of the story.
+              ? '⑂ Đăng nhập để viết một kết cục khác →'
+              : '⑂ Viết một kết cục khác →'}
         </button>
       </section>
 

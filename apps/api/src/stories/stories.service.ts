@@ -78,10 +78,7 @@ export class StoriesService {
    * page. "Mine" is the workspace, where your own drafts are the point.
    */
   private listVisibility(user: User | null, mine: boolean) {
-    if (mine) {
-      // Signed out, nothing is yours. `id: ''` never matches a uuid.
-      return { ownerId: user?.id ?? '' };
-    }
+    if (mine) return { ownerId: user!.id };
     return { visibility: Visibility.PUBLIC };
   }
 
@@ -133,8 +130,12 @@ export class StoriesService {
 
   /** `mine` switches from the public shelf to the caller's own workspace. */
   async list(mine = false) {
-    // `optional`, not `current`: browsing is public and must work signed out.
-    const viewer = await this.currentUser.optional();
+    // The shelf is public and must work signed out; a workspace belongs to
+    // somebody, so asking for one without an account is a 401, not an empty
+    // list - "you own nothing" and "you are nobody" are different answers.
+    const viewer = mine
+      ? await this.currentUser.current()
+      : await this.currentUser.optional();
 
     return this.prisma.story.findMany({
       where: this.listVisibility(viewer, mine),
@@ -215,12 +216,13 @@ export class StoriesService {
    * doing it late.
    */
   async recordView(id: string) {
-    const user = await this.currentUser.current();
+    // Anonymous reads are most of the audience and must still count.
+    const user = await this.currentUser.optional();
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) throw new NotFoundException(`Story ${id} not found`);
 
     // The author refreshing their own page is not an audience.
-    if (story.ownerId === user.id) return { viewCount: story.viewCount };
+    if (user && story.ownerId === user.id) return { viewCount: story.viewCount };
 
     const updated = await this.prisma.story.update({
       where: { id },
@@ -249,9 +251,16 @@ export class StoriesService {
     });
     if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
 
-    const user = await this.currentUser.current();
-    const access = await this.paywall.access(branch.story, user.id);
-    const maxDepth = await this.paywall.readableDepth(branch.story, user.id);
+    // Reading is the public surface: no token required. Signed out you get
+    // the free chapters, same as a signed-in stranger who has not unlocked it.
+    const user = await this.currentUser.optional();
+    this.assertReadable(branch.story, user);
+
+    const access = await this.paywall.access(branch.story, user?.id ?? null);
+    const maxDepth = await this.paywall.readableDepth(
+      branch.story,
+      user?.id ?? null,
+    );
 
     const inherited: Contribution[] = [];
     let cutoff = branch.forkedAtDepth;

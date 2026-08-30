@@ -46,8 +46,10 @@ export class PaywallService {
    * so the story can keep spreading and being forked - a paywall that stops
    * discovery caps the story's reach at the moment it starts working.
    */
-  async access(story: Story, userId: string): Promise<AccessState> {
-    const isOwner = story.ownerId === userId;
+  /** `userId` is null for a signed-out reader, who owns nothing and has
+   * unlocked nothing but can still read the free chapters. */
+  async access(story: Story, userId: string | null): Promise<AccessState> {
+    const isOwner = userId !== null && story.ownerId === userId;
     const gated = story.unlockPrice > 0;
 
     if (!gated || isOwner) {
@@ -60,9 +62,11 @@ export class PaywallService {
       };
     }
 
-    const unlock = await this.prisma.storyUnlock.findUnique({
-      where: { storyId_userId: { storyId: story.id, userId } },
-    });
+    const unlock = userId
+      ? await this.prisma.storyUnlock.findUnique({
+          where: { storyId_userId: { storyId: story.id, userId } },
+        })
+      : null;
 
     const locked = Math.max(
       0,
@@ -79,7 +83,7 @@ export class PaywallService {
   }
 
   /** Depth this reader can read up to, inclusive. Infinity when unlocked. */
-  async readableDepth(story: Story, userId: string): Promise<number> {
+  async readableDepth(story: Story, userId: string | null): Promise<number> {
     const state = await this.access(story, userId);
     return state.unlocked
       ? Number.POSITIVE_INFINITY

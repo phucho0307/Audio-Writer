@@ -8,6 +8,8 @@ import {
   type Contribution,
   type Story,
 } from '@/lib/api';
+import { SignInPrompt } from '@/app/SignInWall';
+import { useAuth } from '@/lib/useAuth';
 
 /**
  * Choosing where to diverge.
@@ -22,6 +24,7 @@ export default function ForkPicker({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { user, ready } = useAuth();
   const { id } = use(params);
 
   const [story, setStory] = useState<Story | null>(null);
@@ -195,13 +198,23 @@ export default function ForkPicker({
           </p>
         )}
 
-        <button
-          onClick={fork}
-          disabled={picked === null || busy}
-          className="rounded-md bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-35"
-        >
-          {busy ? 'Đang tạo nhánh…' : '⑂ Rẽ nhánh và viết tiếp'}
-        </button>
+        {ready && !user ? (
+          // Reading got them this far without an account; the ask arrives only
+          // now, when they have chosen a chapter and want to write.
+          <SignInPrompt
+            compact
+            title="Đăng nhập để rẽ nhánh"
+            reason="Nhánh mới là truyện của bạn, nên cần một tài khoản để lưu. Bản gốc không thay đổi."
+          />
+        ) : (
+          <button
+            onClick={fork}
+            disabled={picked === null || busy}
+            className="rounded-md bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-35"
+          >
+            {busy ? 'Đang tạo nhánh…' : '⑂ Rẽ nhánh và viết tiếp'}
+          </button>
+        )}
 
         {error && (
           <p className="font-mono text-[12px] text-red-600 dark:text-red-400">
