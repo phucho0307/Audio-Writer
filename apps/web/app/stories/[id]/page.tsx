@@ -38,7 +38,16 @@ export default function StoryPage({
   const { id } = use(params);
   // A fork lands here with ?branch=, so the writer opens on their own branch
   // rather than the original they just diverged from.
-  const wanted = useSearchParams().get('branch');
+  const query = useSearchParams();
+  const wanted = query.get('branch');
+  /**
+   * Fork mode: the reader chose a chapter to diverge from, but no branch
+   * exists yet. It is created by the first save, so leaving this page costs
+   * nothing and no empty branch is left behind.
+   */
+  const forkFrom = query.get('forkFrom');
+  const forkAt = Number(query.get('atDepth'));
+  const forking = forkFrom !== null && Number.isInteger(forkAt) && forkAt >= 0;
 
   const [story, setStory] = useState<Story | null>(null);
   const [branchId, setBranchId] = useState<string | null>(null);
@@ -58,6 +67,7 @@ export default function StoryPage({
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [showPricing, setShowPricing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [forkName, setForkName] = useState('');
   /** Which chapter the contents list has opened for editing. */
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmBranch, setConfirmBranch] = useState<string | null>(null);
@@ -73,11 +83,13 @@ export default function StoryPage({
     setBranchId(
       (b) =>
         b ??
-        (wanted && s.branches.some((x) => x.id === wanted)
-          ? wanted
-          : (mainBranchId(s) ?? null)),
+        (forking
+          ? forkFrom
+          : wanted && s.branches.some((x) => x.id === wanted)
+            ? wanted
+            : (mainBranchId(s) ?? null)),
     );
-  }, [id, wanted]);
+  }, [id, wanted, forking, forkFrom]);
 
   useEffect(() => {
     loadStory().catch((e: Error) => setError(e.message));
@@ -106,6 +118,22 @@ export default function StoryPage({
     setBusy('commit');
     setError(null);
     try {
+      if (forking) {
+        // The branch and its first chapter are created together, so this is
+        // the moment the fork actually becomes a thing.
+        const branch = await api.fork(forkFrom!, {
+          atDepth: forkAt,
+          name: forkName.trim() || `nhánh từ chương ${forkAt + 2}`,
+          textPlain: draft.trim(),
+          authorType,
+          ...(authorType === 'AI'
+            ? { modelProvider: 'gemini', modelName: 'gemini-2.5-flash' }
+            : {}),
+        });
+        window.location.href = `/stories/${id}?branch=${branch.id}`;
+        return;
+      }
+
       await api.commit(branchId, {
         textPlain: draft.trim(),
         authorType,
@@ -173,13 +201,19 @@ export default function StoryPage({
     if (!branchId || !read) return;
     setBusy('fork');
     try {
+      // The opening line is the chapter, so the branch has content from the
+      // moment it exists - there is no window where an empty one can be left.
       const branch = await api.fork(branchId, {
         atDepth: read.branch.depth,
         name: opt.title.slice(0, 40),
+        textPlain: opt.firstLine,
+        authorType: 'AI',
+        modelProvider: 'gemini',
+        modelName: 'gemini-2.5-flash',
       });
       setOptions(null);
       setBranchId(branch.id);
-      setDraft(opt.firstLine + '\n\n');
+      setDraft('');
       await loadStory();
       draftRef.current?.focus();
     } catch (e) {
@@ -308,7 +342,13 @@ export default function StoryPage({
   const liveBranchId = mainBranchId(story) ?? null;
   const frozen =
     story.visibility !== 'PRIVATE' && branchId === liveBranchId;
-  const chaptersEditable = read.access.isOwner && !frozen;
+  const chaptersEditable = read.access.isOwner && !frozen && !forking;
+
+  // Only what the fork will inherit. Chapters past the fork point belong to
+  // the branch being left behind.
+  const shown = forking
+    ? read.contributions.filter((c) => c.depth <= forkAt)
+    : read.contributions;
   // Grey the AI out when it is spent, rather than letting a click fail. Writing
   // by hand stays available regardless - that is the point of the cap.
   const aiSpent = quota !== null && !quota.unlimited && quota.totalRemaining === 0;
@@ -489,8 +529,35 @@ export default function StoryPage({
         </div>
       )}
 
+      {forking && (
+        <section className="flex flex-col gap-3 rounded-lg border border-[var(--color-accent)] bg-[var(--color-accent-soft)] p-4">
+          <div>
+            <div className="text-[13px] font-medium">
+              Nhánh mới từ chương {forkAt + 1}
+            </div>
+            <p className="text-[12px] text-[var(--color-muted)]">
+              {forkAt + 1} chương đầu được giữ nguyên từ bản gốc. Bạn viết tiếp
+              từ chương {forkAt + 2}. Nhánh chỉ được tạo khi bạn lưu — rời trang
+              bây giờ thì không có gì được lưu lại.
+            </p>
+          </div>
+          <label className="flex flex-col gap-1.5">
+            <span className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
+              Tên nhánh
+            </span>
+            <input
+              value={forkName}
+              onChange={(e) => setForkName(e.target.value)}
+              maxLength={80}
+              placeholder={`nhánh từ chương ${forkAt + 2}`}
+              className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 text-[14px]"
+            />
+          </label>
+        </section>
+      )}
+
       {/* ---- contents ---- */}
-      {read.contributions.length > 1 && (
+      {shown.length > 1 && (
         <section className="flex flex-col">
           <h2 className="flex items-baseline justify-between gap-3 border-b border-[var(--color-line)] pb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)]">
             <span>Mục lục</span>
@@ -502,7 +569,7 @@ export default function StoryPage({
           </h2>
 
           <ol className="flex flex-col">
-            {read.contributions.map((c) => (
+            {shown.map((c) => (
               <li key={c.id}>
                 {/* An anchor, not a route: the chapters are already on this
                     page, and navigating away would lose the editor state. */}
@@ -555,12 +622,12 @@ export default function StoryPage({
             Chưa có gì. Viết đoạn đầu tiên, hoặc để AI mở đầu giúp bạn.
           </p>
         )}
-        {read.contributions.map((c, i) => (
+        {shown.map((c, i) => (
           <Chapter
             key={c.id}
             chapter={c}
             inherited={c.branchId !== branchId}
-            isLast={i === read.contributions.length - 1}
+            isLast={i === shown.length - 1}
             canEdit={chaptersEditable}
             editing={editingId === c.id}
             onOpen={() => setEditingId(c.id)}
@@ -774,11 +841,11 @@ export default function StoryPage({
         </section>
       )}
 
-      {read.access.isOwner && (
+      {read.access.isOwner && !forking && (
         <PublishPanel story={story} onChange={loadStory} />
       )}
 
-      {read.access.isOwner && (
+      {read.access.isOwner && !forking && (
         <RevisePanel
           story={story}
           branchId={branchId}
@@ -789,7 +856,7 @@ export default function StoryPage({
 
       {/* Its own block rather than a link among the pricing controls, where it
           was both hard to find and one slip away from an accidental click. */}
-      {read.access.isOwner && (
+      {read.access.isOwner && !forking && (
         <section className="flex flex-col gap-3 rounded-lg border border-red-500/40 bg-[var(--color-surface)] p-4">
           <div>
             <div className="text-[13px] font-medium">Xoá truyện</div>

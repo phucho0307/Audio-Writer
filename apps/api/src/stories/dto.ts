@@ -104,6 +104,14 @@ export class CommitContributionDto {
   modelName?: string;
 }
 
+/**
+ * Forking now carries its first chapter.
+ *
+ * A branch used to appear the moment someone clicked "rẽ nhánh", so opening
+ * the fork screen and changing your mind left a permanent empty branch on
+ * somebody's story. Requiring the chapter means a branch exists only once
+ * there is something in it.
+ */
 export class ForkBranchDto {
   /** Everything at or below this depth is inherited from the parent branch. */
   @IsInt()
@@ -114,6 +122,29 @@ export class ForkBranchDto {
   @IsString()
   @MaxLength(80)
   name?: string;
+
+  @IsObject()
+  content!: Record<string, unknown>;
+
+  @IsString()
+  @MinLength(1)
+  textPlain!: string;
+
+  @IsEnum(AuthorType)
+  authorType!: AuthorType;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  modelProvider?: string;
+
+  @IsOptional()
+  @IsString()
+  modelName?: string;
 }
 
 export class GrantCreditsDto {

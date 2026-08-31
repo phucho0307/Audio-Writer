@@ -292,10 +292,28 @@ export const api = {
       }),
     }),
 
-  fork: (branchId: string, body: { atDepth: number; name?: string }) =>
+  /**
+   * Forking carries its first chapter, so a branch only exists once there is
+   * something in it. Clicking "rẽ nhánh" no longer creates anything.
+   */
+  fork: (
+    branchId: string,
+    body: {
+      atDepth: number;
+      name?: string;
+      textPlain: string;
+      authorType: 'HUMAN' | 'AI';
+      title?: string;
+      modelProvider?: string;
+      modelName?: string;
+    },
+  ) =>
     call<BranchSummary>(`/branches/${branchId}/fork`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        content: { type: 'doc', text: body.textPlain },
+        ...body,
+      }),
     }),
 
   suggest: (branchId: string, count = 4) =>

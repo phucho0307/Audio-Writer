@@ -980,7 +980,7 @@ export class StoriesService {
         data: {
           storyId: parent.storyId,
           ownerId: user.id,
-          name: dto.name ?? `fork-${Date.now().toString(36)}`,
+          name: dto.name?.trim() || `fork-${Date.now().toString(36)}`,
           forkedFromBranchId: parent.id,
           forkedAtDepth: dto.atDepth,
           // Ancestors of the parent, plus the parent itself. Root first.
@@ -989,12 +989,36 @@ export class StoriesService {
         },
       });
 
-      await tx.story.update({
-        where: { id: parent.storyId },
-        data: { branchCount: { increment: 1 } },
+      // The branch and its first chapter are one act. Writing them separately
+      // is what used to leave empty branches behind whenever the second half
+      // never happened.
+      const first = await tx.contribution.create({
+        data: {
+          branchId: branch.id,
+          parentId: null,
+          depth: dto.atDepth + 1,
+          title: dto.title,
+          authorId: user.id,
+          authorType: dto.authorType,
+          content: dto.content as never,
+          textPlain: dto.textPlain,
+          wordCount: countWords(dto.textPlain),
+          modelProvider: dto.modelProvider,
+          modelName: dto.modelName,
+        },
       });
 
-      return branch;
+      await tx.branch.update({
+        where: { id: branch.id },
+        data: { headContributionId: first.id, depth: first.depth },
+      });
+
+      await tx.story.update({
+        where: { id: parent.storyId },
+        data: { branchCount: { increment: 1 }, updatedAt: new Date() },
+      });
+
+      return { ...branch, headContributionId: first.id, depth: first.depth };
     });
   }
 }

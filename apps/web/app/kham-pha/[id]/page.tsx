@@ -47,20 +47,14 @@ export default function ForkPicker({
     })();
   }, [id]);
 
-  async function fork() {
+  /**
+   * Opens the editor in fork mode. Nothing is created here: a branch exists
+   * only once its first chapter is saved, so backing out costs nothing.
+   */
+  function fork() {
     if (!read || picked === null) return;
     setBusy(true);
-    setError(null);
-    try {
-      const branch = await api.fork(read.branch.id, {
-        atDepth: picked,
-        name: `nhánh từ chương ${picked + 1}`,
-      });
-      window.location.href = `/stories/${id}?branch=${branch.id}`;
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
-    }
+    window.location.href = `/stories/${id}?forkFrom=${read.branch.id}&atDepth=${picked}`;
   }
 
   if (error && !story) {

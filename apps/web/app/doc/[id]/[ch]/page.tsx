@@ -67,20 +67,11 @@ export default function Reader({
    * so sending them to the chapter picker asks a question they have just
    * answered by scrolling to the bottom of this page.
    */
-  async function forkHere() {
+  function forkHere() {
     if (!read) return;
     setForking(true);
-    setError(null);
-    try {
-      const branch = await api.fork(read.branch.id, {
-        atDepth: depth,
-        name: `nhánh từ chương ${depth + 1}`,
-      });
-      window.location.href = `/stories/${id}?branch=${branch.id}`;
-    } catch (e) {
-      setError((e as Error).message);
-      setForking(false);
-    }
+    // Nothing is created until the first chapter is saved.
+    window.location.href = `/stories/${id}?forkFrom=${read.branch.id}&atDepth=${depth}`;
   }
 
   // Landing on a new chapter should start at its top.
