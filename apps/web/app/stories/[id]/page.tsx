@@ -61,6 +61,9 @@ export default function StoryPage({
   /** Which chapter the contents list has opened for editing. */
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmBranch, setConfirmBranch] = useState<string | null>(null);
+  /** Shown beside the branch chips. The page-level error box is far enough
+   * down that a refusal up here read as nothing happening. */
+  const [branchError, setBranchError] = useState<string | null>(null);
 
   const draftRef = useRef<HTMLTextAreaElement>(null);
 
@@ -208,13 +211,13 @@ export default function StoryPage({
   /** Back to private. Only forks can stop this. */
   async function hideBranch(id: string) {
     setBusy('branch');
-    setError(null);
+    setBranchError(null);
     try {
       await api.unpublishBranch(id);
       setConfirmBranch(null);
       await refresh();
     } catch (e) {
-      setError((e as Error).message);
+      setBranchError((e as Error).message);
     } finally {
       setBusy(null);
     }
@@ -224,14 +227,14 @@ export default function StoryPage({
    * been forked from, so failures show rather than being guessed at here. */
   async function removeBranch(id: string) {
     setBusy('branch');
-    setError(null);
+    setBranchError(null);
     try {
       await api.deleteBranch(id);
       setConfirmBranch(null);
       if (branchId === id) setBranchId(mainBranchId(story!) ?? null);
       await refresh();
     } catch (e) {
-      setError((e as Error).message);
+      setBranchError((e as Error).message);
       setConfirmBranch(null);
     } finally {
       setBusy(null);
@@ -431,8 +434,9 @@ export default function StoryPage({
                     )}
                   </button>
 
-                  {/* The live branch is the published story; removing it would
-                      leave readers with nothing. */}
+                  {/* Offered on every branch you own, including the live one.
+                      Only forks refuse, and the server is the only thing that
+                      knows about those - so the reason is shown, not guessed. */}
                   {mine && (
                     confirmBranch === b.id ? (
                       <span className="flex items-center gap-1.5 font-mono text-[10px]">
@@ -461,7 +465,10 @@ export default function StoryPage({
                       </span>
                     ) : (
                       <button
-                        onClick={() => setConfirmBranch(b.id)}
+                        onClick={() => {
+                          setBranchError(null);
+                          setConfirmBranch(b.id);
+                        }}
                         aria-label={`Xoá nhánh ${b.name}`}
                         className="font-mono text-[13px] leading-none opacity-0 transition-opacity hover:text-red-500 focus:opacity-100 group-hover/br:opacity-100"
                       >
@@ -473,6 +480,12 @@ export default function StoryPage({
               );
             })}
           </div>
+
+          {branchError && (
+            <p className="max-w-[60ch] text-[12px] text-amber-600">
+              {branchError}
+            </p>
+          )}
         </div>
       )}
 
