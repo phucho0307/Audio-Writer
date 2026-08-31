@@ -17,11 +17,19 @@ import { AuthService, type GoogleProfile } from './auth.service';
 import { CurrentUserService } from './current-user.service';
 import { OAuthFailureFilter } from './oauth-failure.filter';
 import { TokenService, type IssuedTokens } from './token.service';
+import { Throttle } from '@nestjs/throttler';
+import { AUTH_TIER } from '../throttler/tiers';
 
 /** Scoped to the auth routes, so ordinary API traffic never carries it. */
 const COOKIE = 'aw_refresh';
 const COOKIE_PATH = '/api/auth';
 
+/**
+ * Every route here is on the tight limit. Sign-in and refresh are where
+ * credential stuffing and token grinding go, and none of them is an endpoint
+ * anybody legitimately calls in a loop.
+ */
+@Throttle(AUTH_TIER)
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);

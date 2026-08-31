@@ -11,6 +11,8 @@ import {
 import { IsIn, IsOptional } from 'class-validator';
 import { TtsService } from './tts.service';
 import { DEFAULT_VOICE, VOICES } from './gemini-tts.driver';
+import { Throttle } from '@nestjs/throttler';
+import { COSTLY_TIER } from '../throttler/tiers';
 
 const VOICE_IDS = VOICES.map((v) => v.id);
 
@@ -20,6 +22,8 @@ class VoiceDto {
   voice?: string;
 }
 
+/** One narration is ~28 seconds of provider time; these cannot be cheap. */
+@Throttle(COSTLY_TIER)
 @Controller('audio')
 export class TtsController {
   constructor(private readonly tts: TtsService) {}

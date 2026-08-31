@@ -13,6 +13,8 @@ import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-va
 import type { Paragraphs, Pov } from '@aw/shared';
 import { LlmService } from './llm.service';
 import { DevOnlyGuard } from '../auth/dev-only.guard';
+import { Throttle } from '@nestjs/throttler';
+import { COSTLY_TIER } from '../throttler/tiers';
 
 class SeedDto {
   @IsOptional()
@@ -55,6 +57,12 @@ class GrantDto {
   amount?: number;
 }
 
+/**
+ * Generation costs money and sits behind a 20-a-day free tier. The daily AI
+ * quota already meters how much a person may generate; this limits how fast,
+ * which is what stops one caller exhausting the shared key in a burst.
+ */
+@Throttle(COSTLY_TIER)
 @Controller('ai')
 export class LlmController {
   constructor(private readonly llm: LlmService) {}
