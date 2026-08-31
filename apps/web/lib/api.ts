@@ -33,6 +33,7 @@ export type BranchSummary = {
   forkedAtDepth: number | null;
   forkedFromBranchId: string | null;
   lineage: string[];
+  isDraft: boolean;
   owner?: { handle: string; displayName: string };
   _count?: { contributions: number };
 };
@@ -125,6 +126,17 @@ export function mainBranch(story: Story): BranchSummary | undefined {
       ? story.branches.find((b) => b.id === story.mainBranchId)
       : undefined) ?? story.branches.find((b) => b.isRoot)
   );
+}
+
+/**
+ * Same answer as `mainBranch`, but works on a list row too.
+ *
+ * The shelf query only carries the root branch, so a story whose main has been
+ * promoted elsewhere would resolve to the wrong one; `mainBranchId` is on the
+ * story itself and is right either way.
+ */
+export function mainBranchId(story: Story): string | undefined {
+  return story.mainBranchId ?? mainBranch(story)?.id ?? story.branches[0]?.id;
 }
 
 export class ApiError extends Error {
@@ -222,6 +234,12 @@ export const api = {
     call<BranchSummary>(`/stories/${storyId}/revise`, {
       method: 'POST',
       body: JSON.stringify(name ? { name } : {}),
+    }),
+
+  /** Only a branch nobody reads: not the live one, and not forked from. */
+  deleteBranch: (branchId: string) =>
+    call<{ deleted: boolean; id: string }>(`/branches/${branchId}`, {
+      method: 'DELETE',
     }),
 
   /** Make a branch the one readers land on. */

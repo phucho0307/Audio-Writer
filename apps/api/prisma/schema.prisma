@@ -164,6 +164,13 @@ model Branch {
   forkedAtDepth      Int?
   lineage            String[] @default([])
 
+  /// A working copy, visible only to its owner.
+  ///
+  /// Revisions start here: the whole point of revising on a copy is that
+  /// nobody reads it until it is promoted. Forks are not drafts - a fork is
+  /// someone's own story and public from the first word.
+  isDraft Boolean @default(false)
+
   headContributionId String? @db.Uuid
   depth              Int     @default(0)
 

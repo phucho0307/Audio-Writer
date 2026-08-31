@@ -93,6 +93,12 @@ export class StoriesController {
     return this.stories.revise(id, dto);
   }
 
+  /** Only a branch nobody reads: not the live one, and not forked from. */
+  @Delete('branches/:id')
+  deleteBranch(@Param('id', ParseUUIDPipe) id: string) {
+    return this.stories.deleteBranch(id);
+  }
+
   /** Make this branch the one readers land on. */
   @Post('branches/:id/promote')
   promote(@Param('id', ParseUUIDPipe) id: string) {

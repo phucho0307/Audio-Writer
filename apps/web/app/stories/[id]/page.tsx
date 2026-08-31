@@ -8,7 +8,7 @@ import PublishPanel from './PublishPanel';
 import Chapter from './Chapter';
 import RevisePanel from './RevisePanel';
 import {
-  mainBranch,
+  mainBranchId,
   ApiError,
   api,
   streamProse,
@@ -60,6 +60,7 @@ export default function StoryPage({
   const [confirmDelete, setConfirmDelete] = useState(false);
   /** Which chapter the contents list has opened for editing. */
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [confirmBranch, setConfirmBranch] = useState<string | null>(null);
 
   const draftRef = useRef<HTMLTextAreaElement>(null);
 
@@ -71,7 +72,7 @@ export default function StoryPage({
         b ??
         (wanted && s.branches.some((x) => x.id === wanted)
           ? wanted
-          : (mainBranch(s)?.id ?? null)),
+          : (mainBranchId(s) ?? null)),
     );
   }, [id, wanted]);
 
@@ -204,6 +205,24 @@ export default function StoryPage({
     await loadStory();
   }
 
+  /** A branch nobody reads. The API refuses the live one and any that have
+   * been forked from, so failures show rather than being guessed at here. */
+  async function removeBranch(id: string) {
+    setBusy('branch');
+    setError(null);
+    try {
+      await api.deleteBranch(id);
+      setConfirmBranch(null);
+      if (branchId === id) setBranchId(mainBranchId(story!) ?? null);
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+      setConfirmBranch(null);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   async function remove() {
     setBusy('delete');
     try {
@@ -268,7 +287,7 @@ export default function StoryPage({
   // chapter under them is what a revision is for. Unlike the fork-inheritance
   // rule, this one is knowable here, so the controls are hidden rather than
   // offered and refused.
-  const liveBranchId = story.mainBranchId ?? mainBranch(story)?.id ?? null;
+  const liveBranchId = mainBranchId(story) ?? null;
   const frozen =
     story.visibility !== 'PRIVATE' && branchId === liveBranchId;
   const chaptersEditable = read.access.isOwner && !frozen;
@@ -371,26 +390,64 @@ export default function StoryPage({
             Nhánh · {story.branches.length}
           </span>
           <div className="flex flex-wrap gap-1.5">
-            {story.branches.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => setBranchId(b.id)}
-                className={`rounded-md border px-2.5 py-1 text-[13px] ${
-                  b.id === branchId
-                    ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
-                    : 'border-[var(--color-line)] text-[var(--color-muted)] hover:border-[var(--color-accent)]'
-                }`}
-              >
-                {b.id === (story.mainBranchId ?? mainBranch(story)?.id)
-                  ? `${b.isRoot ? 'main' : b.name} · đang đăng`
-                  : b.name}
-                {b.forkedAtDepth !== null && (
-                  <span className="ml-1.5 font-mono text-[10px] opacity-60">
-                    ⑂{b.forkedAtDepth}
-                  </span>
-                )}
-              </button>
-            ))}
+            {story.branches.map((b) => {
+              const live = b.id === liveBranchId;
+              const mine = read.access.isOwner;
+              return (
+                <span
+                  key={b.id}
+                  className={`group/br flex items-center gap-1 rounded-md border px-2.5 py-1 text-[13px] ${
+                    b.id === branchId
+                      ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
+                      : 'border-[var(--color-line)] text-[var(--color-muted)] hover:border-[var(--color-accent)]'
+                  }`}
+                >
+                  <button onClick={() => setBranchId(b.id)}>
+                    {live ? `${b.isRoot ? 'main' : b.name} · đang đăng` : b.name}
+                    {b.isDraft && (
+                      <span className="ml-1.5 font-mono text-[10px] opacity-70">
+                        riêng tư
+                      </span>
+                    )}
+                    {b.forkedAtDepth !== null && (
+                      <span className="ml-1.5 font-mono text-[10px] opacity-60">
+                        ⑂{b.forkedAtDepth}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* The live branch is the published story; removing it would
+                      leave readers with nothing. */}
+                  {mine && !live && (
+                    confirmBranch === b.id ? (
+                      <span className="flex items-center gap-1 font-mono text-[10px]">
+                        <button
+                          onClick={() => void removeBranch(b.id)}
+                          disabled={busy !== null}
+                          className="text-red-500 underline disabled:opacity-40"
+                        >
+                          {busy === 'branch' ? 'đang xoá…' : 'xoá?'}
+                        </button>
+                        <button
+                          onClick={() => setConfirmBranch(null)}
+                          className="underline opacity-70"
+                        >
+                          huỷ
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmBranch(b.id)}
+                        aria-label={`Xoá nhánh ${b.name}`}
+                        className="font-mono text-[13px] leading-none opacity-0 transition-opacity hover:text-red-500 focus:opacity-100 group-hover/br:opacity-100"
+                      >
+                        ×
+                      </button>
+                    )
+                  )}
+                </span>
+              );
+            })}
           </div>
         </div>
       )}

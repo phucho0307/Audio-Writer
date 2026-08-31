@@ -173,7 +173,18 @@ export class StoriesService {
 
     const viewer = await this.currentUser.optional();
     this.assertReadable(story, viewer);
-    return story;
+
+    // Drafts are working copies. Listing them would announce that a revision
+    // is under way and hand out the id needed to read it.
+    const canSeeDrafts =
+      viewer?.id === story.ownerId || viewer?.role === Role.ADMIN;
+
+    return {
+      ...story,
+      branches: canSeeDrafts
+        ? story.branches
+        : story.branches.filter((b) => !b.isDraft),
+    };
   }
 
   /**
@@ -343,6 +354,9 @@ export class StoriesService {
             dto.name?.trim() ||
             `bản sửa ${new Date().toISOString().slice(0, 10)}`,
           isRoot: false,
+          // Nobody reads it until it is promoted - that is the whole point of
+          // revising on a copy rather than in place.
+          isDraft: true,
           // No forkedFromBranchId: nothing is inherited, so there is no
           // ancestor to read through and no cutoff to respect.
           lineage: [],
@@ -384,6 +398,65 @@ export class StoriesService {
   }
 
   /**
+   * Removes a branch nobody is reading.
+   *
+   * Refused for the branch readers land on - that is the published story, and
+   * deleting it would leave the story with nothing to show. Refused too when
+   * something has forked from it, because a fork reads its ancestors through
+   * `lineage`: dropping the row would not free the fork, it would break it.
+   */
+  async deleteBranch(branchId: string) {
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+    if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
+
+    // Branch ownership, not story ownership: a fork belongs to the person who
+    // made it, on somebody else's story, and they must be able to take it
+    // down again.
+    const user = await this.currentUser.current();
+    if (branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_BRANCH_OWNER',
+        message: 'Chỉ xoá được nhánh của chính bạn.',
+      });
+    }
+
+    const story = await this.prisma.story.findUniqueOrThrow({
+      where: { id: branch.storyId },
+    });
+
+    if (this.isMain(story, branch)) {
+      throw new ConflictException({
+        code: 'BRANCH_IS_LIVE',
+        message:
+          'Đây là bản đang đăng. Hãy dùng nhánh khác làm bản chính trước, hoặc xoá cả truyện.',
+      });
+    }
+
+    const child = await this.prisma.branch.findFirst({
+      where: { lineage: { has: branch.id } },
+      select: { id: true },
+    });
+    if (child) {
+      throw new ConflictException({
+        code: 'BRANCH_HAS_FORKS',
+        message: 'Đã có người rẽ nhánh từ nhánh này nên không xoá được.',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Contributions and audio clips cascade from the branch row.
+      await tx.branch.delete({ where: { id: branchId } });
+      await tx.story.update({
+        where: { id: branch.storyId },
+        data: { branchCount: { decrement: 1 } },
+      });
+      return { deleted: true, id: branchId };
+    });
+  }
+
+  /**
    * Make a branch the version readers get.
    *
    * The branch it replaces is left alone rather than deleted - it is what
@@ -409,6 +482,14 @@ export class StoriesService {
 
       // The headline numbers describe what readers see, so they follow the
       // main branch rather than the root.
+      // No longer a working copy: this is the version people read.
+      if (branch.isDraft) {
+        await tx.branch.update({
+          where: { id: branch.id },
+          data: { isDraft: false },
+        });
+      }
+
       await tx.story.update({
         where: { id: branch.storyId },
         data: {
@@ -606,6 +687,17 @@ export class StoriesService {
     // the free chapters, same as a signed-in stranger who has not unlocked it.
     const user = await this.currentUser.optional();
     this.assertReadable(branch.story, user);
+
+    // A draft is the author's working copy. 404 rather than 403: confirming
+    // it exists would tell anyone listing branches that a revision is under
+    // way, which is the author's business.
+    if (
+      branch.isDraft &&
+      branch.ownerId !== user?.id &&
+      user?.role !== Role.ADMIN
+    ) {
+      throw new NotFoundException(`Branch ${branchId} not found`);
+    }
 
     const access = await this.paywall.access(branch.story, user?.id ?? null);
     const maxDepth = await this.paywall.readableDepth(
