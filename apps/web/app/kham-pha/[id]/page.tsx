@@ -3,11 +3,14 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
+  mainBranch,
   api,
   type BranchRead,
   type Contribution,
   type Story,
 } from '@/lib/api';
+import { SignInPrompt } from '@/app/SignInWall';
+import { useAuth } from '@/lib/useAuth';
 
 /**
  * Choosing where to diverge.
@@ -22,6 +25,7 @@ export default function ForkPicker({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { user, ready } = useAuth();
   const { id } = use(params);
 
   const [story, setStory] = useState<Story | null>(null);
@@ -35,7 +39,7 @@ export default function ForkPicker({
       try {
         const s = await api.getStory(id);
         setStory(s);
-        const root = s.branches.find((b) => b.isRoot);
+        const root = mainBranch(s);
         if (root) setRead(await api.readBranch(root.id));
       } catch (e) {
         setError((e as Error).message);
@@ -43,20 +47,14 @@ export default function ForkPicker({
     })();
   }, [id]);
 
-  async function fork() {
+  /**
+   * Opens the editor in fork mode. Nothing is created here: a branch exists
+   * only once its first chapter is saved, so backing out costs nothing.
+   */
+  function fork() {
     if (!read || picked === null) return;
     setBusy(true);
-    setError(null);
-    try {
-      const branch = await api.fork(read.branch.id, {
-        atDepth: picked,
-        name: `nhánh từ chương ${picked + 1}`,
-      });
-      window.location.href = `/stories/${id}?branch=${branch.id}`;
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
-    }
+    window.location.href = `/stories/${id}?forkFrom=${read.branch.id}&atDepth=${picked}`;
   }
 
   if (error && !story) {
@@ -195,13 +193,23 @@ export default function ForkPicker({
           </p>
         )}
 
-        <button
-          onClick={fork}
-          disabled={picked === null || busy}
-          className="rounded-md bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-35"
-        >
-          {busy ? 'Đang tạo nhánh…' : '⑂ Rẽ nhánh và viết tiếp'}
-        </button>
+        {ready && !user ? (
+          // Reading got them this far without an account; the ask arrives only
+          // now, when they have chosen a chapter and want to write.
+          <SignInPrompt
+            compact
+            title="Đăng nhập để rẽ nhánh"
+            reason="Nhánh mới là truyện của bạn, nên cần một tài khoản để lưu. Bản gốc không thay đổi."
+          />
+        ) : (
+          <button
+            onClick={fork}
+            disabled={picked === null || busy}
+            className="rounded-md bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-35"
+          >
+            {busy ? 'Đang tạo nhánh…' : '⑂ Rẽ nhánh và viết tiếp'}
+          </button>
+        )}
 
         {error && (
           <p className="font-mono text-[12px] text-red-600 dark:text-red-400">

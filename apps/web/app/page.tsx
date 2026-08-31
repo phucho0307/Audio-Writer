@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, type Story } from '@/lib/api';
+import SignInWall from './SignInWall';
 
 /**
  * The writer's shelf.
@@ -12,7 +13,7 @@ import { api, type Story } from '@/lib/api';
  * are an input the AI needs, not a property of a story - and it was the
  * largest block on the page for a field nobody has to fill in.
  */
-export default function Home() {
+function MyStories() {
   const [stories, setStories] = useState<Story[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -20,8 +21,8 @@ export default function Home() {
 
   useEffect(() => {
     api
-      .listStories()
-      .then((all) => setStories(all.filter((s) => s.owner?.handle !== 'admin')))
+      .myStories()
+      .then(setStories)
       .catch((e: Error) => setError(e.message));
   }, []);
 
@@ -136,5 +137,21 @@ export default function Home() {
         </div>
       )}
     </main>
+  );
+}
+
+/**
+ * The shelf is personal, so there is nothing to show a signed-out visitor -
+ * not an empty state, which would read as "you have no stories" rather than
+ * "these are not your stories".
+ */
+export default function Home() {
+  return (
+    <SignInWall
+      title="Truyện của tôi"
+      reason="Đăng nhập để xem truyện bạn đang viết và bắt đầu truyện mới. Truyện mới luôn ở chế độ riêng tư cho đến khi bạn bấm đăng."
+    >
+      <MyStories />
+    </SignInWall>
   );
 }

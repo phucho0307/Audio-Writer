@@ -13,6 +13,13 @@ datasource db {
 // Identity
 // ---------------------------------------------------------------------------
 
+enum Role {
+  USER
+  /// Can act on any story, not just their own. Assigned by hand in the
+  /// database - there is deliberately no endpoint that grants it.
+  ADMIN
+}
+
 model User {
   id           String  @id @default(uuid()) @db.Uuid
   email        String  @unique
@@ -22,6 +29,7 @@ model User {
   googleSub    String? @unique
   avatarUrl    String?
   locale       String  @default("vi")
+  role         Role    @default(USER)
 
   // Bring-your-own-key: lets heavy users skip the shared free-tier queue.
   // Encrypted at rest by the app layer, never returned to the client.
@@ -88,7 +96,9 @@ model Story {
   genres     String[]
   language   String      @default("vi")
   status     StoryStatus @default(DRAFTING)
-  visibility Visibility  @default(PUBLIC)
+  /// Starts private. A story becomes visible only through an explicit publish,
+  /// which is also where the fork policy has to be answered.
+  visibility Visibility  @default(PRIVATE)
 
   // Denormalised for the feed. Recomputed on write, never read-modify-write.
   contributionCount Int @default(0)
@@ -101,12 +111,30 @@ model Story {
   /// story's reach at exactly the moment it starts working.
   freeChapters Int @default(3)
 
+  /// Whether anyone other than the owner may fork this story.
+  ///
+  /// Null means undeclared, and a story cannot leave PRIVATE while it is - so
+  /// publishing forces the writer to answer the question rather than
+  /// inheriting a default they never saw. Turning it off later blocks new
+  /// forks only; branches that already exist keep working, because retracting
+  /// someone's published work is a different and much heavier decision.
+  allowForks Boolean?
+
   /// Credits to unlock everything beyond the free chapters. 0 leaves the
   /// whole story open, which is the default until the writer opts in.
   unlockPrice Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  /// The branch readers land on.
+  ///
+  /// Normally the root, but a writer revising a published story works on a
+  /// copy and promotes it here when it is ready - so the version people read
+  /// changes atomically, and the branch it replaced stays as history. Null
+  /// means "the root branch", which is every story until someone revises one.
+  mainBranchId String? @unique @db.Uuid
+  mainBranch   Branch? @relation("MainBranch", fields: [mainBranchId], references: [id], onDelete: SetNull)
 
   branches Branch[]
   unlocks  StoryUnlock[]
@@ -136,11 +164,21 @@ model Branch {
   forkedAtDepth      Int?
   lineage            String[] @default([])
 
+  /// A working copy, visible only to its owner.
+  ///
+  /// Revisions start here: the whole point of revising on a copy is that
+  /// nobody reads it until it is promoted. Forks are not drafts - a fork is
+  /// someone's own story and public from the first word.
+  isDraft Boolean @default(false)
+
   headContributionId String? @db.Uuid
   depth              Int     @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  /// Set when this branch is the story's canonical one. See Story.mainBranch.
+  mainOf Story? @relation("MainBranch")
 
   contributions Contribution[]
   scenes        Scene[]

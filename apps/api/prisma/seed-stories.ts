@@ -13,7 +13,7 @@
  */
 import { writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { AuthorType, PrismaClient, Visibility } from '@prisma/client';
+import { AuthorType, PrismaClient, Role, Visibility } from '@prisma/client';
 import { SAMPLE_STORIES, type SampleStory } from './sample-stories';
 import { COVER_ART } from './cover-art';
 
@@ -88,6 +88,10 @@ async function seedOne(story: SampleStory, authorId: string) {
       genres: story.genres,
       language: 'vi',
       visibility: Visibility.PUBLIC,
+      // Explicit, because the column is null by default and a PUBLIC story
+      // with an undeclared fork policy is a state the API will not let
+      // anyone reach through the app.
+      allowForks: true,
       freeChapters: 2,
       unlockPrice: 0,
       contributionCount: story.chapters.length,
@@ -134,8 +138,29 @@ async function seedOne(story: SampleStory, authorId: string) {
   );
 }
 
-async function main() {
-  const author = await prisma.user.upsert({
+/**
+ * Who the samples belong to.
+ *
+ * Prefers a real ADMIN account, so the samples end up owned by someone who
+ * can actually sign in and manage them - a placeholder with no googleSub
+ * leaves them unreachable through the UI forever. Falls back to creating that
+ * placeholder on a fresh clone, where no admin exists yet.
+ */
+async function resolveAuthor() {
+  const byEnv = process.env.SEED_AUTHOR_EMAIL;
+  if (byEnv) {
+    const u = await prisma.user.findUnique({ where: { email: byEnv } });
+    if (u) return u;
+    console.warn(`SEED_AUTHOR_EMAIL=${byEnv} not found; falling back.`);
+  }
+
+  const admin = await prisma.user.findFirst({
+    where: { role: Role.ADMIN },
+    orderBy: { createdAt: 'asc' },
+  });
+  if (admin) return admin;
+
+  return prisma.user.upsert({
     where: { handle: 'admin' },
     update: {},
     create: {
@@ -145,16 +170,32 @@ async function main() {
       locale: 'vi',
     },
   });
+}
 
-  // Idempotent: re-running replaces the samples rather than duplicating them.
-  const removed = await prisma.story.deleteMany({ where: { ownerId: author.id } });
-  if (removed.count) console.log(`Replacing ${removed.count} existing samples\n`);
+async function main() {
+  const author = await resolveAuthor();
+
+  // Scoped by title, not just by owner.
+  //
+  // Owner alone was safe while the samples belonged to a placeholder nobody
+  // used. Now that they belong to a real account, deleting everything that
+  // account owns would take that person's own writing with it on every
+  // re-seed.
+  const titles = SAMPLE_STORIES.map((s) => s.title);
+  const removed = await prisma.story.deleteMany({
+    where: { ownerId: author.id, title: { in: titles } },
+  });
+  if (removed.count) console.log(`Replacing ${removed.count} existing samples
+`);
 
   for (const story of SAMPLE_STORIES) {
     await seedOne(story, author.id);
   }
 
-  console.log(`\n${SAMPLE_STORIES.length} sample stories seeded as @admin.`);
+  console.log(
+    `
+${SAMPLE_STORIES.length} sample stories seeded as @${author.handle}.`,
+  );
 }
 
 main()

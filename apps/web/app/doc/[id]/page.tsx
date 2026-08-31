@@ -4,6 +4,7 @@ import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
+  mainBranch,
   api,
   type BranchRead,
   type ChapterAudio,
@@ -44,7 +45,7 @@ export default function Contents({
         setStory(s);
         const branch =
           (wantedBranch && s.branches.find((b) => b.id === wantedBranch)) ||
-          s.branches.find((b) => b.isRoot);
+          mainBranch(s);
         if (!branch) return;
         const r = await api.readBranch(branch.id);
         setRead(r);

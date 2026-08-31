@@ -1,5 +1,7 @@
-export const API =
-  process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api';
+import { API } from './env';
+import { getToken, refresh } from './auth';
+
+export { API };
 
 export type Story = {
   id: string;
@@ -15,6 +17,9 @@ export type Story = {
   viewCount: number;
   freeChapters: number;
   unlockPrice: number;
+  visibility: 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
+  allowForks: boolean;
+  mainBranchId: string | null;
   updatedAt: string;
   owner?: { handle: string; displayName: string };
   branches: BranchSummary[];
@@ -28,6 +33,7 @@ export type BranchSummary = {
   forkedAtDepth: number | null;
   forkedFromBranchId: string | null;
   lineage: string[];
+  isDraft: boolean;
   owner?: { handle: string; displayName: string };
   _count?: { contributions: number };
 };
@@ -107,6 +113,32 @@ export type NarrateResult = {
   chapters: ChapterAudio[];
 };
 
+/**
+ * The branch readers land on.
+ *
+ * Not always the root: revising a published story promotes a copy, and from
+ * then on the root is history. Everything that used to reach for `isRoot`
+ * goes through here so the answer cannot differ between pages.
+ */
+export function mainBranch(story: Story): BranchSummary | undefined {
+  return (
+    (story.mainBranchId
+      ? story.branches.find((b) => b.id === story.mainBranchId)
+      : undefined) ?? story.branches.find((b) => b.isRoot)
+  );
+}
+
+/**
+ * Same answer as `mainBranch`, but works on a list row too.
+ *
+ * The shelf query only carries the root branch, so a story whose main has been
+ * promoted elsewhere would resolve to the wrong one; `mainBranchId` is on the
+ * story itself and is right either way.
+ */
+export function mainBranchId(story: Story): string | undefined {
+  return story.mainBranchId ?? mainBranch(story)?.id ?? story.branches[0]?.id;
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -117,12 +149,38 @@ export class ApiError extends Error {
   }
 }
 
-async function call<T>(path: string, init?: RequestInit): Promise<T> {
+function authHeaders(extra?: HeadersInit): HeadersInit {
+  const token = getToken();
+  return {
+    'content-type': 'application/json',
+    ...(token ? { authorization: `Bearer ${token}` } : {}),
+    ...extra,
+  };
+}
+
+/**
+ * `retry` guards against a loop: if the refreshed token is also rejected,
+ * something is wrong that another round trip will not fix.
+ */
+async function call<T>(
+  path: string,
+  init?: RequestInit,
+  retry = true,
+): Promise<T> {
   const res = await fetch(API + path, {
     ...init,
-    headers: { 'content-type': 'application/json', ...init?.headers },
+    headers: authHeaders(init?.headers),
+    credentials: 'include',
     cache: 'no-store',
   });
+
+  // The access token lasts fifteen minutes and is gone after any page load, so
+  // a 401 is the expected state rather than an error. Renew and repeat once;
+  // the caller never sees it.
+  if (res.status === 401 && retry) {
+    const token = await refresh();
+    if (token) return call<T>(path, init, false);
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -136,7 +194,11 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  /** The public shelf: PUBLIC stories only, works signed out. */
   listStories: () => call<Story[]>('/stories'),
+
+  /** Your own workspace: every story you own, drafts included. */
+  myStories: () => call<Story[]>('/stories?mine=true'),
 
   getStory: (id: string) => call<Story>(`/stories/${id}`),
 
@@ -150,6 +212,9 @@ export const api = {
       title?: string;
       freeChapters?: number;
       unlockPrice?: number;
+      visibility?: 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
+      status?: 'DRAFTING' | 'COMPLETE' | 'ARCHIVED';
+      allowForks?: boolean;
     },
   ) =>
     call<Story>(`/stories/${id}`, {
@@ -163,6 +228,49 @@ export const api = {
     }),
 
   readBranch: (id: string) => call<BranchRead>(`/branches/${id}`),
+
+  /** An editable copy of the published version. */
+  revise: (storyId: string, name?: string) =>
+    call<BranchSummary>(`/stories/${storyId}/revise`, {
+      method: 'POST',
+      body: JSON.stringify(name ? { name } : {}),
+    }),
+
+  /** Only a branch nobody reads: not the live one, and not forked from. */
+  deleteBranch: (branchId: string) =>
+    call<{ deleted: boolean; id: string }>(`/branches/${branchId}`, {
+      method: 'DELETE',
+    }),
+
+  /** Back to private. Takes the story private too if this is the live one. */
+  unpublishBranch: (branchId: string) =>
+    call<{ unpublished: boolean; id: string; storyWentPrivate: boolean }>(
+      `/branches/${branchId}/unpublish`,
+      { method: 'POST' },
+    ),
+
+  /** Make a branch the one readers land on. */
+  promote: (branchId: string) =>
+    call<{ promoted: boolean; branchId: string }>(
+      `/branches/${branchId}/promote`,
+      { method: 'POST' },
+    ),
+
+  /** Owner-only, and refused once someone has forked from this chapter. */
+  editChapter: (
+    contributionId: string,
+    body: { textPlain?: string; title?: string },
+  ) =>
+    call<Contribution>(`/contributions/${contributionId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+
+  /** Only the last chapter of a branch. */
+  deleteChapter: (contributionId: string) =>
+    call<{ deleted: boolean; id: string }>(`/contributions/${contributionId}`, {
+      method: 'DELETE',
+    }),
 
   commit: (
     branchId: string,
@@ -184,10 +292,28 @@ export const api = {
       }),
     }),
 
-  fork: (branchId: string, body: { atDepth: number; name?: string }) =>
+  /**
+   * Forking carries its first chapter, so a branch only exists once there is
+   * something in it. Clicking "rẽ nhánh" no longer creates anything.
+   */
+  fork: (
+    branchId: string,
+    body: {
+      atDepth: number;
+      name?: string;
+      textPlain: string;
+      authorType: 'HUMAN' | 'AI';
+      title?: string;
+      modelProvider?: string;
+      modelName?: string;
+    },
+  ) =>
     call<BranchSummary>(`/branches/${branchId}/fork`, {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        content: { type: 'doc', text: body.textPlain },
+        ...body,
+      }),
     }),
 
   suggest: (branchId: string, count = 4) =>
@@ -251,12 +377,21 @@ export async function streamProse(
   path: string,
   body: unknown,
   onChunk: (text: string) => void,
+  retry = true,
 ): Promise<void> {
   const res = await fetch(API + path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: authHeaders(),
+    credentials: 'include',
     body: JSON.stringify(body),
   });
+
+  // Safe to repeat: nothing has been read off the stream yet, and no
+  // contribution is written until the prose comes back.
+  if (res.status === 401 && retry) {
+    const token = await refresh();
+    if (token) return streamProse(path, body, onChunk, false);
+  }
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));

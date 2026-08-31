@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Account from './Account';
 
 /**
  * Reading lives under the library, so /doc/* keeps "khám phá" lit rather than
@@ -45,6 +46,11 @@ export default function Nav() {
           </Link>
         );
       })}
+
+      {/* Separated from the section links: this is who you are, not where you
+          are, and the underline treatment above would misread as a third tab. */}
+      <span className="ml-1 h-4 w-px bg-[var(--color-line)]" aria-hidden />
+      <Account />
     </nav>
   );
 }

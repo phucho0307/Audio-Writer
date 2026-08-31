@@ -1,5 +1,6 @@
 import {
   IsArray,
+  IsBoolean,
   IsEnum,
   IsIn,
   IsInt,
@@ -11,7 +12,7 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
-import { AuthorType } from '@prisma/client';
+import { AuthorType, Visibility, StoryStatus } from '@prisma/client';
 
 export class CreateStoryDto {
   @IsString()
@@ -65,6 +66,21 @@ export class UpdateStoryDto {
   @Min(0)
   @Max(1000)
   unlockPrice?: number;
+
+  /** Publishing. PRIVATE is owner-only; UNLISTED is by-link but unlisted. */
+  @IsOptional()
+  @IsEnum(Visibility)
+  visibility?: Visibility;
+
+  /** DRAFTING while it is being written, COMPLETE when the writer says so. */
+  @IsOptional()
+  @IsEnum(StoryStatus)
+  status?: StoryStatus;
+
+  /** Whether other people may fork this story. */
+  @IsOptional()
+  @IsBoolean()
+  allowForks?: boolean;
 }
 
 export class CommitContributionDto {
@@ -88,6 +104,14 @@ export class CommitContributionDto {
   modelName?: string;
 }
 
+/**
+ * Forking now carries its first chapter.
+ *
+ * A branch used to appear the moment someone clicked "rẽ nhánh", so opening
+ * the fork screen and changing your mind left a permanent empty branch on
+ * somebody's story. Requiring the chapter means a branch exists only once
+ * there is something in it.
+ */
 export class ForkBranchDto {
   /** Everything at or below this depth is inherited from the parent branch. */
   @IsInt()
@@ -98,6 +122,29 @@ export class ForkBranchDto {
   @IsString()
   @MaxLength(80)
   name?: string;
+
+  @IsObject()
+  content!: Record<string, unknown>;
+
+  @IsString()
+  @MinLength(1)
+  textPlain!: string;
+
+  @IsEnum(AuthorType)
+  authorType!: AuthorType;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+
+  @IsOptional()
+  @IsString()
+  modelProvider?: string;
+
+  @IsOptional()
+  @IsString()
+  modelName?: string;
 }
 
 export class GrantCreditsDto {
@@ -106,4 +153,25 @@ export class GrantCreditsDto {
   @Min(1)
   @Max(10000)
   amount?: number;
+}
+
+/** Both optional: renaming a chapter and rewriting it are separate acts. */
+export class EditContributionDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  textPlain?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  title?: string;
+}
+
+export class ReviseDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  name?: string;
 }

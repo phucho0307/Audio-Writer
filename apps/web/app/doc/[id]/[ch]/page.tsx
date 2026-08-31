@@ -3,7 +3,14 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { api, type BranchRead, type Story } from '@/lib/api';
+import {
+  mainBranch,
+  api,
+  type BranchRead,
+  type Story,
+} from '@/lib/api';
+import { useAuth } from '@/lib/useAuth';
+import { signIn } from '@/lib/auth';
 import ChapterNarration from './ChapterNarration';
 
 /**
@@ -22,6 +29,7 @@ export default function Reader({
 }: {
   params: Promise<{ id: string; ch: string }>;
 }) {
+  const { user, ready } = useAuth();
   const { id, ch } = use(params);
   const wantedBranch = useSearchParams().get('branch');
 
@@ -40,7 +48,7 @@ export default function Reader({
         setStory(s);
         const branch =
           (wantedBranch && s.branches.find((b) => b.id === wantedBranch)) ||
-          s.branches.find((b) => b.isRoot);
+          mainBranch(s);
         if (branch) setRead(await api.readBranch(branch.id));
       } catch (e) {
         setError((e as Error).message);
@@ -59,20 +67,11 @@ export default function Reader({
    * so sending them to the chapter picker asks a question they have just
    * answered by scrolling to the bottom of this page.
    */
-  async function forkHere() {
+  function forkHere() {
     if (!read) return;
     setForking(true);
-    setError(null);
-    try {
-      const branch = await api.fork(read.branch.id, {
-        atDepth: depth,
-        name: `nhánh từ chương ${depth + 1}`,
-      });
-      window.location.href = `/stories/${id}?branch=${branch.id}`;
-    } catch (e) {
-      setError((e as Error).message);
-      setForking(false);
-    }
+    // Nothing is created until the first chapter is saved.
+    window.location.href = `/stories/${id}?forkFrom=${read.branch.id}&atDepth=${depth}`;
   }
 
   // Landing on a new chapter should start at its top.
@@ -184,11 +183,18 @@ export default function Reader({
           thay đổi.
         </p>
         <button
-          onClick={forkHere}
+          onClick={ready && !user ? signIn : forkHere}
           disabled={forking}
           className="self-start text-[14px] font-medium text-[var(--color-accent)] hover:underline disabled:opacity-50"
         >
-          {forking ? 'Đang tạo nhánh…' : '⑂ Viết một kết cục khác →'}
+          {forking
+            ? 'Đang tạo nhánh…'
+            : ready && !user
+              // Inline rather than a card: this sits at the end of a chapter,
+              // and a sign-in box between the last line and the next-chapter
+              // arrows would read as the end of the story.
+              ? '⑂ Đăng nhập để viết một kết cục khác →'
+              : '⑂ Viết một kết cục khác →'}
         </button>
       </section>
 

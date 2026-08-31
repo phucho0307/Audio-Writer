@@ -1,17 +1,28 @@
 import {
   BadRequestException,
+  ConflictException,
   ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuthorType, type Branch, type Contribution } from '@prisma/client';
+import {
+  AuthorType,
+  Role,
+  Visibility,
+  type Branch,
+  type Contribution,
+  type Story,
+  type User,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { PaywallService } from './paywall.service';
 import type {
   CommitContributionDto,
   CreateStoryDto,
+  EditContributionDto,
   ForkBranchDto,
+  ReviseDto,
   UpdateStoryDto,
 } from './dto';
 
@@ -22,6 +33,70 @@ export class StoriesService {
     private readonly currentUser: CurrentUserService,
     private readonly paywall: PaywallService,
   ) {}
+
+  // -------------------------------------------------------------------------
+  // Permissions
+  //
+  // Ownership is the only role here. There is no admin, no moderator and no
+  // collaborator yet, so every rule reduces to "is this your story" - and
+  // keeping that in three named helpers means the answer cannot drift between
+  // callers the way it just had, with `update` quietly enforcing nothing.
+  // -------------------------------------------------------------------------
+
+  /**
+   * The story, or 403 unless the caller owns it or is an admin.
+   *
+   * Admin exists because the seeded sample stories belong to an account with
+   * no googleSub - nobody can sign in as it, so without this they would be
+   * permanently unmanageable. The role is set by hand in the database; there
+   * is no endpoint that grants it.
+   */
+  private async ownedStory(id: string): Promise<{ story: Story; user: User }> {
+    const user = await this.currentUser.current();
+    const story = await this.prisma.story.findUnique({ where: { id } });
+    if (!story) throw new NotFoundException(`Story ${id} not found`);
+
+    if (story.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_OWNER',
+        message: 'Chỉ chủ sở hữu truyện mới làm được việc này.',
+      });
+    }
+    return { story, user };
+  }
+
+  /**
+   * Prisma filter for stories a given viewer is allowed to see listed.
+   *
+   * UNLISTED is deliberately absent rather than hidden-but-fetchable: it means
+   * "reachable by link, not in the feed", which is what someone sharing a
+   * draft with friends wants. PRIVATE is owner-only everywhere.
+   */
+  /**
+   * Two different questions, so two different filters.
+   *
+   * The shelf is discovery: only PUBLIC, for everybody including admins - a
+   * moderator's view of every draft on the platform is a different feature,
+   * and folding it in here would put strangers' private work on the browse
+   * page. "Mine" is the workspace, where your own drafts are the point.
+   */
+  private listVisibility(user: User | null, mine: boolean) {
+    if (mine) return { ownerId: user!.id };
+    return { visibility: Visibility.PUBLIC };
+  }
+
+  /** Throws 404 - not 403 - when a private story is fetched by a stranger. */
+  private assertReadable(
+    story: { visibility: Visibility; ownerId: string },
+    user: User | null,
+  ): void {
+    if (story.visibility !== Visibility.PRIVATE) return;
+    if (story.ownerId === user?.id) return;
+    if (user?.role === Role.ADMIN) return;
+    // Confirming it exists would leak the id of every private draft to anyone
+    // willing to guess. Say nothing.
+    throw new NotFoundException('Story not found');
+  }
 
   // -------------------------------------------------------------------------
   // Stories
@@ -56,8 +131,17 @@ export class StoriesService {
     });
   }
 
-  async list() {
+  /** `mine` switches from the public shelf to the caller's own workspace. */
+  async list(mine = false) {
+    // The shelf is public and must work signed out; a workspace belongs to
+    // somebody, so asking for one without an account is a 401, not an empty
+    // list - "you own nothing" and "you are nobody" are different answers.
+    const viewer = mine
+      ? await this.currentUser.current()
+      : await this.currentUser.optional();
+
     return this.prisma.story.findMany({
+      where: this.listVisibility(viewer, mine),
       orderBy: { updatedAt: 'desc' },
       include: {
         owner: { select: { handle: true, displayName: true } },
@@ -86,11 +170,47 @@ export class StoriesService {
       },
     });
     if (!story) throw new NotFoundException(`Story ${id} not found`);
-    return story;
+
+    const viewer = await this.currentUser.optional();
+    this.assertReadable(story, viewer);
+
+    // Drafts are working copies. Listing them would announce that a revision
+    // is under way and hand out the id needed to read it.
+    const canSeeDrafts =
+      viewer?.id === story.ownerId || viewer?.role === Role.ADMIN;
+
+    return {
+      ...story,
+      branches: canSeeDrafts
+        ? story.branches
+        : story.branches.filter((b) => !b.isDraft),
+    };
   }
 
+  /**
+   * Owner-only. Covers publishing (`visibility`), marking a story finished
+   * (`status`), whether others may fork it, and the paywall knobs.
+   *
+   * Publishing is the one place the fork policy has to be answered. A story
+   * whose `allowForks` is still null cannot leave PRIVATE - otherwise the
+   * writer inherits a default they never saw, on the single decision that
+   * determines whether strangers can take their story somewhere else.
+   */
   async update(id: string, dto: UpdateStoryDto) {
-    await this.get(id);
+    const { story } = await this.ownedStory(id);
+
+    const visibility = dto.visibility ?? story.visibility;
+    const allowForks =
+      dto.allowForks !== undefined ? dto.allowForks : story.allowForks;
+
+    if (visibility !== Visibility.PRIVATE && allowForks === null) {
+      throw new BadRequestException({
+        code: 'FORK_POLICY_REQUIRED',
+        message:
+          'Hãy chọn cho phép rẽ nhánh hay không trước khi đăng truyện.',
+      });
+    }
+
     return this.prisma.story.update({ where: { id }, data: dto });
   }
 
@@ -99,14 +219,7 @@ export class StoriesService {
    * contributions, scenes and unlocks do the rest.
    */
   async remove(id: string) {
-    const user = await this.currentUser.current();
-    const story = await this.prisma.story.findUnique({ where: { id } });
-    if (!story) throw new NotFoundException(`Story ${id} not found`);
-
-    if (story.ownerId !== user.id) {
-      throw new ForbiddenException('Only the owner can delete this story.');
-    }
-
+    await this.ownedStory(id);
     await this.prisma.story.delete({ where: { id } });
     return { deleted: true, id };
   }
@@ -117,12 +230,13 @@ export class StoriesService {
    * doing it late.
    */
   async recordView(id: string) {
-    const user = await this.currentUser.current();
+    // Anonymous reads are most of the audience and must still count.
+    const user = await this.currentUser.optional();
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) throw new NotFoundException(`Story ${id} not found`);
 
     // The author refreshing their own page is not an audience.
-    if (story.ownerId === user.id) return { viewCount: story.viewCount };
+    if (user && story.ownerId === user.id) return { viewCount: story.viewCount };
 
     const updated = await this.prisma.story.update({
       where: { id },
@@ -130,6 +244,535 @@ export class StoriesService {
       select: { viewCount: true },
     });
     return updated;
+  }
+
+  /**
+   * Every chapter a branch reads as, own rows plus inherited ancestors.
+   *
+   * Shared by reading, revising and promoting so the three can never disagree
+   * about what a branch actually contains. Takes a transaction client so a
+   * revise sees a consistent snapshot.
+   */
+  private async readableChapters(
+    tx: Pick<PrismaService, 'contribution' | 'branch'>,
+    branch: Branch,
+  ): Promise<Contribution[]> {
+    const inherited: Contribution[] = [];
+    let cutoff = branch.forkedAtDepth;
+
+    for (const ancestorId of [...branch.lineage].reverse()) {
+      if (cutoff === null) break;
+
+      inherited.unshift(
+        ...(await tx.contribution.findMany({
+          where: { branchId: ancestorId, depth: { lte: cutoff } },
+          orderBy: { depth: 'asc' },
+        })),
+      );
+
+      const ancestor = await tx.branch.findUnique({
+        where: { id: ancestorId },
+        select: { forkedAtDepth: true },
+      });
+      cutoff = ancestor?.forkedAtDepth ?? null;
+    }
+
+    const own = await tx.contribution.findMany({
+      where: { branchId: branch.id },
+      orderBy: { depth: 'asc' },
+    });
+
+    // A branch overrides its ancestors at any depth it has written itself.
+    const ownDepths = new Set(own.map((c) => c.depth));
+    return [...inherited.filter((c) => !ownDepths.has(c.depth)), ...own].sort(
+      (a, b) => a.depth - b.depth,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Revising a published story
+  // -------------------------------------------------------------------------
+
+  /**
+   * Whether this branch is the one the story's headline numbers describe.
+   *
+   * Was `branch.isRoot` everywhere, which stops being true the moment a
+   * revision is promoted - the counters would then freeze on a branch nobody
+   * reads.
+   */
+  private isMain(
+    story: { mainBranchId: string | null },
+    branch: { id: string; isRoot: boolean },
+  ): boolean {
+    return story.mainBranchId
+      ? story.mainBranchId === branch.id
+      : branch.isRoot;
+  }
+
+  /** The branch readers land on. Null main means the root, for every story
+   * that has never been revised. */
+  private mainBranchOf(
+    story: { mainBranchId: string | null },
+    branches: Branch[],
+  ): Branch {
+    const main = story.mainBranchId
+      ? branches.find((b) => b.id === story.mainBranchId)
+      : branches.find((b) => b.isRoot);
+    if (!main) throw new NotFoundException('Story has no readable branch');
+    return main;
+  }
+
+  /**
+   * An editable copy of the current main branch.
+   *
+   * Copies the rows rather than inheriting them, which is the opposite of what
+   * an ordinary fork does and the whole point here: inheriting would leave the
+   * chapters owned by the published branch and therefore still frozen, so
+   * fixing a typo in chapter three would mean rewriting chapters three onward.
+   * A copy makes every chapter editable at once.
+   */
+  async revise(storyId: string, dto: ReviseDto = {}) {
+    const { story, user } = await this.ownedStory(storyId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const branches = await tx.branch.findMany({ where: { storyId } });
+      const main = this.mainBranchOf(story, branches);
+
+      const source = await this.readableChapters(tx, main);
+      if (source.length === 0) {
+        throw new BadRequestException({
+          code: 'NOTHING_TO_REVISE',
+          message: 'Truyện chưa có chương nào.',
+        });
+      }
+
+      const copy = await tx.branch.create({
+        data: {
+          storyId,
+          ownerId: user.id,
+          name:
+            dto.name?.trim() ||
+            `bản sửa ${new Date().toISOString().slice(0, 10)}`,
+          isRoot: false,
+          // Nobody reads it until it is promoted - that is the whole point of
+          // revising on a copy rather than in place.
+          isDraft: true,
+          // No forkedFromBranchId: nothing is inherited, so there is no
+          // ancestor to read through and no cutoff to respect.
+          lineage: [],
+          depth: source.length - 1,
+        },
+      });
+
+      let parentId: string | null = null;
+      for (const [depth, c] of source.entries()) {
+        const row: Contribution = await tx.contribution.create({
+          data: {
+            branchId: copy.id,
+            parentId,
+            depth,
+            title: c.title,
+            authorId: c.authorId,
+            authorType: c.authorType,
+            content: c.content as never,
+            textPlain: c.textPlain,
+            wordCount: c.wordCount,
+            modelProvider: c.modelProvider,
+            modelName: c.modelName,
+          },
+        });
+        parentId = row.id;
+      }
+
+      await tx.branch.update({
+        where: { id: copy.id },
+        data: { headContributionId: parentId },
+      });
+      await tx.story.update({
+        where: { id: storyId },
+        data: { branchCount: { increment: 1 } },
+      });
+
+      return copy;
+    });
+  }
+
+  /**
+   * Removes a branch nobody is reading.
+   *
+   * Refused for the branch readers land on - that is the published story, and
+   * deleting it would leave the story with nothing to show. Refused too when
+   * something has forked from it, because a fork reads its ancestors through
+   * `lineage`: dropping the row would not free the fork, it would break it.
+   */
+  async deleteBranch(branchId: string) {
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+    if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
+
+    // Branch ownership, not story ownership: a fork belongs to the person who
+    // made it, on somebody else's story, and they must be able to take it
+    // down again.
+    const user = await this.currentUser.current();
+    if (branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_BRANCH_OWNER',
+        message: 'Chỉ xoá được nhánh của chính bạn.',
+      });
+    }
+
+    const story = await this.prisma.story.findUniqueOrThrow({
+      where: { id: branch.storyId },
+    });
+
+    const disposable = await this.assertNobodyBuiltOn(branch.id, user.id);
+    const live = this.isMain(story, branch);
+
+    // Being published is not itself a reason to refuse - the writer can take
+    // their story down. But the root is the story's floor: removing it would
+    // leave nothing for main to fall back to.
+    if (live && branch.isRoot) {
+      throw new ConflictException({
+        code: 'BRANCH_IS_ROOT',
+        message:
+          'Đây là nhánh gốc của truyện. Xoá cả truyện nếu bạn muốn bỏ hẳn.',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // Empty branches of the caller's that only existed to read through this
+      // one. Removed first, so nothing is left pointing at a deleted ancestor.
+      if (disposable.length > 0) {
+        await tx.branch.deleteMany({ where: { id: { in: disposable } } });
+      }
+
+      // Contributions and audio clips cascade from the branch row.
+      await tx.branch.delete({ where: { id: branchId } });
+
+      if (live) {
+        // Main falls back to the root, and the headline numbers have to follow
+        // it - they described a branch that no longer exists.
+        const root = await tx.branch.findFirstOrThrow({
+          where: { storyId: branch.storyId, isRoot: true },
+        });
+        const chapters = await this.readableChapters(tx, root);
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: {
+            mainBranchId: null,
+            contributionCount: chapters.length,
+            wordCount: chapters.reduce((n, c) => n + c.wordCount, 0),
+            branchCount: { decrement: 1 + disposable.length },
+          },
+        });
+      } else {
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: { branchCount: { decrement: 1 + disposable.length } },
+        });
+      }
+
+      return { deleted: true, id: branchId, revertedToRoot: live };
+    });
+  }
+
+  /**
+   * Take a branch back to private.
+   *
+   * The mirror of promoting. For the branch readers are on this takes the
+   * whole story private, because a public story whose only readable branch is
+   * a draft is not a state anyone should be able to reach - there would be
+   * nothing to show and no error to explain it.
+   */
+  async unpublishBranch(branchId: string) {
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+    if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
+
+    const user = await this.currentUser.current();
+    if (branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_BRANCH_OWNER',
+        message: 'Chỉ ẩn được nhánh của chính bạn.',
+      });
+    }
+
+    // Hiding removes nothing, so an empty branch of your own is left alone -
+    // it just has nothing to inherit while this one is private.
+    await this.assertNobodyBuiltOn(branch.id, user.id);
+
+    const story = await this.prisma.story.findUniqueOrThrow({
+      where: { id: branch.storyId },
+    });
+    const live = this.isMain(story, branch);
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.branch.update({
+        where: { id: branchId },
+        data: { isDraft: true },
+      });
+
+      if (live) {
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: { visibility: Visibility.PRIVATE },
+        });
+      }
+
+      return { unpublished: true, id: branchId, storyWentPrivate: live };
+    });
+  }
+
+  /**
+   * The one thing that takes a branch out of its owner's hands.
+   *
+   * A fork reads its ancestors through `lineage`, so hiding or deleting a
+   * branch somebody forked from does not release it - it breaks their story.
+   * Nothing else is a reason to refuse: being published is a decision the
+   * writer is allowed to reverse.
+   */
+  private async assertNobodyBuiltOn(
+    branchId: string,
+    userId: string,
+  ): Promise<string[]> {
+    const children = await this.prisma.branch.findMany({
+      where: { lineage: { has: branchId } },
+      select: {
+        id: true,
+        name: true,
+        ownerId: true,
+        _count: { select: { contributions: true } },
+      },
+    });
+
+    // An empty branch of your own is not work, it is scaffolding - usually a
+    // fork someone opened, looked at and never wrote in. Refusing on account
+    // of one protects nothing and leaves the writer stuck behind a branch they
+    // do not remember making. It goes with the parent instead.
+    const disposable = children.filter(
+      (c) => c.ownerId === userId && c._count.contributions === 0,
+    );
+    const blocking = children.filter((c) => !disposable.includes(c));
+
+    if (blocking.length > 0) {
+      const names = blocking.map((c) => `“${c.name}”`).join(', ');
+      throw new ConflictException({
+        code: 'BRANCH_HAS_FORKS',
+        message: `${names} đọc truyện qua nhánh này, nên nó phải giữ nguyên. Hãy xoá nhánh đó trước nếu nó là của bạn.`,
+      });
+    }
+
+    return disposable.map((c) => c.id);
+  }
+
+  /**
+   * Make a branch the version readers get.
+   *
+   * The branch it replaces is left alone rather than deleted - it is what
+   * anyone who forked from it still reads through, and it is the only record
+   * of what the story said before.
+   */
+  async promote(branchId: string) {
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+    if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
+
+    const { user } = await this.ownedStory(branch.storyId);
+    if (branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_BRANCH_OWNER',
+        message: 'Chỉ dùng được nhánh của chính bạn làm bản chính.',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const chapters = await this.readableChapters(tx, branch);
+
+      // The headline numbers describe what readers see, so they follow the
+      // main branch rather than the root.
+      // No longer a working copy: this is the version people read.
+      if (branch.isDraft) {
+        await tx.branch.update({
+          where: { id: branch.id },
+          data: { isDraft: false },
+        });
+      }
+
+      await tx.story.update({
+        where: { id: branch.storyId },
+        data: {
+          mainBranchId: branch.id,
+          contributionCount: chapters.length,
+          wordCount: chapters.reduce((n, c) => n + c.wordCount, 0),
+        },
+      });
+
+      return { promoted: true, branchId: branch.id };
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // Editing a chapter
+  //
+  // Contributions are immutable because forks inherit them by reference - a
+  // fork copies no rows. Rewriting a chapter someone has already built on
+  // would change their story underneath them, and removing one would leave a
+  // hole in the depth sequence that `@@unique([branchId, depth])` and the
+  // parent chain both depend on.
+  //
+  // That is a reason to refuse when somebody depends on it, not a reason to
+  // refuse always. A writer fixing a typo in a chapter nobody has touched is
+  // the common case, and the model should not be the thing that stops them.
+  // -------------------------------------------------------------------------
+
+  /**
+   * Loads a chapter and proves it is safe to change.
+   *
+   * Only direct children need checking: a grandchild's slice of this branch is
+   * bounded by its parent's `forkedAtDepth`, and that parent is a direct child.
+   */
+  private async editableChapter(id: string) {
+    const user = await this.currentUser.current();
+
+    const chapter = await this.prisma.contribution.findUnique({
+      where: { id },
+      include: { branch: true },
+    });
+    if (!chapter) throw new NotFoundException(`Chapter ${id} not found`);
+
+    if (chapter.branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_OWNER',
+        message: 'Chỉ chủ sở hữu nhánh mới sửa được chương này.',
+      });
+    }
+
+    // A published story is a fixed thing to everyone reading it. Changing a
+    // chapter under them is what `revise` exists for: work on a copy, then
+    // promote it, so the swap happens once and in the open.
+    const story = await this.prisma.story.findUniqueOrThrow({
+      where: { id: chapter.branch.storyId },
+    });
+    if (
+      this.isMain(story, chapter.branch) &&
+      story.visibility !== Visibility.PRIVATE
+    ) {
+      throw new ConflictException({
+        code: 'STORY_PUBLISHED',
+        message:
+          'Truyện đã đăng nên không sửa trực tiếp được. Hãy tạo một nhánh để sửa, rồi dùng nhánh đó làm bản chính.',
+      });
+    }
+
+    const dependent = await this.prisma.branch.findFirst({
+      where: {
+        forkedFromBranchId: chapter.branchId,
+        forkedAtDepth: { gte: chapter.depth },
+      },
+      select: { id: true },
+    });
+    if (dependent) {
+      throw new ConflictException({
+        code: 'CHAPTER_INHERITED',
+        message:
+          'Đã có người rẽ nhánh từ chương này, nên không sửa được nữa. Hãy viết một chương mới để chỉnh lại.',
+      });
+    }
+
+    return { chapter, branch: chapter.branch };
+  }
+
+  async editChapter(id: string, dto: EditContributionDto) {
+    const { chapter, branch } = await this.editableChapter(id);
+    const words = countWords(dto.textPlain ?? chapter.textPlain);
+    const delta = words - chapter.wordCount;
+
+    return this.prisma.$transaction(async (tx) => {
+      const updated = await tx.contribution.update({
+        where: { id },
+        data: {
+          ...(dto.title !== undefined ? { title: dto.title } : {}),
+          ...(dto.textPlain !== undefined
+            ? {
+                textPlain: dto.textPlain,
+                content: { type: 'doc', text: dto.textPlain } as never,
+                wordCount: words,
+              }
+            : {}),
+        },
+      });
+
+      // Narration read the old text, so it is now wrong. Deleting the clips
+      // makes the next play regenerate rather than quietly playing a version
+      // of the chapter that no longer exists.
+      if (dto.textPlain !== undefined) {
+        await tx.audioClip.deleteMany({ where: { contributionId: id } });
+      }
+
+      const story = await tx.story.findUniqueOrThrow({
+        where: { id: branch.storyId },
+      });
+      if (this.isMain(story, branch) && delta !== 0) {
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: { wordCount: { increment: delta } },
+        });
+      }
+      return updated;
+    });
+  }
+
+  /**
+   * Removes the last chapter of a branch.
+   *
+   * The tip only. Deleting from the middle would renumber everything after it,
+   * which breaks forks pointing at those depths, audio clips keyed by depth,
+   * and the parent chain - for a convenience that "delete twice" already
+   * covers.
+   */
+  async deleteChapter(id: string) {
+    const { chapter, branch } = await this.editableChapter(id);
+
+    if (chapter.depth !== branch.depth || branch.headContributionId !== id) {
+      throw new ConflictException({
+        code: 'NOT_LAST_CHAPTER',
+        message: 'Chỉ xoá được chương cuối cùng.',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.contribution.delete({ where: { id } });
+
+      await tx.branch.update({
+        where: { id: branch.id },
+        data: {
+          headContributionId: chapter.parentId,
+          // Back to the fork point when the branch is empty again, so the next
+          // commit resumes where it did before anything was written.
+          depth: chapter.parentId
+            ? chapter.depth - 1
+            : (branch.forkedAtDepth ?? 0),
+        },
+      });
+
+      const story = await tx.story.findUniqueOrThrow({
+        where: { id: branch.storyId },
+      });
+      if (this.isMain(story, branch)) {
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: {
+            contributionCount: { decrement: 1 },
+            wordCount: { decrement: chapter.wordCount },
+          },
+        });
+      }
+
+      return { deleted: true, id };
+    });
   }
 
   // -------------------------------------------------------------------------
@@ -151,9 +794,27 @@ export class StoriesService {
     });
     if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
 
-    const user = await this.currentUser.current();
-    const access = await this.paywall.access(branch.story, user.id);
-    const maxDepth = await this.paywall.readableDepth(branch.story, user.id);
+    // Reading is the public surface: no token required. Signed out you get
+    // the free chapters, same as a signed-in stranger who has not unlocked it.
+    const user = await this.currentUser.optional();
+    this.assertReadable(branch.story, user);
+
+    // A draft is the author's working copy. 404 rather than 403: confirming
+    // it exists would tell anyone listing branches that a revision is under
+    // way, which is the author's business.
+    if (
+      branch.isDraft &&
+      branch.ownerId !== user?.id &&
+      user?.role !== Role.ADMIN
+    ) {
+      throw new NotFoundException(`Branch ${branchId} not found`);
+    }
+
+    const access = await this.paywall.access(branch.story, user?.id ?? null);
+    const maxDepth = await this.paywall.readableDepth(
+      branch.story,
+      user?.id ?? null,
+    );
 
     const inherited: Contribution[] = [];
     let cutoff = branch.forkedAtDepth;
@@ -248,7 +909,11 @@ export class StoriesService {
       // stranger writing one chapter on their own branch silently changed the
       // original's numbers for every reader. Fork activity belongs in
       // branchCount, which already tracks it.
-      if (branch.isRoot) {
+      const story = await tx.story.findUniqueOrThrow({
+        where: { id: branch.storyId },
+      });
+
+      if (this.isMain(story, branch)) {
         await tx.story.update({
           where: { id: branch.storyId },
           data: {
@@ -287,6 +952,21 @@ export class StoriesService {
       const story = await tx.story.findUniqueOrThrow({
         where: { id: parent.storyId },
       });
+
+      // The owner can always fork their own work - the switch is about what
+      // other people may do, not a lock the writer can shut themselves out of.
+      // `null` is undeclared, not permitted. A story in that state should be
+      // private anyway, but the fork path must not be the one place that
+      // treats "never answered" as yes.
+      if (story.allowForks !== true && story.ownerId !== user.id) {
+        throw new ForbiddenException({
+          code: 'FORKS_DISABLED',
+          message: 'Tác giả đã tắt tính năng rẽ nhánh cho truyện này.',
+        });
+      }
+
+      this.assertReadable(story, user);
+
       const maxDepth = await this.paywall.readableDepth(story, user.id);
       if (dto.atDepth > maxDepth) {
         throw new ForbiddenException({
@@ -300,7 +980,7 @@ export class StoriesService {
         data: {
           storyId: parent.storyId,
           ownerId: user.id,
-          name: dto.name ?? `fork-${Date.now().toString(36)}`,
+          name: dto.name?.trim() || `fork-${Date.now().toString(36)}`,
           forkedFromBranchId: parent.id,
           forkedAtDepth: dto.atDepth,
           // Ancestors of the parent, plus the parent itself. Root first.
@@ -309,12 +989,36 @@ export class StoriesService {
         },
       });
 
-      await tx.story.update({
-        where: { id: parent.storyId },
-        data: { branchCount: { increment: 1 } },
+      // The branch and its first chapter are one act. Writing them separately
+      // is what used to leave empty branches behind whenever the second half
+      // never happened.
+      const first = await tx.contribution.create({
+        data: {
+          branchId: branch.id,
+          parentId: null,
+          depth: dto.atDepth + 1,
+          title: dto.title,
+          authorId: user.id,
+          authorType: dto.authorType,
+          content: dto.content as never,
+          textPlain: dto.textPlain,
+          wordCount: countWords(dto.textPlain),
+          modelProvider: dto.modelProvider,
+          modelName: dto.modelName,
+        },
       });
 
-      return branch;
+      await tx.branch.update({
+        where: { id: branch.id },
+        data: { headContributionId: first.id, depth: first.depth },
+      });
+
+      await tx.story.update({
+        where: { id: parent.storyId },
+        data: { branchCount: { increment: 1 }, updatedAt: new Date() },
+      });
+
+      return { ...branch, headContributionId: first.id, depth: first.depth };
     });
   }
 }
