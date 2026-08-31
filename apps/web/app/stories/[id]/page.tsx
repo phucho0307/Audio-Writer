@@ -69,6 +69,7 @@ export default function StoryPage({
   const [showPricing, setShowPricing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [forkName, setForkName] = useState("");
+  const [showSettings, setShowSettings] = useState(false);
   /** Which chapter the contents list has opened for editing. */
   const [editingId, setEditingId] = useState<string | null>(null);
   const [confirmBranch, setConfirmBranch] = useState<string | null>(null);
@@ -589,6 +590,154 @@ export default function StoryPage({
           </section>
         )}
 
+        {/* ---- narration ---- */}
+        {!empty && branchId && <AudioPlayer branchId={branchId} />}
+
+        {/* Settings, behind a toggle.
+            These were below the story, which on an eight-chapter draft meant
+            scrolling past 7,500 words to reach the publish switch. Collapsed
+            rather than merely moved: they are consulted occasionally, and the
+            chapters are what the page is for. */}
+        {read.access.isOwner && !forking && (
+          <section className="flex flex-col gap-3">
+            <button
+              onClick={() => setShowSettings((v) => !v)}
+              className="flex items-center gap-2 self-start font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+            >
+              Cài đặt truyện {showSettings ? '▴' : '▾'}
+            </button>
+            {showSettings && (
+              <div className="flex flex-col gap-4">
+        {/* ---- writer: pricing ---- */}
+        {read.access.isOwner && (
+          <section className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-[var(--color-muted)]">
+              <span>{story.viewCount} lượt xem</span>
+              <span>·</span>
+              <span>
+                {story.unlockPrice > 0
+                  ? `${story.freeChapters} chương đầu miễn phí · ${story.unlockPrice} credit`
+                  : "toàn bộ miễn phí"}
+              </span>
+              <button
+                onClick={() => setShowPricing((v) => !v)}
+                className="underline hover:text-[var(--color-accent)]"
+              >
+                {showPricing ? "đóng" : "đặt giá"}
+              </button>
+              {(wallet?.balance ?? 0) > 0 && (
+                <span className="text-[var(--color-accent)]">
+                  đã kiếm {wallet?.balance} credit
+                </span>
+              )}
+            </div>
+
+            {showPricing && (
+              <div className="flex flex-col gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+                <p className="text-[13px] text-[var(--color-muted)]">
+                  Truyện vẫn luôn lan truyền được: các chương đầu không bao giờ
+                  bị khoá, ai cũng đọc và rẽ nhánh được. Chỉ phần sau mới tính
+                  phí.
+                </p>
+
+                <label className="flex items-center gap-3 text-[13px]">
+                  <span className="w-40">Số chương miễn phí</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    value={story.freeChapters}
+                    onChange={(e) =>
+                      setPricing({ freeChapters: Number(e.target.value) })
+                    }
+                    className="w-20 rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-2 py-1 font-mono"
+                  />
+                </label>
+
+                <label className="flex items-center gap-3 text-[13px]">
+                  <span className="w-40">Giá mở khoá (credit)</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={1000}
+                    value={story.unlockPrice}
+                    onChange={(e) =>
+                      setPricing({ unlockPrice: Number(e.target.value) })
+                    }
+                    className="w-20 rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-2 py-1 font-mono"
+                  />
+                  <span className="font-mono text-[11px] text-[var(--color-muted)]">
+                    0 = miễn phí hoàn toàn
+                  </span>
+                </label>
+
+                {story.unlockPrice > 0 && (
+                  <p className="font-mono text-[11px] text-[var(--color-muted)]">
+                    bạn nhận {Math.round((story.unlockPrice * 70) / 100)} credit
+                    mỗi lượt mở khoá (70%)
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+        {read.access.isOwner && !forking && (
+          <PublishPanel story={story} onChange={loadStory} />
+        )}
+        {read.access.isOwner && !forking && (
+          <RevisePanel
+            story={story}
+            branchId={branchId}
+            onBranch={setBranchId}
+            onChange={refresh}
+          />
+        )}
+        {/* Its own block rather than a link among the pricing controls, where it
+          was both hard to find and one slip away from an accidental click. */}
+        {read.access.isOwner && !forking && (
+          <section className="flex flex-col gap-3 rounded-lg border border-red-500/40 bg-[var(--color-surface)] p-4">
+            <div>
+              <div className="text-[13px] font-medium">Xoá truyện</div>
+              <p className="text-[12px] text-[var(--color-muted)]">
+                Xoá cả {story.contributionCount} chương, mọi nhánh và giọng đọc.
+                Không khôi phục được.
+              </p>
+            </div>
+
+            {confirmDelete ? (
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-[13px] text-red-600 dark:text-red-400">
+                  Chắc chắn xoá “{story.title}”?
+                </span>
+                <button
+                  onClick={remove}
+                  disabled={busy !== null}
+                  className="rounded-md bg-red-600 px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+                >
+                  {busy === "delete" ? "đang xoá…" : "xoá vĩnh viễn"}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="font-mono text-[12px] text-[var(--color-muted)] underline"
+                >
+                  huỷ
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="self-start rounded-md border border-red-500/60 px-3 py-1.5 font-mono text-[12px] text-red-600 transition-colors hover:bg-red-600 hover:text-white dark:text-red-400"
+              >
+                xoá truyện
+              </button>
+            )}
+          </section>
+        )}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* ---- contents, inline on narrow screens ---- */}
         <div className="lg:hidden">
           <Contents
@@ -659,9 +808,6 @@ export default function StoryPage({
             </div>
           </section>
         )}
-
-        {/* ---- narration ---- */}
-        {!empty && branchId && <AudioPlayer branchId={branchId} />}
 
         {/* ---- plot options ---- */}
         {options && (
@@ -751,135 +897,6 @@ export default function StoryPage({
                 </button>
               ))}
             </div>
-          </section>
-        )}
-
-        {/* ---- writer: pricing ---- */}
-        {read.access.isOwner && (
-          <section className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-[var(--color-muted)]">
-              <span>{story.viewCount} lượt xem</span>
-              <span>·</span>
-              <span>
-                {story.unlockPrice > 0
-                  ? `${story.freeChapters} chương đầu miễn phí · ${story.unlockPrice} credit`
-                  : "toàn bộ miễn phí"}
-              </span>
-              <button
-                onClick={() => setShowPricing((v) => !v)}
-                className="underline hover:text-[var(--color-accent)]"
-              >
-                {showPricing ? "đóng" : "đặt giá"}
-              </button>
-              {(wallet?.balance ?? 0) > 0 && (
-                <span className="text-[var(--color-accent)]">
-                  đã kiếm {wallet?.balance} credit
-                </span>
-              )}
-            </div>
-
-            {showPricing && (
-              <div className="flex flex-col gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
-                <p className="text-[13px] text-[var(--color-muted)]">
-                  Truyện vẫn luôn lan truyền được: các chương đầu không bao giờ
-                  bị khoá, ai cũng đọc và rẽ nhánh được. Chỉ phần sau mới tính
-                  phí.
-                </p>
-
-                <label className="flex items-center gap-3 text-[13px]">
-                  <span className="w-40">Số chương miễn phí</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={50}
-                    value={story.freeChapters}
-                    onChange={(e) =>
-                      setPricing({ freeChapters: Number(e.target.value) })
-                    }
-                    className="w-20 rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-2 py-1 font-mono"
-                  />
-                </label>
-
-                <label className="flex items-center gap-3 text-[13px]">
-                  <span className="w-40">Giá mở khoá (credit)</span>
-                  <input
-                    type="number"
-                    min={0}
-                    max={1000}
-                    value={story.unlockPrice}
-                    onChange={(e) =>
-                      setPricing({ unlockPrice: Number(e.target.value) })
-                    }
-                    className="w-20 rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-2 py-1 font-mono"
-                  />
-                  <span className="font-mono text-[11px] text-[var(--color-muted)]">
-                    0 = miễn phí hoàn toàn
-                  </span>
-                </label>
-
-                {story.unlockPrice > 0 && (
-                  <p className="font-mono text-[11px] text-[var(--color-muted)]">
-                    bạn nhận {Math.round((story.unlockPrice * 70) / 100)} credit
-                    mỗi lượt mở khoá (70%)
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
-        )}
-
-        {read.access.isOwner && !forking && (
-          <PublishPanel story={story} onChange={loadStory} />
-        )}
-
-        {read.access.isOwner && !forking && (
-          <RevisePanel
-            story={story}
-            branchId={branchId}
-            onBranch={setBranchId}
-            onChange={refresh}
-          />
-        )}
-
-        {/* Its own block rather than a link among the pricing controls, where it
-          was both hard to find and one slip away from an accidental click. */}
-        {read.access.isOwner && !forking && (
-          <section className="flex flex-col gap-3 rounded-lg border border-red-500/40 bg-[var(--color-surface)] p-4">
-            <div>
-              <div className="text-[13px] font-medium">Xoá truyện</div>
-              <p className="text-[12px] text-[var(--color-muted)]">
-                Xoá cả {story.contributionCount} chương, mọi nhánh và giọng đọc.
-                Không khôi phục được.
-              </p>
-            </div>
-
-            {confirmDelete ? (
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-[13px] text-red-600 dark:text-red-400">
-                  Chắc chắn xoá “{story.title}”?
-                </span>
-                <button
-                  onClick={remove}
-                  disabled={busy !== null}
-                  className="rounded-md bg-red-600 px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
-                >
-                  {busy === "delete" ? "đang xoá…" : "xoá vĩnh viễn"}
-                </button>
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="font-mono text-[12px] text-[var(--color-muted)] underline"
-                >
-                  huỷ
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setConfirmDelete(true)}
-                className="self-start rounded-md border border-red-500/60 px-3 py-1.5 font-mono text-[12px] text-red-600 transition-colors hover:bg-red-600 hover:text-white dark:text-red-400"
-              >
-                xoá truyện
-              </button>
-            )}
           </section>
         )}
 
