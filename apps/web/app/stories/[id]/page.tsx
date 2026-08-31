@@ -6,7 +6,9 @@ import { useSearchParams } from 'next/navigation';
 import AudioPlayer from './AudioPlayer';
 import PublishPanel from './PublishPanel';
 import Chapter from './Chapter';
+import RevisePanel from './RevisePanel';
 import {
+  mainBranch,
   ApiError,
   api,
   streamProse,
@@ -67,7 +69,7 @@ export default function StoryPage({
         b ??
         (wanted && s.branches.some((x) => x.id === wanted)
           ? wanted
-          : (s.branches.find((x) => x.isRoot)?.id ?? null)),
+          : (mainBranch(s)?.id ?? null)),
     );
   }, [id, wanted]);
 
@@ -368,7 +370,9 @@ export default function StoryPage({
                     : 'border-[var(--color-line)] text-[var(--color-muted)] hover:border-[var(--color-accent)]'
                 }`}
               >
-                {b.isRoot ? 'main' : b.name}
+                {b.id === (story.mainBranchId ?? mainBranch(story)?.id)
+                  ? `${b.isRoot ? 'main' : b.name} · đang đăng`
+                  : b.name}
                 {b.forkedAtDepth !== null && (
                   <span className="ml-1.5 font-mono text-[10px] opacity-60">
                     ⑂{b.forkedAtDepth}
@@ -652,6 +656,15 @@ export default function StoryPage({
 
       {read.access.isOwner && (
         <PublishPanel story={story} onChange={loadStory} />
+      )}
+
+      {read.access.isOwner && (
+        <RevisePanel
+          story={story}
+          branchId={branchId}
+          onBranch={setBranchId}
+          onChange={refresh}
+        />
       )}
 
       {/* Its own block rather than a link among the pricing controls, where it

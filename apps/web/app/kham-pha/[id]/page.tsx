@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
+  mainBranch,
   api,
   type BranchRead,
   type Contribution,
@@ -38,7 +39,7 @@ export default function ForkPicker({
       try {
         const s = await api.getStory(id);
         setStory(s);
-        const root = s.branches.find((b) => b.isRoot);
+        const root = mainBranch(s);
         if (root) setRead(await api.readBranch(root.id));
       } catch (e) {
         setError((e as Error).message);

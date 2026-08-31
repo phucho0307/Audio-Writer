@@ -234,6 +234,191 @@ export class StoriesService {
     return updated;
   }
 
+  /**
+   * Every chapter a branch reads as, own rows plus inherited ancestors.
+   *
+   * Shared by reading, revising and promoting so the three can never disagree
+   * about what a branch actually contains. Takes a transaction client so a
+   * revise sees a consistent snapshot.
+   */
+  private async readableChapters(
+    tx: Pick<PrismaService, 'contribution' | 'branch'>,
+    branch: Branch,
+  ): Promise<Contribution[]> {
+    const inherited: Contribution[] = [];
+    let cutoff = branch.forkedAtDepth;
+
+    for (const ancestorId of [...branch.lineage].reverse()) {
+      if (cutoff === null) break;
+
+      inherited.unshift(
+        ...(await tx.contribution.findMany({
+          where: { branchId: ancestorId, depth: { lte: cutoff } },
+          orderBy: { depth: 'asc' },
+        })),
+      );
+
+      const ancestor = await tx.branch.findUnique({
+        where: { id: ancestorId },
+        select: { forkedAtDepth: true },
+      });
+      cutoff = ancestor?.forkedAtDepth ?? null;
+    }
+
+    const own = await tx.contribution.findMany({
+      where: { branchId: branch.id },
+      orderBy: { depth: 'asc' },
+    });
+
+    // A branch overrides its ancestors at any depth it has written itself.
+    const ownDepths = new Set(own.map((c) => c.depth));
+    return [...inherited.filter((c) => !ownDepths.has(c.depth)), ...own].sort(
+      (a, b) => a.depth - b.depth,
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // Revising a published story
+  // -------------------------------------------------------------------------
+
+  /**
+   * Whether this branch is the one the story's headline numbers describe.
+   *
+   * Was `branch.isRoot` everywhere, which stops being true the moment a
+   * revision is promoted - the counters would then freeze on a branch nobody
+   * reads.
+   */
+  private isMain(
+    story: { mainBranchId: string | null },
+    branch: { id: string; isRoot: boolean },
+  ): boolean {
+    return story.mainBranchId
+      ? story.mainBranchId === branch.id
+      : branch.isRoot;
+  }
+
+  /** The branch readers land on. Null main means the root, for every story
+   * that has never been revised. */
+  private mainBranchOf(
+    story: { mainBranchId: string | null },
+    branches: Branch[],
+  ): Branch {
+    const main = story.mainBranchId
+      ? branches.find((b) => b.id === story.mainBranchId)
+      : branches.find((b) => b.isRoot);
+    if (!main) throw new NotFoundException('Story has no readable branch');
+    return main;
+  }
+
+  /**
+   * An editable copy of the current main branch.
+   *
+   * Copies the rows rather than inheriting them, which is the opposite of what
+   * an ordinary fork does and the whole point here: inheriting would leave the
+   * chapters owned by the published branch and therefore still frozen, so
+   * fixing a typo in chapter three would mean rewriting chapters three onward.
+   * A copy makes every chapter editable at once.
+   */
+  async revise(storyId: string) {
+    const { story, user } = await this.ownedStory(storyId);
+
+    return this.prisma.$transaction(async (tx) => {
+      const branches = await tx.branch.findMany({ where: { storyId } });
+      const main = this.mainBranchOf(story, branches);
+
+      const source = await this.readableChapters(tx, main);
+      if (source.length === 0) {
+        throw new BadRequestException({
+          code: 'NOTHING_TO_REVISE',
+          message: 'Truyện chưa có chương nào.',
+        });
+      }
+
+      const copy = await tx.branch.create({
+        data: {
+          storyId,
+          ownerId: user.id,
+          name: `bản sửa ${new Date().toISOString().slice(0, 10)}`,
+          isRoot: false,
+          // No forkedFromBranchId: nothing is inherited, so there is no
+          // ancestor to read through and no cutoff to respect.
+          lineage: [],
+          depth: source.length - 1,
+        },
+      });
+
+      let parentId: string | null = null;
+      for (const [depth, c] of source.entries()) {
+        const row: Contribution = await tx.contribution.create({
+          data: {
+            branchId: copy.id,
+            parentId,
+            depth,
+            title: c.title,
+            authorId: c.authorId,
+            authorType: c.authorType,
+            content: c.content as never,
+            textPlain: c.textPlain,
+            wordCount: c.wordCount,
+            modelProvider: c.modelProvider,
+            modelName: c.modelName,
+          },
+        });
+        parentId = row.id;
+      }
+
+      await tx.branch.update({
+        where: { id: copy.id },
+        data: { headContributionId: parentId },
+      });
+      await tx.story.update({
+        where: { id: storyId },
+        data: { branchCount: { increment: 1 } },
+      });
+
+      return copy;
+    });
+  }
+
+  /**
+   * Make a branch the version readers get.
+   *
+   * The branch it replaces is left alone rather than deleted - it is what
+   * anyone who forked from it still reads through, and it is the only record
+   * of what the story said before.
+   */
+  async promote(branchId: string) {
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+    if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
+
+    const { user } = await this.ownedStory(branch.storyId);
+    if (branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_BRANCH_OWNER',
+        message: 'Chỉ dùng được nhánh của chính bạn làm bản chính.',
+      });
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      const chapters = await this.readableChapters(tx, branch);
+
+      // The headline numbers describe what readers see, so they follow the
+      // main branch rather than the root.
+      await tx.story.update({
+        where: { id: branch.storyId },
+        data: {
+          mainBranchId: branch.id,
+          contributionCount: chapters.length,
+          wordCount: chapters.reduce((n, c) => n + c.wordCount, 0),
+        },
+      });
+
+      return { promoted: true, branchId: branch.id };
+    });
+  }
+
   // -------------------------------------------------------------------------
   // Editing a chapter
   //
@@ -267,6 +452,23 @@ export class StoriesService {
       throw new ForbiddenException({
         code: 'NOT_OWNER',
         message: 'Chỉ chủ sở hữu nhánh mới sửa được chương này.',
+      });
+    }
+
+    // A published story is a fixed thing to everyone reading it. Changing a
+    // chapter under them is what `revise` exists for: work on a copy, then
+    // promote it, so the swap happens once and in the open.
+    const story = await this.prisma.story.findUniqueOrThrow({
+      where: { id: chapter.branch.storyId },
+    });
+    if (
+      this.isMain(story, chapter.branch) &&
+      story.visibility !== Visibility.PRIVATE
+    ) {
+      throw new ConflictException({
+        code: 'STORY_PUBLISHED',
+        message:
+          'Truyện đã đăng nên không sửa trực tiếp được. Hãy tạo một nhánh để sửa, rồi dùng nhánh đó làm bản chính.',
       });
     }
 
@@ -315,7 +517,10 @@ export class StoriesService {
         await tx.audioClip.deleteMany({ where: { contributionId: id } });
       }
 
-      if (branch.isRoot && delta !== 0) {
+      const story = await tx.story.findUniqueOrThrow({
+        where: { id: branch.storyId },
+      });
+      if (this.isMain(story, branch) && delta !== 0) {
         await tx.story.update({
           where: { id: branch.storyId },
           data: { wordCount: { increment: delta } },
@@ -358,7 +563,10 @@ export class StoriesService {
         },
       });
 
-      if (branch.isRoot) {
+      const story = await tx.story.findUniqueOrThrow({
+        where: { id: branch.storyId },
+      });
+      if (this.isMain(story, branch)) {
         await tx.story.update({
           where: { id: branch.storyId },
           data: {
@@ -495,7 +703,11 @@ export class StoriesService {
       // stranger writing one chapter on their own branch silently changed the
       // original's numbers for every reader. Fork activity belongs in
       // branchCount, which already tracks it.
-      if (branch.isRoot) {
+      const story = await tx.story.findUniqueOrThrow({
+        where: { id: branch.storyId },
+      });
+
+      if (this.isMain(story, branch)) {
         await tx.story.update({
           where: { id: branch.storyId },
           data: {

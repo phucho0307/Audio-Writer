@@ -19,6 +19,7 @@ export type Story = {
   unlockPrice: number;
   visibility: 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
   allowForks: boolean;
+  mainBranchId: string | null;
   updatedAt: string;
   owner?: { handle: string; displayName: string };
   branches: BranchSummary[];
@@ -111,6 +112,21 @@ export type NarrateResult = {
   chapters: ChapterAudio[];
 };
 
+/**
+ * The branch readers land on.
+ *
+ * Not always the root: revising a published story promotes a copy, and from
+ * then on the root is history. Everything that used to reach for `isRoot`
+ * goes through here so the answer cannot differ between pages.
+ */
+export function mainBranch(story: Story): BranchSummary | undefined {
+  return (
+    (story.mainBranchId
+      ? story.branches.find((b) => b.id === story.mainBranchId)
+      : undefined) ?? story.branches.find((b) => b.isRoot)
+  );
+}
+
 export class ApiError extends Error {
   constructor(
     public readonly status: number,
@@ -200,6 +216,17 @@ export const api = {
     }),
 
   readBranch: (id: string) => call<BranchRead>(`/branches/${id}`),
+
+  /** An editable copy of the published version. */
+  revise: (storyId: string) =>
+    call<BranchSummary>(`/stories/${storyId}/revise`, { method: 'POST' }),
+
+  /** Make a branch the one readers land on. */
+  promote: (branchId: string) =>
+    call<{ promoted: boolean; branchId: string }>(
+      `/branches/${branchId}/promote`,
+      { method: 'POST' },
+    ),
 
   /** Owner-only, and refused once someone has forked from this chapter. */
   editChapter: (

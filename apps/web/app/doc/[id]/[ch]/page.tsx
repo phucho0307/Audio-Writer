@@ -3,7 +3,12 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { api, type BranchRead, type Story } from '@/lib/api';
+import {
+  mainBranch,
+  api,
+  type BranchRead,
+  type Story,
+} from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { signIn } from '@/lib/auth';
 import ChapterNarration from './ChapterNarration';
@@ -43,7 +48,7 @@ export default function Reader({
         setStory(s);
         const branch =
           (wantedBranch && s.branches.find((b) => b.id === wantedBranch)) ||
-          s.branches.find((b) => b.isRoot);
+          mainBranch(s);
         if (branch) setRead(await api.readBranch(branch.id));
       } catch (e) {
         setError((e as Error).message);

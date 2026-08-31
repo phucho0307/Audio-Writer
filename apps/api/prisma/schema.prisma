@@ -127,6 +127,15 @@ model Story {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  /// The branch readers land on.
+  ///
+  /// Normally the root, but a writer revising a published story works on a
+  /// copy and promotes it here when it is ready - so the version people read
+  /// changes atomically, and the branch it replaced stays as history. Null
+  /// means "the root branch", which is every story until someone revises one.
+  mainBranchId String? @unique @db.Uuid
+  mainBranch   Branch? @relation("MainBranch", fields: [mainBranchId], references: [id], onDelete: SetNull)
+
   branches Branch[]
   unlocks  StoryUnlock[]
 
@@ -160,6 +169,9 @@ model Branch {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  /// Set when this branch is the story's canonical one. See Story.mainBranch.
+  mainOf Story? @relation("MainBranch")
 
   contributions Contribution[]
   scenes        Scene[]

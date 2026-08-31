@@ -86,6 +86,18 @@ export class StoriesController {
   }
 
   /** The resolved reading view: inherited contributions plus this branch's own. */
+  /** An editable copy of the published version, to revise and then promote. */
+  @Post('stories/:id/revise')
+  revise(@Param('id', ParseUUIDPipe) id: string) {
+    return this.stories.revise(id);
+  }
+
+  /** Make this branch the one readers land on. */
+  @Post('branches/:id/promote')
+  promote(@Param('id', ParseUUIDPipe) id: string) {
+    return this.stories.promote(id);
+  }
+
   /** Owner-only, and only while nobody has forked from this chapter. */
   @Patch('contributions/:id')
   editChapter(
