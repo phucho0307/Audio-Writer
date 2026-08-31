@@ -87,7 +87,9 @@ export default function Chapter({
       className="group/ch flex scroll-mt-6 flex-col gap-1.5"
     >
       <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[var(--color-muted)]">
-        <span>#{chapter.depth}</span>
+        {/* `depth` is 0-based - it is a position in the chain, not a
+            chapter number. Everywhere it is shown to a reader it gets +1. */}
+        <span>Chương {chapter.depth + 1}</span>
         <span
           className={
             chapter.authorType === 'AI'
