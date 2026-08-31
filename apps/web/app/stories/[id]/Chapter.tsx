@@ -104,9 +104,13 @@ export default function Chapter({
         {inherited && <span className="opacity-60">· kế thừa</span>}
 
         {/* Inherited chapters belong to the branch they came from; editing one
-            here would rewrite somebody else's story. */}
+            here would rewrite somebody else's story.
+
+            Always visible rather than hover-revealed: deleting the last
+            chapter makes the one before it the last, and hunting for a hover
+            target that moved is what made deleting a few feel impossible. */}
         {canEdit && !inherited && !editing && (
-          <span className="ml-auto flex items-center gap-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover/ch:opacity-100">
+          <span className="ml-auto flex items-center gap-2">
             <button
               onClick={onOpen}
               className="normal-case underline hover:text-[var(--color-ink)]"

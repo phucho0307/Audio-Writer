@@ -153,6 +153,34 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
 
   return (
     <section className="flex flex-col gap-3 border-y border-[var(--color-line)] py-3.5">
+      {/* At the top, the way the reader has it. Below the chapter list it sat
+          off-screen the moment a story got long enough to need one. */}
+      {playing !== null && (
+        <div className="flex flex-col gap-1.5">
+          <audio
+            ref={audioRef}
+            controls
+            onEnded={onEnded}
+            onError={() => setError('Không tải được file âm thanh.')}
+            className="h-9 w-full"
+            preload="none"
+          />
+          <div className="flex items-center gap-3 font-mono text-[10.5px] text-[var(--color-muted)]">
+            <span>Chương {playing + 1}</span>
+            <span className="opacity-40">·</span>
+            <span className="min-w-0 truncate">
+              {chapters?.find((c) => c.depth === playing)?.preview}
+            </span>
+            <button
+              onClick={() => setPlaying(null)}
+              className="ml-auto flex-none hover:text-[var(--color-accent)]"
+            >
+              đóng
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <button
           onClick={playAll}
@@ -242,17 +270,6 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
           );
         })}
       </ol>
-
-      {playing !== null && (
-        <audio
-          ref={audioRef}
-          controls
-          onEnded={onEnded}
-          onError={() => setError('Không tải được file âm thanh.')}
-          className="h-9 w-full"
-          preload="none"
-        />
-      )}
 
       {error && (
         <p className="font-mono text-[11px] text-amber-600 dark:text-amber-400">
