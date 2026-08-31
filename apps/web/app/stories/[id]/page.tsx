@@ -205,6 +205,21 @@ export default function StoryPage({
     await loadStory();
   }
 
+  /** Back to private. Only forks can stop this. */
+  async function hideBranch(id: string) {
+    setBusy('branch');
+    setError(null);
+    try {
+      await api.unpublishBranch(id);
+      setConfirmBranch(null);
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   /** A branch nobody reads. The API refuses the live one and any that have
    * been forked from, so failures show rather than being guessed at here. */
   async function removeBranch(id: string) {
@@ -418,15 +433,24 @@ export default function StoryPage({
 
                   {/* The live branch is the published story; removing it would
                       leave readers with nothing. */}
-                  {mine && !live && (
+                  {mine && (
                     confirmBranch === b.id ? (
-                      <span className="flex items-center gap-1 font-mono text-[10px]">
+                      <span className="flex items-center gap-1.5 font-mono text-[10px]">
+                        {!b.isDraft && (
+                          <button
+                            onClick={() => void hideBranch(b.id)}
+                            disabled={busy !== null}
+                            className="underline hover:text-[var(--color-ink)] disabled:opacity-40"
+                          >
+                            ẩn
+                          </button>
+                        )}
                         <button
                           onClick={() => void removeBranch(b.id)}
                           disabled={busy !== null}
                           className="text-red-500 underline disabled:opacity-40"
                         >
-                          {busy === 'branch' ? 'đang xoá…' : 'xoá?'}
+                          {busy === 'branch' ? '…' : 'xoá'}
                         </button>
                         <button
                           onClick={() => setConfirmBranch(null)}

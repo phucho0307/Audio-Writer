@@ -99,6 +99,12 @@ export class StoriesController {
     return this.stories.deleteBranch(id);
   }
 
+  /** Back to private. Takes the story private too if this is the live one. */
+  @Post('branches/:id/unpublish')
+  unpublishBranch(@Param('id', ParseUUIDPipe) id: string) {
+    return this.stories.unpublishBranch(id);
+  }
+
   /** Make this branch the one readers land on. */
   @Post('branches/:id/promote')
   promote(@Param('id', ParseUUIDPipe) id: string) {

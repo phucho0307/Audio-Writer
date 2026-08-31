@@ -426,34 +426,118 @@ export class StoriesService {
       where: { id: branch.storyId },
     });
 
-    if (this.isMain(story, branch)) {
-      throw new ConflictException({
-        code: 'BRANCH_IS_LIVE',
-        message:
-          'Đây là bản đang đăng. Hãy dùng nhánh khác làm bản chính trước, hoặc xoá cả truyện.',
-      });
-    }
+    await this.assertNobodyBuiltOn(branch.id);
 
-    const child = await this.prisma.branch.findFirst({
-      where: { lineage: { has: branch.id } },
-      select: { id: true },
-    });
-    if (child) {
+    const live = this.isMain(story, branch);
+
+    // Being published is not itself a reason to refuse - the writer can take
+    // their story down. But the root is the story's floor: removing it would
+    // leave nothing for main to fall back to.
+    if (live && branch.isRoot) {
       throw new ConflictException({
-        code: 'BRANCH_HAS_FORKS',
-        message: 'Đã có người rẽ nhánh từ nhánh này nên không xoá được.',
+        code: 'BRANCH_IS_ROOT',
+        message:
+          'Đây là nhánh gốc của truyện. Xoá cả truyện nếu bạn muốn bỏ hẳn.',
       });
     }
 
     return this.prisma.$transaction(async (tx) => {
       // Contributions and audio clips cascade from the branch row.
       await tx.branch.delete({ where: { id: branchId } });
-      await tx.story.update({
-        where: { id: branch.storyId },
-        data: { branchCount: { decrement: 1 } },
-      });
-      return { deleted: true, id: branchId };
+
+      if (live) {
+        // Main falls back to the root, and the headline numbers have to follow
+        // it - they described a branch that no longer exists.
+        const root = await tx.branch.findFirstOrThrow({
+          where: { storyId: branch.storyId, isRoot: true },
+        });
+        const chapters = await this.readableChapters(tx, root);
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: {
+            mainBranchId: null,
+            contributionCount: chapters.length,
+            wordCount: chapters.reduce((n, c) => n + c.wordCount, 0),
+            branchCount: { decrement: 1 },
+          },
+        });
+      } else {
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: { branchCount: { decrement: 1 } },
+        });
+      }
+
+      return { deleted: true, id: branchId, revertedToRoot: live };
     });
+  }
+
+  /**
+   * Take a branch back to private.
+   *
+   * The mirror of promoting. For the branch readers are on this takes the
+   * whole story private, because a public story whose only readable branch is
+   * a draft is not a state anyone should be able to reach - there would be
+   * nothing to show and no error to explain it.
+   */
+  async unpublishBranch(branchId: string) {
+    const branch = await this.prisma.branch.findUnique({
+      where: { id: branchId },
+    });
+    if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
+
+    const user = await this.currentUser.current();
+    if (branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_BRANCH_OWNER',
+        message: 'Chỉ ẩn được nhánh của chính bạn.',
+      });
+    }
+
+    await this.assertNobodyBuiltOn(branch.id);
+
+    const story = await this.prisma.story.findUniqueOrThrow({
+      where: { id: branch.storyId },
+    });
+    const live = this.isMain(story, branch);
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.branch.update({
+        where: { id: branchId },
+        data: { isDraft: true },
+      });
+
+      if (live) {
+        await tx.story.update({
+          where: { id: branch.storyId },
+          data: { visibility: Visibility.PRIVATE },
+        });
+      }
+
+      return { unpublished: true, id: branchId, storyWentPrivate: live };
+    });
+  }
+
+  /**
+   * The one thing that takes a branch out of its owner's hands.
+   *
+   * A fork reads its ancestors through `lineage`, so hiding or deleting a
+   * branch somebody forked from does not release it - it breaks their story.
+   * Nothing else is a reason to refuse: being published is a decision the
+   * writer is allowed to reverse.
+   */
+  private async assertNobodyBuiltOn(branchId: string): Promise<void> {
+    const child = await this.prisma.branch.findFirst({
+      where: { lineage: { has: branchId } },
+      select: { id: true },
+    });
+    if (child) {
+      throw new ConflictException({
+        code: 'BRANCH_HAS_FORKS',
+        message:
+          'Đã có người rẽ nhánh từ nhánh này. Họ đọc truyện qua nhánh của bạn, nên nó phải giữ nguyên.',
+      });
+    }
   }
 
   /**

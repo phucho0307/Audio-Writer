@@ -242,6 +242,13 @@ export const api = {
       method: 'DELETE',
     }),
 
+  /** Back to private. Takes the story private too if this is the live one. */
+  unpublishBranch: (branchId: string) =>
+    call<{ unpublished: boolean; id: string; storyWentPrivate: boolean }>(
+      `/branches/${branchId}/unpublish`,
+      { method: 'POST' },
+    ),
+
   /** Make a branch the one readers land on. */
   promote: (branchId: string) =>
     call<{ promoted: boolean; branchId: string }>(
