@@ -22,6 +22,8 @@ export default function RevisePanel({
   onChange: () => Promise<void> | void;
 }) {
   const [busy, setBusy] = useState<'revise' | 'promote' | null>(null);
+  const [naming, setNaming] = useState(false);
+  const [name, setName] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const main = mainBranch(story);
@@ -35,9 +37,11 @@ export default function RevisePanel({
     setBusy('revise');
     setError(null);
     try {
-      const branch = await api.revise(story.id);
+      const branch = await api.revise(story.id, name.trim() || undefined);
       await onChange();
       onBranch(branch.id);
+      setNaming(false);
+      setName('');
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
     } finally {
@@ -71,13 +75,48 @@ export default function RevisePanel({
               nó làm bản chính. Viết chương mới thì vẫn bình thường.
             </p>
           </div>
-          <button
-            onClick={revise}
-            disabled={busy !== null}
-            className="self-start rounded-md border border-[var(--color-line)] px-3 py-1.5 font-mono text-[12px] transition-colors hover:border-[var(--color-accent)] disabled:opacity-40"
-          >
-            {busy === 'revise' ? 'đang tạo…' : '⑂ tạo bản sửa'}
-          </button>
+          {naming ? (
+            <div className="flex flex-col gap-2 rounded-md border border-[var(--color-accent)] bg-[var(--color-accent-soft)] p-3">
+              <label className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
+                Tên bản sửa
+              </label>
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && void revise()}
+                maxLength={80}
+                placeholder="ví dụ: sửa lỗi chính tả chương 3"
+                className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 text-[14px]"
+              />
+              <p className="text-[11px] text-[var(--color-muted)]">
+                Chỉ bạn thấy tên này, để phân biệt các bản sửa với nhau. Bỏ
+                trống cũng được.
+              </p>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={revise}
+                  disabled={busy !== null}
+                  className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+                >
+                  {busy === 'revise' ? 'đang tạo…' : 'tạo bản sửa'}
+                </button>
+                <button
+                  onClick={() => setNaming(false)}
+                  className="font-mono text-[12px] text-[var(--color-muted)] underline"
+                >
+                  huỷ
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setNaming(true)}
+              className="self-start rounded-md border border-[var(--color-line)] px-3 py-1.5 font-mono text-[12px] transition-colors hover:border-[var(--color-accent)]"
+            >
+              ⑂ tạo bản sửa
+            </button>
+          )}
         </>
       ) : (
         <>

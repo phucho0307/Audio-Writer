@@ -58,6 +58,8 @@ export default function StoryPage({
   const [wallet, setWallet] = useState<Wallet | null>(null);
   const [showPricing, setShowPricing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /** Which chapter the contents list has opened for editing. */
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const draftRef = useRef<HTMLTextAreaElement>(null);
 
@@ -261,6 +263,15 @@ export default function StoryPage({
   }
 
   const empty = read.contributions.length === 0;
+
+  // The branch readers land on is frozen once the story is public - changing a
+  // chapter under them is what a revision is for. Unlike the fork-inheritance
+  // rule, this one is knowable here, so the controls are hidden rather than
+  // offered and refused.
+  const liveBranchId = story.mainBranchId ?? mainBranch(story)?.id ?? null;
+  const frozen =
+    story.visibility !== 'PRIVATE' && branchId === liveBranchId;
+  const chaptersEditable = read.access.isOwner && !frozen;
   // Grey the AI out when it is spent, rather than letting a click fail. Writing
   // by hand stays available regardless - that is the point of the cap.
   const aiSpent = quota !== null && !quota.unlimited && quota.totalRemaining === 0;
@@ -387,8 +398,13 @@ export default function StoryPage({
       {/* ---- contents ---- */}
       {read.contributions.length > 1 && (
         <section className="flex flex-col">
-          <h2 className="border-b border-[var(--color-line)] pb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)]">
-            Mục lục
+          <h2 className="flex items-baseline justify-between gap-3 border-b border-[var(--color-line)] pb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)]">
+            <span>Mục lục</span>
+            {chaptersEditable && (
+              <span className="normal-case tracking-normal opacity-70">
+                bấm vào chương để sửa
+              </span>
+            )}
           </h2>
 
           <ol className="flex flex-col">
@@ -398,6 +414,13 @@ export default function StoryPage({
                     page, and navigating away would lose the editor state. */}
                 <a
                   href={`#chuong-${c.depth + 1}`}
+                  onClick={() => {
+                    // Picking a chapter from the list is how you choose what
+                    // to edit; the anchor still does the scrolling.
+                    if (chaptersEditable && c.branchId === branchId) {
+                      setEditingId(c.id);
+                    }
+                  }}
                   className="group flex items-baseline gap-4 border-b border-[var(--color-line)] py-2.5 transition-colors"
                 >
                   <span className="w-7 flex-none font-mono text-[12px] tabular-nums text-[var(--color-muted)]">
@@ -444,7 +467,10 @@ export default function StoryPage({
             chapter={c}
             inherited={c.branchId !== branchId}
             isLast={i === read.contributions.length - 1}
-            canEdit={read.access.isOwner}
+            canEdit={chaptersEditable}
+            editing={editingId === c.id}
+            onOpen={() => setEditingId(c.id)}
+            onClose={() => setEditingId(null)}
             onChange={refresh}
           />
         ))}
@@ -726,7 +752,7 @@ export default function StoryPage({
             disabled={!draft.trim() || busy !== null}
             className="rounded-md bg-[var(--color-accent)] px-3.5 py-2 text-sm font-medium text-white disabled:opacity-40"
           >
-            {busy === 'commit' ? 'Đang lưu…' : 'Lưu đoạn này'}
+            {busy === 'commit' ? 'Đang lưu…' : 'Lưu thay đổi'}
           </button>
 
           {draft.trim() && (
@@ -735,7 +761,7 @@ export default function StoryPage({
               disabled={busy !== null}
               className="rounded-md border border-[var(--color-line)] px-3.5 py-2 text-sm hover:border-[var(--color-accent)] disabled:opacity-40"
             >
-              Lưu · ghi nhận AI viết
+              Lưu thay đổi · ghi nhận AI viết
             </button>
           )}
 

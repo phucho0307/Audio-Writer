@@ -22,6 +22,7 @@ import type {
   CreateStoryDto,
   EditContributionDto,
   ForkBranchDto,
+  ReviseDto,
   UpdateStoryDto,
 } from './dto';
 
@@ -319,7 +320,7 @@ export class StoriesService {
    * fixing a typo in chapter three would mean rewriting chapters three onward.
    * A copy makes every chapter editable at once.
    */
-  async revise(storyId: string) {
+  async revise(storyId: string, dto: ReviseDto = {}) {
     const { story, user } = await this.ownedStory(storyId);
 
     return this.prisma.$transaction(async (tx) => {
@@ -338,7 +339,9 @@ export class StoriesService {
         data: {
           storyId,
           ownerId: user.id,
-          name: `bản sửa ${new Date().toISOString().slice(0, 10)}`,
+          name:
+            dto.name?.trim() ||
+            `bản sửa ${new Date().toISOString().slice(0, 10)}`,
           isRoot: false,
           // No forkedFromBranchId: nothing is inherited, so there is no
           // ancestor to read through and no cutoff to respect.

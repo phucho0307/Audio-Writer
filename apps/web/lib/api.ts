@@ -218,8 +218,11 @@ export const api = {
   readBranch: (id: string) => call<BranchRead>(`/branches/${id}`),
 
   /** An editable copy of the published version. */
-  revise: (storyId: string) =>
-    call<BranchSummary>(`/stories/${storyId}/revise`, { method: 'POST' }),
+  revise: (storyId: string, name?: string) =>
+    call<BranchSummary>(`/stories/${storyId}/revise`, {
+      method: 'POST',
+      body: JSON.stringify(name ? { name } : {}),
+    }),
 
   /** Make a branch the one readers land on. */
   promote: (branchId: string) =>

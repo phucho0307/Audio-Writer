@@ -19,6 +19,7 @@ import {
   EditContributionDto,
   ForkBranchDto,
   GrantCreditsDto,
+  ReviseDto,
   UpdateStoryDto,
 } from './dto';
 
@@ -88,8 +89,8 @@ export class StoriesController {
   /** The resolved reading view: inherited contributions plus this branch's own. */
   /** An editable copy of the published version, to revise and then promote. */
   @Post('stories/:id/revise')
-  revise(@Param('id', ParseUUIDPipe) id: string) {
-    return this.stories.revise(id);
+  revise(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ReviseDto) {
+    return this.stories.revise(id, dto);
   }
 
   /** Make this branch the one readers land on. */

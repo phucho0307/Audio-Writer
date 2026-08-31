@@ -136,3 +136,11 @@ export class EditContributionDto {
   @MaxLength(200)
   title?: string;
 }
+
+export class ReviseDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  name?: string;
+}
