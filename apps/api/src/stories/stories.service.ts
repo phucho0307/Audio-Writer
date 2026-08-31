@@ -426,8 +426,7 @@ export class StoriesService {
       where: { id: branch.storyId },
     });
 
-    await this.assertNobodyBuiltOn(branch.id);
-
+    const disposable = await this.assertNobodyBuiltOn(branch.id, user.id);
     const live = this.isMain(story, branch);
 
     // Being published is not itself a reason to refuse - the writer can take
@@ -442,6 +441,12 @@ export class StoriesService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // Empty branches of the caller's that only existed to read through this
+      // one. Removed first, so nothing is left pointing at a deleted ancestor.
+      if (disposable.length > 0) {
+        await tx.branch.deleteMany({ where: { id: { in: disposable } } });
+      }
+
       // Contributions and audio clips cascade from the branch row.
       await tx.branch.delete({ where: { id: branchId } });
 
@@ -458,13 +463,13 @@ export class StoriesService {
             mainBranchId: null,
             contributionCount: chapters.length,
             wordCount: chapters.reduce((n, c) => n + c.wordCount, 0),
-            branchCount: { decrement: 1 },
+            branchCount: { decrement: 1 + disposable.length },
           },
         });
       } else {
         await tx.story.update({
           where: { id: branch.storyId },
-          data: { branchCount: { decrement: 1 } },
+          data: { branchCount: { decrement: 1 + disposable.length } },
         });
       }
 
@@ -494,7 +499,9 @@ export class StoriesService {
       });
     }
 
-    await this.assertNobodyBuiltOn(branch.id);
+    // Hiding removes nothing, so an empty branch of your own is left alone -
+    // it just has nothing to inherit while this one is private.
+    await this.assertNobodyBuiltOn(branch.id, user.id);
 
     const story = await this.prisma.story.findUniqueOrThrow({
       where: { id: branch.storyId },
@@ -526,18 +533,38 @@ export class StoriesService {
    * Nothing else is a reason to refuse: being published is a decision the
    * writer is allowed to reverse.
    */
-  private async assertNobodyBuiltOn(branchId: string): Promise<void> {
-    const child = await this.prisma.branch.findFirst({
+  private async assertNobodyBuiltOn(
+    branchId: string,
+    userId: string,
+  ): Promise<string[]> {
+    const children = await this.prisma.branch.findMany({
       where: { lineage: { has: branchId } },
-      select: { id: true },
+      select: {
+        id: true,
+        name: true,
+        ownerId: true,
+        _count: { select: { contributions: true } },
+      },
     });
-    if (child) {
+
+    // An empty branch of your own is not work, it is scaffolding - usually a
+    // fork someone opened, looked at and never wrote in. Refusing on account
+    // of one protects nothing and leaves the writer stuck behind a branch they
+    // do not remember making. It goes with the parent instead.
+    const disposable = children.filter(
+      (c) => c.ownerId === userId && c._count.contributions === 0,
+    );
+    const blocking = children.filter((c) => !disposable.includes(c));
+
+    if (blocking.length > 0) {
+      const names = blocking.map((c) => `“${c.name}”`).join(', ');
       throw new ConflictException({
         code: 'BRANCH_HAS_FORKS',
-        message:
-          'Đã có người rẽ nhánh từ nhánh này. Họ đọc truyện qua nhánh của bạn, nên nó phải giữ nguyên.',
+        message: `${names} đọc truyện qua nhánh này, nên nó phải giữ nguyên. Hãy xoá nhánh đó trước nếu nó là của bạn.`,
       });
     }
+
+    return disposable.map((c) => c.id);
   }
 
   /**
