@@ -105,11 +105,39 @@ export type ChapterAudio = {
   locked: boolean;
 };
 
+export type RenderStatus =
+  | 'QUEUED'
+  | 'RUNNING'
+  | 'COMPLETE'
+  | 'FAILED'
+  | 'CANCELLED';
+
+/**
+ * What asking for narration returns now.
+ *
+ * The API answers in milliseconds with a job rather than blocking for the ~28
+ * seconds a chapter takes to synthesise. `cached: true` means the audio was
+ * already there and no work was queued, so `url` is filled in and `jobId` is
+ * null.
+ */
+export type NarrationTicket = {
+  jobId: string | null;
+  status: RenderStatus;
+  url: string | null;
+  durationMs: number | null;
+  cached: boolean;
+};
+
+export type NarrationJobState = {
+  jobId: string;
+  status: RenderStatus;
+  url: string | null;
+  error: string | null;
+};
+
 export type NarrateResult = {
-  narrated: number;
+  queued: number;
   alreadyHad: number;
-  stoppedAt: number | null;
-  reason: string | null;
   chapters: ChapterAudio[];
 };
 
@@ -340,12 +368,15 @@ export const api = {
   chapterAudio: (branchId: string, voice: string) =>
     call<ChapterAudio[]>(`/audio/branches/${branchId}?voice=${voice}`),
 
-  /** Mode one: narrate a single chapter. */
+  /** Mode one: queue a single chapter. Returns a job, not a clip. */
   narrateChapter: (branchId: string, depth: number, voice: string) =>
-    call<{ url: string; durationMs: number; cached: boolean }>(
-      `/audio/branches/${branchId}/chapters/${depth}`,
-      { method: 'POST', body: JSON.stringify({ voice }) },
-    ),
+    call<NarrationTicket>(`/audio/branches/${branchId}/chapters/${depth}`, {
+      method: 'POST',
+      body: JSON.stringify({ voice }),
+    }),
+
+  narrationJob: (jobId: string) =>
+    call<NarrationJobState>(`/audio/jobs/${jobId}`),
 
   /** Mode two: narrate every chapter that does not have audio yet. */
   narrateBranch: (branchId: string, voice: string) =>

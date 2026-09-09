@@ -1,43 +1,30 @@
 import { Logger } from '@nestjs/common';
+import {
+  TtsError,
+  TtsRateLimitedError,
+  type SpeechResult,
+  type TtsDriver,
+  type Voice,
+} from './tts-driver';
 
 const BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
-export interface SpeechResult {
-  /** Playable WAV bytes. */
-  wav: Buffer;
-  durationMs: number;
-  voice: string;
-  provider: string;
-}
-
-/** Thrown on 429 so callers can distinguish "out of quota" from "broken". */
-export class TtsRateLimitedError extends Error {
-  constructor(public readonly retryAfterMs?: number) {
-    super('TTS provider is rate limited');
-    this.name = 'TtsRateLimitedError';
-  }
-}
-
-export class TtsError extends Error {
-  constructor(
-    message: string,
-    public readonly status?: number,
-  ) {
-    super(message);
-    this.name = 'TtsError';
-  }
-}
+// Re-exported so the rest of the module keeps importing errors from wherever
+// it already did. The definitions live with the interface, because the worker
+// catches TtsRateLimitedError without knowing which driver produced it.
+export { TtsError, TtsRateLimitedError };
+export type { SpeechResult };
 
 /**
  * Gemini's prebuilt voices, filtered to ones that carry Vietnamese narration
  * without sounding like an announcement. Names are the provider's.
  */
-export const VOICES = [
+export const VOICES: readonly Voice[] = [
   { id: 'Kore', label: 'Kore · nữ, trầm ấm' },
   { id: 'Aoede', label: 'Aoede · nữ, nhẹ' },
   { id: 'Charon', label: 'Charon · nam, trầm' },
   { id: 'Puck', label: 'Puck · nam, linh hoạt' },
-] as const;
+];
 
 export const DEFAULT_VOICE = 'Kore';
 
@@ -76,8 +63,10 @@ function parseRate(mime: string | undefined): number {
   return m ? Number(m[1]) : 24000;
 }
 
-export class GeminiTtsDriver {
+export class GeminiTtsDriver implements TtsDriver {
   readonly name = 'gemini-tts';
+  readonly voices = VOICES;
+  readonly defaultVoice = DEFAULT_VOICE;
   private readonly logger = new Logger(GeminiTtsDriver.name);
 
   constructor(
@@ -92,6 +81,11 @@ export class GeminiTtsDriver {
   async speak(text: string, voice = DEFAULT_VOICE): Promise<SpeechResult> {
     const res = await fetch(`${BASE}/${this.model}:generateContent`, {
       method: 'POST',
+      // Without this a hung provider holds a worker slot for ever: the job
+      // never fails, so it never retries, and the reader polls a status that
+      // will not change. Two minutes is roughly four times the longest
+      // synthesis actually observed.
+      signal: AbortSignal.timeout(120_000),
       headers: {
         'content-type': 'application/json',
         'x-goog-api-key': this.apiKey,

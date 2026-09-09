@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ApiError, api, type Voice } from '@/lib/api';
+import { ApiError, api, type RenderStatus, type Voice } from '@/lib/api';
+import { awaitNarration, NarrationFailed } from '@/lib/narration';
 
 function mmss(ms: number | null): string {
   if (!ms) return '--:--';
@@ -28,6 +29,8 @@ export default function ChapterNarration({
   const [url, setUrl] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState<number | null>(null);
   const [rate, setRate] = useState(1.5);
+  /** Queued behind other work, or actually being synthesised right now. */
+  const [stage, setStage] = useState<RenderStatus | null>(null);
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,20 +71,28 @@ export default function ChapterNarration({
 
   async function narrate() {
     setBusy(true);
+    setStage('QUEUED');
     setError(null);
     try {
-      const clip = await api.narrateChapter(branchId, depth, voice);
+      // Returns a job, not a clip. The wait happens here rather than in the
+      // request, so nothing is lost if the reader navigates away - the audio
+      // is still being made and will be there when they come back.
+      const ticket = await api.narrateChapter(branchId, depth, voice);
+      const clip = await awaitNarration(ticket, { onStatus: setStage });
       setUrl(clip.url);
       setDurationMs(clip.durationMs);
       setTimeout(() => void audioRef.current?.play().catch(() => {}), 60);
     } catch (e) {
       setError(
-        e instanceof ApiError && e.code === 'TTS_RATE_LIMITED'
-          ? 'Hết lượt tạo giọng đọc hôm nay.'
-          : (e as Error).message,
+        e instanceof NarrationFailed
+          ? e.message
+          : e instanceof ApiError && e.code === 'TTS_RATE_LIMITED'
+            ? 'Hết lượt tạo giọng đọc hôm nay.'
+            : (e as Error).message,
       );
     } finally {
       setBusy(false);
+      setStage(null);
     }
   }
 
@@ -116,7 +127,11 @@ export default function ChapterNarration({
             disabled={busy}
             className="font-mono text-[12px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
           >
-            {busy ? '♪ đang tạo giọng đọc…' : '♪ nghe chương này'}
+            {busy
+              ? stage === 'QUEUED'
+                ? '♪ đang xếp hàng…'
+                : '♪ đang tạo giọng đọc…'
+              : '♪ nghe chương này'}
           </button>
           <button
             onClick={() => setOpen((v) => !v)}

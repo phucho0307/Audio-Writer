@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, api, type ChapterAudio, type Voice } from '@/lib/api';
+import { awaitNarration, NarrationFailed } from '@/lib/narration';
 
 function mmss(ms: number | null): string {
   if (!ms) return '--:--';
@@ -33,6 +34,8 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
   const [continuous, setContinuous] = useState(false);
   const [rate, setRate] = useState(1.5);
   const [open, setOpen] = useState(false);
+  /** Something has been queued, so keep checking for it to land. */
+  const [watching, setWatching] = useState(false);
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -60,11 +63,52 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
 
   function fail(e: unknown) {
     setError(
-      e instanceof ApiError && e.code === 'TTS_RATE_LIMITED'
-        ? 'Đã hết lượt đọc hôm nay. Thử lại sau.'
-        : (e as Error).message,
+      e instanceof NarrationFailed
+        ? e.message
+        : e instanceof ApiError && e.code === 'TTS_RATE_LIMITED'
+          ? 'Đã hết lượt đọc hôm nay. Thử lại sau.'
+          : (e as Error).message,
     );
   }
+
+  /** Chapters the reader may hear that have no audio yet. */
+  const pending =
+    chapters?.filter((c) => !c.locked && !c.url).length ?? 0;
+
+  /**
+   * Chapters arrive one at a time now, so the list has to keep updating.
+   *
+   * This is what makes whole-story narration usable: a listener starts on
+   * chapter one while the rest are still being made, and each appears as it
+   * lands. Rendering runs far ahead of listening - about half a minute of work
+   * per six minutes of audio - so after the first chapter nobody waits again.
+   */
+  useEffect(() => {
+    if (!watching) return;
+    if (pending === 0) {
+      setWatching(false);
+      return;
+    }
+    const t = setInterval(() => {
+      void refresh().catch(() => {});
+    }, 3000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watching, pending, branchId, voice]);
+
+  /**
+   * Start as soon as the first chapter exists.
+   *
+   * On a story with no narration at all, "play the whole thing" queues
+   * everything and there is nothing to play yet. This picks it up the moment
+   * the first one lands - roughly half a minute, rather than the twenty
+   * minutes the whole branch takes.
+   */
+  useEffect(() => {
+    if (!continuous || playing !== null || !chapters) return;
+    const first = chapters.find((c) => c.url);
+    if (first) setPlaying(first.depth);
+  }, [continuous, playing, chapters]);
 
   async function playChapter(depth: number) {
     setError(null);
@@ -73,7 +117,10 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
     if (!chapter?.url) {
       setWorking(depth);
       try {
-        await api.narrateChapter(branchId, depth, voice);
+        // Queued, not performed. Waiting happens on the client so the request
+        // returns immediately and nothing is lost if the page is closed.
+        const ticket = await api.narrateChapter(branchId, depth, voice);
+        await awaitNarration(ticket);
         await refresh();
       } catch (e) {
         fail(e);
@@ -89,18 +136,17 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
     setError(null);
     setWorking('all');
     try {
+      // Every missing chapter is queued at once and at bulk priority, so a
+      // reader elsewhere asking for a single chapter is not stuck behind two
+      // hundred jobs. This returns in milliseconds; it used to run every
+      // chapter in sequence inside the request.
       const res = await api.narrateBranch(branchId, voice);
       setChapters(res.chapters);
-      if (res.stoppedAt !== null) {
-        setError(
-          `Mới đọc được ${res.narrated} chương thì hết lượt. Phần còn lại thử lại sau.`,
-        );
-      }
+      setContinuous(true);
+      if (res.queued > 0) setWatching(true);
+
       const first = res.chapters.find((c) => c.url);
-      if (first) {
-        setContinuous(true);
-        setPlaying(first.depth);
-      }
+      if (first) setPlaying(first.depth);
     } catch (e) {
       fail(e);
     } finally {

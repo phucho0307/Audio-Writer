@@ -305,8 +305,18 @@ model RenderJob {
   id       String @id @default(uuid()) @db.Uuid
   branchId String @db.Uuid
   branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
-  userId   String @db.Uuid
-  user     User   @relation(fields: [userId], references: [id])
+
+  /// Null for narration asked for by a signed-out reader. Public stories are
+  /// readable without an account, and narration is part of reading them.
+  userId String? @db.Uuid
+  user   User?   @relation(fields: [userId], references: [id])
+
+  /// Set for per-chapter narration; null for whole-branch and video renders,
+  /// which this table was originally shaped for. Deliberately not a foreign
+  /// key: the job row is a record of work done, and should outlive a chapter
+  /// that gets deleted.
+  contributionId String? @db.Uuid
+  voice          String?
 
   kind   RenderKind
   status RenderStatus @default(QUEUED)
