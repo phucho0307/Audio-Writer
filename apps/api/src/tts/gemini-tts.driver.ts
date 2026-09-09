@@ -67,6 +67,11 @@ export class GeminiTtsDriver implements TtsDriver {
   readonly name = 'gemini-tts';
   readonly voices = VOICES;
   readonly defaultVoice = DEFAULT_VOICE;
+
+  get fingerprint(): string {
+    return `${this.name}:${this.model}`;
+  }
+
   private readonly logger = new Logger(GeminiTtsDriver.name);
 
   constructor(

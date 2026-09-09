@@ -52,6 +52,25 @@ export class NarrationQueue implements OnModuleInit, OnModuleDestroy {
     priority: number = PRIORITY.INTERACTIVE,
   ): Promise<string> {
     const jobId = `audio:${job.contributionId}:${job.voice}`;
+
+    // A finished job keeps its id until it is evicted, and `add` on an id that
+    // already exists is a silent no-op. That made retrying a failed narration
+    // do nothing at all: the row was reopened to QUEUED, the enqueue was
+    // ignored, and the reader polled a status that would never change. So a
+    // terminal job is cleared out of the way first.
+    const previous = await this.queue.getJob(jobId);
+    if (previous) {
+      const state = await previous.getState();
+      if (state === 'completed' || state === 'failed') {
+        await previous.remove();
+      } else {
+        // Still waiting, delayed or running. Two callers watching one piece of
+        // work is the intended behaviour.
+        this.logger.log(`${jobId} already ${state} - not queued again`);
+        return jobId;
+      }
+    }
+
     await this.queue.add(NARRATE_CHAPTER, job, { jobId, priority });
     this.logger.log(
       `queued ${jobId} (priority ${priority === PRIORITY.BULK ? 'bulk' : 'interactive'})`,

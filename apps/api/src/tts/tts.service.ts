@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RenderKind, RenderStatus } from '@prisma/client';
+import { createHash } from 'node:crypto';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service';
@@ -164,7 +165,7 @@ export class TtsService {
       );
     }
 
-    return this.enqueueOne(branchId, chapter.id, voice, PRIORITY.INTERACTIVE);
+    return this.enqueueOne(branchId, chapter, voice, PRIORITY.INTERACTIVE);
   }
 
   /**
@@ -179,31 +180,69 @@ export class TtsService {
   async enqueueBranch(branchId: string, voice = DEFAULT_VOICE) {
     this.assertUsable(voice);
 
-    const chapters = await this.list(branchId, voice);
-    const todo = chapters.filter((c) => !c.locked && !c.url && c.contributionId);
+    // readBranch rather than list(), because enqueueOne now needs the text to
+    // address a clip by content and list() only carries a preview.
+    const { contributions } = await this.stories.readBranch(branchId);
+    const clips = await this.prisma.audioClip.findMany({
+      where: { voice, contributionId: { in: contributions.map((c) => c.id) } },
+      select: { contributionId: true },
+    });
+    const have = new Set(clips.map((c) => c.contributionId));
+    const todo = contributions.filter((c) => !have.has(c.id));
 
+    let queued = 0;
     for (const chapter of todo) {
-      await this.enqueueOne(
+      const ticket = await this.enqueueOne(
         branchId,
-        chapter.contributionId,
+        chapter,
         voice,
         PRIORITY.BULK,
       );
+      // A chapter whose words are already narrated elsewhere costs nothing and
+      // is not queued, so it must not be counted as queued either.
+      if (ticket.jobId) queued += 1;
     }
 
     return {
-      queued: todo.length,
-      alreadyHad: chapters.filter((c) => c.url).length,
+      queued,
+      alreadyHad: contributions.length - queued,
       chapters: await this.list(branchId, voice),
     };
   }
 
+  /**
+   * What a clip is addressed by: the text, the voice, and what produced it.
+   *
+   * Not the contribution id. `revise` copies every chapter into new rows, so an
+   * id-addressed clip is orphaned the moment a story is revised even though the
+   * words are identical. Hashing the text instead means a revision inherits its
+   * narration for free, and it deduplicates across branches as a side effect -
+   * two forks that share a chapter share its audio.
+   */
+  private contentHash(textPlain: string, voice: string): string {
+    return createHash('sha256')
+      .update(`${this.driver.fingerprint}\u0000${voice}\u0000${textPlain}`)
+      .digest('hex');
+  }
+
+  /**
+   * An existing clip for exactly these bytes, whichever row paid for it.
+   */
+  private async clipByContent(hash: string) {
+    return this.prisma.audioClip.findFirst({
+      where: { contentHash: hash },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   private async enqueueOne(
     branchId: string,
-    contributionId: string,
+    chapter: { id: string; textPlain: string },
     voice: string,
     priority: number,
   ): Promise<NarrationTicket> {
+    const contributionId = chapter.id;
+
     const existing = await this.prisma.audioClip.findUnique({
       where: { contributionId_voice: { contributionId, voice } },
     });
@@ -213,6 +252,22 @@ export class TtsService {
         status: RenderStatus.COMPLETE,
         url: existing.url,
         durationMs: existing.durationMs,
+        cached: true,
+      };
+    }
+
+    // Nothing for this row, but perhaps for these exact words. Checked here
+    // rather than only in the worker so a promoted revision queues no jobs at
+    // all, instead of queueing hundreds that each discover they are redundant.
+    const hash = this.contentHash(chapter.textPlain, voice);
+    const sameBytes = await this.clipByContent(hash);
+    if (sameBytes) {
+      const clip = await this.adopt(contributionId, voice, hash, sameBytes);
+      return {
+        jobId: null,
+        status: RenderStatus.COMPLETE,
+        url: clip.url,
+        durationMs: clip.durationMs,
         cached: true,
       };
     }
@@ -348,6 +403,20 @@ export class TtsService {
       throw new NotFoundException(`Contribution ${contributionId} is gone`);
     }
 
+    // Checked again here, not only at enqueue time: another job may have
+    // narrated the same words while this one waited in the queue, and the
+    // provider quota is far too small to spend on bytes we already hold.
+    const hash = this.contentHash(chapter.textPlain, voice);
+    const sameBytes = await this.clipByContent(hash);
+    if (sameBytes) {
+      const clip = await this.adopt(contributionId, voice, hash, sameBytes);
+      await this.finish(renderJobId, clip.url);
+      this.logger.log(
+        `reused existing audio for chapter ${chapter.depth + 1} (${hash.slice(0, 12)})`,
+      );
+      return { url: clip.url };
+    }
+
     await this.prisma.renderJob.update({
       where: { id: renderJobId },
       data: { status: RenderStatus.RUNNING, stage: 'tts', progress: 10 },
@@ -358,7 +427,9 @@ export class TtsService {
     const speech = await this.driver.speak(chapter.textPlain, voice);
 
     await mkdir(this.dir, { recursive: true });
-    const file = `${chapter.id}-${voice}.wav`;
+    // Named by content, so two rows holding the same words point at one file
+    // rather than two copies of it.
+    const file = `${hash}.wav`;
     await writeFile(join(this.dir, file), speech.wav);
     const url = `/audio/${file}`;
 
@@ -370,6 +441,7 @@ export class TtsService {
         url,
         durationMs: speech.durationMs,
         bytes: speech.wav.length,
+        contentHash: hash,
       },
     });
 
@@ -379,6 +451,36 @@ export class TtsService {
     );
 
     return { url };
+  }
+
+  /**
+   * Point a contribution at audio that already exists.
+   *
+   * A row per contribution rather than a shared one, because the clip carries
+   * per-chapter facts the player reads, and because the unique constraint on
+   * (contribution, voice) is what makes narration idempotent. Only the bytes
+   * are shared - which is also why deleting a file can never be driven from a
+   * single clip once anything actually deletes files. Nothing does today.
+   */
+  private async adopt(
+    contributionId: string,
+    voice: string,
+    hash: string,
+    source: { url: string; durationMs: number | null; bytes: number | null; provider: string },
+  ) {
+    return this.prisma.audioClip.upsert({
+      where: { contributionId_voice: { contributionId, voice } },
+      create: {
+        contributionId,
+        voice,
+        provider: source.provider,
+        url: source.url,
+        durationMs: source.durationMs,
+        bytes: source.bytes,
+        contentHash: hash,
+      },
+      update: {},
+    });
   }
 
   private async finish(renderJobId: string, url: string): Promise<void> {

@@ -254,10 +254,22 @@ model AudioClip {
   durationMs Int?
   bytes      Int?
 
+  /// sha256 of the text, the voice and the driver fingerprint.
+  ///
+  /// The file is addressed by what is in it rather than by which row asked for
+  /// it, so identical text narrated in the same voice is stored and paid for
+  /// once. That matters because `revise` copies every chapter into new rows
+  /// with new ids: without this, promoting a revision orphans every clip on
+  /// the story and re-bills the lot to fix one typo.
+  ///
+  /// Nullable only for clips written before this existed.
+  contentHash String?
+
   createdAt DateTime @default(now())
 
   @@unique([contributionId, voice])
   @@index([contributionId])
+  @@index([contentHash])
   @@map("audio_clips")
 }
 

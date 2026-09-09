@@ -26,6 +26,13 @@ export interface SpeechResult {
 
 export interface TtsDriver {
   readonly name: string;
+  /**
+   * Identifies exactly what produced a clip, e.g. `gemini-tts:gemini-2.5-flash-preview-tts`.
+   *
+   * Part of the content hash, so changing model or provider yields new audio
+   * rather than silently reusing the old voice under a new one.
+   */
+  readonly fingerprint: string;
   readonly voices: readonly Voice[];
   readonly defaultVoice: string;
   isConfigured(): boolean;
