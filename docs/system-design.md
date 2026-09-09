@@ -5,8 +5,8 @@ behind it, and the trap that makes it interesting. Nothing here is aspirational:
 if it is in this file, it is in the repo and it runs.
 
 Stack: NestJS + Postgres 16 (pgvector image) + Redis 7, Next.js App Router front
-end, Prisma, in a workspace monorepo. Eight API modules: `auth`, `stories`,
-`llm`, `tts`, `throttler`, `redis`, `prisma`, `health`.
+end, Prisma, in a workspace monorepo. Nine API modules: `auth`, `stories`,
+`llm`, `tts`, `queue`, `throttler`, `redis`, `prisma`, `health`.
 
 ---
 
@@ -359,7 +359,7 @@ INVALID_REFRESH` and the sixth returns `429 TOO_MANY_ATTEMPTS` with `Retry-After
 1800`; eight cookie-less calls in a row count zero; three failures followed by a
 real refresh clears the counter to nothing.
 
-### 3.5 How the two layers interact
+### 3.5 How the two door-side layers interact
 
 The failure limiter trips at 5 and the traffic throttler at 10, so **against an
 actual attacker the failure limiter always fires first** — and buys a 30-minute
@@ -384,7 +384,116 @@ deployment:
 So it is opt-in via `TRUST_PROXY`, set to the number of proxy hops actually in
 front of the API, and empty in local development.
 
-### 3.7 What large platforms do, and what of it applies
+### 3.7 The third limiter: the provider, enforced at the worker
+
+The two limiters above protect *us* — our database, our CPU. This one protects
+a resource we do not own: the TTS provider's quota, which on the free tier is
+roughly **twenty requests a day across the whole project**. Exceed it and
+narration stops working for everybody until tomorrow.
+
+**The key idea: it is enforced where the work happens, not at the door.**
+
+A limiter at the door counts *requests accepted*. That is now the wrong
+quantity. Since narration moved onto a queue, accepting a request costs almost
+nothing — it writes a row and returns in under 100ms — and one click on
+"narrate this story" legitimately accepts two hundred of them. What has to be
+bounded is the rate at which the **worker pool calls the provider**, and that is
+a different number from the rate at which requests arrive. Once the request and
+the outbound call stop being the same event, no limiter at the door can express
+the constraint.
+
+So the ceiling lives on the BullMQ worker:
+
+```ts
+new Worker(NARRATION_QUEUE, handler, {
+  concurrency,                              // how many at once
+  limiter: { max: rpm, duration: 60_000 },  // how many per minute
+});
+```
+
+**Concurrency and rate are two different controls**, and conflating them is the
+usual mistake. Concurrency bounds how many syntheses run *simultaneously* —
+that protects our own box. The limiter bounds how many *start per minute* —
+that protects someone else's quota. Concurrency 2 with no limiter still hammers
+a provider that answers quickly; a limiter with unbounded concurrency lets two
+hundred jobs start in the same second of a fresh window.
+
+**A 429 is not a failed attempt.** This is the subtlest decision in the queue.
+The driver throws `TtsRateLimitedError` carrying the provider's own
+`retryDelay`, and the worker treats it unlike every other error:
+
+```ts
+if (err instanceof TtsRateLimitedError) {
+  await this.worker.rateLimit(err.retryAfterMs ?? 60_000);
+  throw Worker.RateLimitError();
+}
+```
+
+`Worker.RateLimitError()` returns the job to the queue **without spending an
+attempt**, and `rateLimit()` pauses the whole pool for as long as the provider
+asked. Counting it as an ordinary failure would burn all three attempts on a
+queue that only needed to wait — and would burn them fastest exactly when the
+provider is most overloaded, since the backoff is measured in seconds and the
+quota window in hours.
+
+Three failure classes, three treatments, and naming them is the point:
+
+| Failure | Treatment | Why |
+|---|---|---|
+| Provider 429 | pause the pool, no attempt spent | not this job's fault, and it will work later |
+| Transient error | retry, exponential backoff from 5s | may succeed on its own |
+| Chapter deleted | `UnrecoverableError`, no retry | retrying cannot make it exist |
+
+**Fairness, which a rate limit alone does not give you.** A global ceiling makes
+starvation *worse*: one reader queuing two hundred chapters holds the entire
+pool's throughput, and the tighter the ceiling the longer everyone else waits.
+So jobs carry an explicit priority — `INTERACTIVE` for a chapter somebody is
+watching a spinner for, `BULK` for whole-branch narration. Set explicitly on
+every job, never left unset: BullMQ treats an absent priority as its own class,
+so mixing prioritised and unprioritised jobs makes ordering depend on which kind
+happened to arrive.
+
+**What it looked like on real traffic**, which is worth telling because it is
+the retry logic working rather than a test of it:
+
+```
+02:20:37  queued
+02:22:37  attempt 1 FAILED - provider hung, hit the 120s timeout
+02:24:02  re-queued, exponential backoff
+02:24:31  spoke 4081 chars -> 349s of audio
+02:24:32  COMPLETE
+```
+
+The provider hung on the first attempt and answered in **29 seconds** on the
+second. Before the queue, that request would have held an HTTP connection open
+until a proxy killed it, and the work would have been lost.
+
+That exposed two gaps, both now closed:
+
+- **No timeout on the provider call.** A hang held a worker slot indefinitely:
+  the job never failed, so it never retried, and the reader polled a status that
+  would never change. 120s is about four times the longest synthesis observed.
+- **A worker dying mid-render left its row `RUNNING` with nothing behind it.**
+  The sweeper reconciles rows against the queue, and the two cases need opposite
+  treatment: `QUEUED` with no job is **re-queued**, because nothing was spent;
+  `RUNNING` with no job is **failed**, because the provider may already have
+  billed us and the daily quota is measured in tens. Silently re-spending is
+  worse than saying so. That sweeper is the cheap stand-in for a transactional
+  outbox — the outbox makes the write and the publish atomic, instead of
+  detecting afterwards that they were not.
+
+**So there are three limiters, doing three jobs:**
+
+| Layer | Protects | Counts | Enforced |
+|---|---|---|---|
+| Throttler (§3.1) | our CPU and database | requests accepted | at the door |
+| Failure limiter (§3.4) | our session store | failed refreshes | at the door |
+| Queue limiter (§3.7) | **someone else's quota** | provider calls made | **at the worker** |
+
+The first two answer "is this caller asking too often". The third answers "are
+we, collectively, calling out too often".
+
+### 3.8 What large platforms do, and what of it applies
 
 Useful to be able to compare against, and more useful to say which parts you
 deliberately did *not* copy.
@@ -493,14 +602,23 @@ running app rather than by reading code:
 
 Being able to say why something *is not* built is worth as much as the rest.
 
-- **BullMQ narration queue** with retry, backoff, and a dead-letter queue. TTS is
-  currently a ~28-second synchronous request. This is the single biggest gap.
-  Chosen over Kafka: Kafka is a distributed log built for throughput and replay
-  across consumer groups; this is a job queue with retries for one worker pool.
-  Kafka here would be résumé-driven.
+- **A dead-letter queue.** The narration queue itself is built (§3.7). Jobs that
+  exhaust their attempts currently stop in BullMQ's `failed` set and mark the
+  RenderJob row; nothing routes them onward for inspection.
 - **Transactional outbox relay.** The table exists, the relay does not. It is what
   makes "write the row and publish the event" atomic without a distributed
-  transaction, and it doubles as the audit trail §2.10 is missing.
+  transaction, and it doubles as the audit trail §2.10 is missing. Today the
+  sweeper in §3.7 detects that gap after the fact instead of closing it.
+- **Kafka — deliberately not.** It is a distributed log built for throughput and
+  replay across independent consumer groups; narration is a job queue with
+  per-job retry, which is what a log is worst at. Its honest slot is as the
+  outbox relay's *sink*, if a second consumer of the same event stream ever
+  appears — and because the outbox decouples the write from the transport, that
+  would be a sink swap rather than a rewrite.
+- **Audio still ships as WAV to local disk.** About 2.9 MB per minute, written
+  into the web app's `public/` directory by the API process — which works only
+  because both run on one machine, and is the hard blocker on deploying at all.
+  Opus plus object storage is roughly a 10-20x cut in bytes on every play.
 - **`prom-client` + Prometheus/Grafana.** No metrics at all today.
 - **Account control and a second provider.** Active-sessions list with revoke
   (every field it needs is already written on the session row and nothing reads
@@ -579,6 +697,32 @@ The read is already one indexed query per branch ordered by `depth`, with GIN on
 lineage. The next step is caching rendered chapter content in Redis keyed by
 contribution id — safe precisely because contributions are immutable (§4.3), so
 the cache never needs invalidating.
+
+**"You already had a rate limiter. Why did the queue need another one?"**
+Because they bound different quantities. The throttler counts requests
+accepted, which stopped being the interesting number once accepting a request
+got cheap — it writes a row and returns in under 100ms, and one click can
+legitimately accept two hundred. What has to be bounded is how fast the worker
+pool calls the provider, and after the work left the request those are no
+longer the same event. So the ceiling sits on the worker, not the door (§3.7).
+
+**"How do you keep one user from starving the queue?"**
+A global rate limit alone makes that worse — one reader queuing two hundred
+chapters holds the whole pool. Jobs carry an explicit priority: interactive for
+a chapter somebody is waiting on, bulk for whole-branch narration. Explicit on
+every job, because BullMQ treats an unset priority as its own class and mixing
+the two makes ordering depend on which kind arrived.
+
+**"A job fails. What happens?"**
+It depends which kind of failure, and that distinction is most of the design. A
+provider 429 pauses the entire pool for the retry delay the provider asked for
+and returns the job **without spending an attempt** — counting it would exhaust
+the retry budget on a queue that only needed to wait. A transient error retries
+with exponential backoff. A deleted chapter throws `UnrecoverableError`,
+because no number of retries makes it exist. And a worker that dies mid-render
+leaves a row claiming RUNNING with nothing behind it, which the sweeper
+reconciles — re-queueing if nothing was spent, failing if the provider may
+already have billed us.
 
 **"What would you do differently?"**
 Write the tests as tests instead of throwaway scripts, and deploy earlier. Every
