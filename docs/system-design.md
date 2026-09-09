@@ -602,9 +602,47 @@ running app rather than by reading code:
 
 Being able to say why something *is not* built is worth as much as the rest.
 
-- **A dead-letter queue.** The narration queue itself is built (§3.7). Jobs that
-  exhaust their attempts currently stop in BullMQ's `failed` set and mark the
-  RenderJob row; nothing routes them onward for inspection.
+- **Dead-lettering, properly.** The narration queue itself is built (§3.7), and
+  a failure already lands in three places: BullMQ's `failed` set (with payload
+  and stack, evicted after 24h), the `render_jobs` row (permanent, but only the
+  fact and a message), and the worker log. So most of a DLQ exists; what is
+  missing is not a queue but four smaller things.
+
+  A separate BullMQ queue as a graveyard would be duplicated state - the
+  `failed` set already holds the payload and `job.retry()` already replays it,
+  and for anything meant to be *kept*, Postgres is the better store: queryable,
+  joinable to stories and users, and it survives a Redis flush. The right
+  framing is that **`render_jobs` is the dead-letter store and BullMQ's failed
+  set is a short-lived detail view of it**.
+
+  What is actually missing:
+
+  1. **A bug, not a design choice.** `narration.worker.ts` decides a failure is
+     terminal with `job.attemptsMade >= attempts`. That is unreliable:
+     `bullmq/dist/cjs/classes/job.js:450` returns `[false, 0]` for an
+     `UnrecoverableError` *without bumping `attemptsMade`*, so a permanently
+     failed job has `attemptsMade` of 1 out of 3, the row is never marked
+     FAILED, and the reader polls a stale RUNNING until the sweeper catches it
+     five minutes later - recording the sweeper's generic message instead of
+     the real reason. A stall-out behaves the same way, which is exactly what
+     was observed. The fix is to ask rather than infer:
+     `(await job.getState()) === 'failed'`.
+  2. **Retention.** `removeOnFail: { age: 24 * 3600 }` means a Friday-night
+     failure has lost its payload and stack by Monday. Should be about a week.
+  3. **A failure taxonomy.** Every terminal failure looks identical on the row.
+     Provider outage, deleted chapter and bad voice want different responses,
+     and recording a kind (`PROVIDER` / `GONE` / `INTERNAL`) is what makes the
+     counts in §5's metrics entry worth looking at.
+  4. **Operator replay.** Replay *by a reader* already works - asking again
+     reopens a FAILED row through `findOrOpenJob`. There is no way to say
+     "re-run everything that failed with this error".
+
+  Where a second queue would genuinely earn its place is not as a graveyard but
+  as a **fallback lane**: when the cloud provider fails permanently, route the
+  job to a queue served by a different driver - a self-hosted CPU model with no
+  quota - so the reader gets some narration rather than none. That is the reason
+  the `TtsDriver` interface went in during the first stage, and it is not worth
+  building until there is a second driver to fall back to.
 - **Transactional outbox relay.** The table exists, the relay does not. It is what
   makes "write the row and publish the event" atomic without a distributed
   transaction, and it doubles as the audit trail §2.10 is missing. Today the
