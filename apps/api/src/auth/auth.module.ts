@@ -8,6 +8,7 @@ import {
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
+import { AuthFailureLimiter } from './auth-failure.limiter';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CurrentUserService } from './current-user.service';
@@ -54,6 +55,7 @@ const GOOGLE_STRATEGY = {
   providers: [
     CurrentUserService,
     TokenService,
+    AuthFailureLimiter,
     AuthService,
     OAuthFailureFilter,
     SessionCleanupService,

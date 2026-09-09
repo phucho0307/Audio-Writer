@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { ThrottlerStorage } from '@nestjs/throttler';
 import { RedisService } from '../redis/redis.service';
 
@@ -31,9 +31,52 @@ const PREFIX = 'throttle';
  */
 @Injectable()
 export class ThrottlerRedisStorage implements ThrottlerStorage {
+  private readonly logger = new Logger(ThrottlerRedisStorage.name);
+
   constructor(private readonly redis: RedisService) {}
 
+  /**
+   * Redis is down. Every route fails open.
+   *
+   * This is a policy decision, not an oversight, and it is the opposite of what
+   * the usual advice says. Fail-closed is right for a password endpoint: if you
+   * cannot count guesses, do not allow guesses, because a password is
+   * guessable. Nothing here is. Sign-in belongs to Google, and the only
+   * grindable secret we hold is 48 bytes of CSPRNG output, so an unmetered
+   * window costs us database load rather than accounts.
+   *
+   * Failing closed would instead convert a cache outage into a total outage -
+   * nobody browses, nobody refreshes, everyone is logged out. Availability wins
+   * on that trade, and the edge limiter in front of a deployed instance is the
+   * backstop. Revisit the moment a password exists anywhere in this system.
+   */
+  private openRecord(ttl: number): ThrottlerStorageRecord {
+    return {
+      totalHits: 0,
+      timeToExpire: Math.ceil(ttl / 1000),
+      isBlocked: false,
+      timeToBlockExpire: 0,
+    };
+  }
+
   async increment(
+    key: string,
+    ttl: number,
+    limit: number,
+    blockDuration: number,
+    throttlerName: string,
+  ): Promise<ThrottlerStorageRecord> {
+    try {
+      return await this.count(key, ttl, limit, blockDuration, throttlerName);
+    } catch (err) {
+      this.logger.error(
+        `Redis unavailable, rate limit not enforced: ${(err as Error).message}`,
+      );
+      return this.openRecord(ttl);
+    }
+  }
+
+  private async count(
     key: string,
     ttl: number,
     limit: number,

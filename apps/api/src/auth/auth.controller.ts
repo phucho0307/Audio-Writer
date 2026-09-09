@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import type { Role } from '@prisma/client';
+import { AuthFailureLimiter, clientIp } from './auth-failure.limiter';
 import { AuthService, type GoogleProfile } from './auth.service';
 import { CurrentUserService } from './current-user.service';
 import { OAuthFailureFilter } from './oauth-failure.filter';
@@ -38,6 +39,7 @@ export class AuthController {
     private readonly auth: AuthService,
     private readonly tokens: TokenService,
     private readonly currentUser: CurrentUserService,
+    private readonly failures: AuthFailureLimiter,
     private readonly config: ConfigService,
   ) {}
 
@@ -129,6 +131,10 @@ export class AuthController {
   @Post('refresh')
   async refresh(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
     const raw = req.cookies?.[COOKIE] as string | undefined;
+
+    // No cookie is not a failed attempt - it is what every signed-out visitor
+    // sends on page load, because the client cannot know whether a session
+    // exists until it asks. Counting it would lock out ordinary browsing.
     if (!raw) {
       throw new UnauthorizedException({
         code: 'NO_SESSION',
@@ -136,14 +142,19 @@ export class AuthController {
       });
     }
 
+    const ip = clientIp(req);
+    await this.failures.assertNotLocked(ip, res);
+
     try {
       const { tokens, user } = await this.tokens.rotate(raw, this.meta(req));
       this.setRefreshCookie(res, tokens.refreshToken);
+      await this.failures.clear(ip);
       return this.body(tokens, user);
     } catch (err) {
       // Invalid, expired, or reused: the cookie is worthless either way, so
       // clear it rather than leaving the client to retry with it forever.
       this.clearRefreshCookie(res);
+      await this.failures.record(err, ip);
       throw err;
     }
   }

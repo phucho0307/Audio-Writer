@@ -1,13 +1,26 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
   const config = app.get(ConfigService);
+
+  // Both rate limiters key on the caller's address, so this has to be exact,
+  // and it is wrong in opposite directions depending on the deployment. Off,
+  // behind a load balancer, every request appears to come from the balancer and
+  // the whole site shares one bucket. On, with no proxy in front, anyone can set
+  // X-Forwarded-For and choose their own bucket - which is worse than no limit,
+  // because it looks like one. So it is opt-in, and set to the number of proxy
+  // hops actually in front of us.
+  const hops = config.get<string>('TRUST_PROXY', '').trim();
+  if (hops) app.set('trust proxy', /^\d+$/.test(hops) ? Number(hops) : hops);
 
   app.use(helmet());
   app.use(cookieParser());
