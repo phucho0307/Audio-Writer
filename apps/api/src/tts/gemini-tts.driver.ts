@@ -77,6 +77,7 @@ export class GeminiTtsDriver implements TtsDriver {
   constructor(
     private readonly apiKey: string,
     readonly model: string,
+    private readonly timeoutMs = 300_000,
   ) {}
 
   isConfigured(): boolean {
@@ -88,9 +89,16 @@ export class GeminiTtsDriver implements TtsDriver {
       method: 'POST',
       // Without this a hung provider holds a worker slot for ever: the job
       // never fails, so it never retries, and the reader polls a status that
-      // will not change. Two minutes is roughly four times the longest
-      // synthesis actually observed.
-      signal: AbortSignal.timeout(120_000),
+      // will not change.
+      //
+      // Generous on purpose. Two minutes was inherited from when a reader sat
+      // on the open request, and it aborted chapters that were slow rather
+      // than stuck - a six minute narration has been observed taking anywhere
+      // from 29 seconds to over two minutes depending on the provider's mood.
+      // Nobody is waiting now, so the cost of being patient is nothing, while
+      // the cost of being impatient is a wasted attempt and a re-billed
+      // synthesis. This is a deadman switch, not a latency budget.
+      signal: AbortSignal.timeout(this.timeoutMs),
       headers: {
         'content-type': 'application/json',
         'x-goog-api-key': this.apiKey,

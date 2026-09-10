@@ -6,9 +6,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RenderKind, RenderStatus } from '@prisma/client';
+import { Inject } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { PaywallService } from '../stories/paywall.service';
@@ -17,6 +16,11 @@ import { NarrationQueue } from '../queue/narration.queue';
 import { PRIORITY, type NarrationJob } from '../queue/queue.constants';
 import { DEFAULT_VOICE, GeminiTtsDriver } from './gemini-tts.driver';
 import type { TtsDriver } from './tts-driver';
+import { AudioEncoder } from './audio-encoder';
+import {
+  AUDIO_STORAGE,
+  type StorageDriver,
+} from '../storage/storage-driver';
 
 export interface ChapterAudio {
   depth: number;
@@ -42,7 +46,6 @@ export interface NarrationTicket {
 export class TtsService {
   private readonly logger = new Logger(TtsService.name);
   private readonly driver: TtsDriver;
-  private readonly dir: string;
 
   constructor(
     private readonly config: ConfigService,
@@ -51,14 +54,14 @@ export class TtsService {
     private readonly paywall: PaywallService,
     private readonly currentUser: CurrentUserService,
     private readonly queue: NarrationQueue,
+    private readonly encoder: AudioEncoder,
+    @Inject(AUDIO_STORAGE) private readonly storage: StorageDriver,
   ) {
     this.driver = new GeminiTtsDriver(
       this.config.get<string>('GEMINI_API_KEY', ''),
       this.config.get<string>('TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
+      Number(this.config.get<string>('TTS_TIMEOUT_MS', '300000')),
     );
-    // Served straight out of the web app in development. In production this
-    // becomes an object-store key - `url` is only ever a path.
-    this.dir = join(__dirname, '../../../web/public/audio');
   }
 
   get available(): boolean {
@@ -229,9 +232,12 @@ export class TtsService {
    * An existing clip for exactly these bytes, whichever row paid for it.
    */
   private async clipByContent(hash: string) {
+    // Newest first. The hash covers the speech, not the container, so the same
+    // words may exist as an old WAV and a newer m4a; the later rendering is the
+    // smaller one and the one worth adopting.
     return this.prisma.audioClip.findFirst({
       where: { contentHash: hash },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -426,12 +432,18 @@ export class TtsService {
     // which pauses the whole pool rather than failing this one job.
     const speech = await this.driver.speak(chapter.textPlain, voice);
 
-    await mkdir(this.dir, { recursive: true });
+    const encoded = await this.encoder.encode(speech.wav);
+
     // Named by content, so two rows holding the same words point at one file
-    // rather than two copies of it.
-    const file = `${hash}.wav`;
-    await writeFile(join(this.dir, file), speech.wav);
-    const url = `/audio/${file}`;
+    // rather than two copies of it. The extension is part of the key, so a
+    // change of codec writes a new object beside the old one instead of
+    // overwriting bytes something is already serving.
+    const stored = await this.storage.put(
+      `${hash}.${encoded.ext}`,
+      encoded.body,
+      encoded.contentType,
+    );
+    const url = stored.url;
 
     await this.prisma.audioClip.create({
       data: {
@@ -440,14 +452,14 @@ export class TtsService {
         provider: speech.provider,
         url,
         durationMs: speech.durationMs,
-        bytes: speech.wav.length,
+        bytes: stored.bytes,
         contentHash: hash,
       },
     });
 
     await this.finish(renderJobId, url);
     this.logger.log(
-      `narrated chapter ${chapter.depth + 1} of branch ${data.branchId.slice(0, 8)} -> ${file}`,
+      `narrated chapter ${chapter.depth + 1} of branch ${data.branchId.slice(0, 8)} -> ${url} (${Math.round(stored.bytes / 1024)} KB via ${this.storage.name})`,
     );
 
     return { url };

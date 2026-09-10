@@ -26,10 +26,20 @@ __pycache__/
 venv/
 
 # generated media - never commit
+#
+# Narration is derived data: it is regenerable from the chapter text, it is
+# addressed by a hash of that text, and a single chapter is megabytes. The
+# extension list kept missing new formats one at a time, so the directory it
+# all lands in is ignored outright.
 /media/
+/apps/web/public/audio/
 *.mp3
 *.mp4
 *.wav
+*.m4a
+*.aac
+*.opus
+*.ogg
 
 # typescript incremental build cache
 *.tsbuildinfo
