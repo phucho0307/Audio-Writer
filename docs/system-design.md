@@ -199,7 +199,7 @@ the alarm never fires.
 
 ---
 
-## 3. Rate limiting
+## 3. Rate limiting, and the narration queue
 
 ### 3.1 The three questions
 
@@ -493,7 +493,117 @@ That exposed two gaps, both now closed:
 The first two answer "is this caller asking too often". The third answers "are
 we, collectively, calling out too often".
 
-### 3.8 What large platforms do, and what of it applies
+### 3.8 Job identity, and what the queue is not
+
+Three systems are involved in narration and they know nothing about each other.
+The code is what joins them, and confusing them is the fastest way to reason
+wrongly about this.
+
+| | Holds | Role |
+|---|---|---|
+| **Redis / BullMQ** | jobs | a to-do list of work not yet done |
+| **Disk** (later object storage) | the `.wav` bytes | where audio actually lives |
+| **Postgres** | `audio_clips` rows | the source of truth about what audio exists |
+
+**Serving audio never touches the queue.** A reader asking for chapter 42 is a
+Postgres lookup that yields a path. The queue exists only to control the
+one-time work of *creating* audio that does not exist yet. Redis could be
+flushed tomorrow and every existing narration would still play.
+
+### Deterministic job ids
+
+Jobs are identified by what they are, not by when they were asked for:
+
+```
+audio:<contributionId>:<voice>      e.g. audio:8e28f78c-…:Kore
+```
+
+The point is deduplication. Three impatient clicks produce the same id, and
+BullMQ collapses them into one job rather than three calls to a provider whose
+free tier is measured in tens of requests a day.
+
+### The quirk that cost an afternoon
+
+**`queue.add()` with an id that already exists does nothing, and says nothing.**
+No error, no warning, a successful return, and no job. That is how BullMQ
+implements "do not queue the same thing twice", and it is correct behaviour -
+but it interacts badly with the fact that **finished jobs keep their ids until
+they are evicted.**
+
+Retention here is set in `narration.queue.ts`:
+
+```ts
+removeOnComplete: { age: 3600, count: 500 },   // an hour, or 500 jobs
+removeOnFail:     { age: 24 * 3600 },          // a day
+```
+
+So for an hour after a success, and a day after a failure, that id is occupied
+by a record doing nothing except existing. Add a job with the same id in that
+window and it is silently dropped. The row is set to QUEUED, the reader polls,
+and the status never changes - because there is no job.
+
+### Why a completed job blocks exactly as hard as a failed one
+
+This is the part that reads as surprising, and the word "retry" is what makes
+it confusing. Nothing is being retried. A **new** job is being created that
+happens to carry the same deterministic id as one that already finished. That
+the previous job succeeded is irrelevant; what matters is that the id is
+occupied.
+
+**And the id does not include the content hash.** A clip is addressed by
+`sha256(fingerprint + voice + text)` (§3.7 and the data model), but a job is
+addressed by contribution and voice only. Change `TTS_MODEL` and every hash
+changes - so the content check correctly misses and every chapter genuinely
+needs re-synthesising - while every *job id* stays exactly what it was. A
+regeneration pass over two hundred chapters would report complete success and
+produce nothing at all.
+
+That is the scenario that makes the fix load-bearing rather than theoretical.
+
+### The fix
+
+Evict the ghost, but never disturb live work:
+
+```ts
+const previous = await this.queue.getJob(jobId);
+if (previous) {
+  const state = await previous.getState();
+  if (state === 'completed' || state === 'failed') {
+    await previous.remove();          // a finished record squatting on the id
+  } else {
+    return jobId;                     // genuinely waiting or running
+  }
+}
+await this.queue.add(NARRATE_CHAPTER, job, { jobId, priority });
+```
+
+Waiting, delayed or active means a job is really in progress, and two callers
+watching one piece of work is the intended behaviour. Completed or failed means
+the id is held by a record with no future, and it goes.
+
+### The two paths, kept apart
+
+```
+READ  (frequent, cheap, no queue)
+  request -> Postgres: clip for (contribution, voice)? -> path -> bytes
+
+CREATE (rare, expensive, queued)
+  request -> clip for this contribution?          -> no
+          -> clip with this content hash anywhere? -> no
+          -> queue.add
+             worker -> provider -> write bytes -> insert clip row
+```
+
+Both short-circuits happen in the request, before anything is queued, which is
+why a promoted revision queues zero jobs rather than two hundred that each wake
+up and discover they are redundant.
+
+**In one sentence:** audio is tracked by Postgres and stored as files; jobs live
+in Redis and only govern the one-time work of creating audio, and because
+finished jobs keep their ids, a new job with a reused id has to evict the old
+record first or it is silently dropped.
+
+### 3.9 What large platforms do, and what of it applies
 
 Useful to be able to compare against, and more useful to say which parts you
 deliberately did *not* copy.
