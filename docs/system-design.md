@@ -603,7 +603,135 @@ in Redis and only govern the one-time work of creating audio, and because
 finished jobs keep their ids, a new job with a reused id has to evict the old
 record first or it is silently dropped.
 
-### 3.9 What large platforms do, and what of it applies
+### 3.9 Delivering the audio: codec and storage
+
+Two problems that share one write path, and the second one is what blocked
+deployment entirely.
+
+### Where the file goes
+
+The API was writing `.wav` files into **the web app's** `public/` directory.
+That works only while both processes share a filesystem, which stops being true
+the moment either is containerised or replicated: the API produces files nobody
+can serve, a second replica cannot see what the first one wrote, and a deploy
+replaces the container and takes the files with it.
+
+Storage is now an interface with two implementations, `LocalDiskStorage` and
+`R2Storage`, chosen by **whether `R2_BUCKET` is set** rather than by
+`NODE_ENV`. That distinction is deliberate: `NODE_ENV` is a label anybody can
+set, and a developer setting it to `production` to test something should not
+cause uploads to a bucket that does not exist. Configuration should be decided
+by what actually exists, not by what an environment claims to be.
+
+The half-configured case is the dangerous one - `R2_BUCKET` set but credentials
+missing - because it fails inside a worker, one upload at a time, long after
+the mistake was made. It is checked at **boot**, logged as an error naming the
+missing variables, and falls back to disk.
+
+**R2 rather than S3**, for one reason that dominates every other
+consideration: audio is almost entirely egress, and R2 charges none of it. At
+any real number of listeners the bandwidth bill exceeds the synthesis bill, and
+audio is the one kind of content where that is true early.
+
+### What a codec is, and why one is needed here
+
+Gemini returns raw PCM: 24 kHz, 16-bit, mono. That is 384 kbit/s, about
+**2.9 MB per minute**, so a six minute chapter shipped **16 MB** - on every
+single play, to a phone, on a mobile network.
+
+A codec exploits the fact that hearing is imperfect: frequencies too high to
+resolve, quiet sounds masked by loud ones nearby. Discard what cannot be heard
+and the file shrinks by an order of magnitude with no audible difference. It is
+compression shaped around the ear rather than around the bytes.
+
+| | AAC | Opus |
+|---|---|---|
+| Standardised | 1997 | 2012 |
+| Quality per byte | good | roughly twice as good |
+| Playback from a file | universal | patchy, Safari and iOS especially |
+| Live / WebRTC | fine | excellent, very low latency |
+| Containers | `.m4a`, `.mp4` | `.opus`, `.ogg`, `.webm` |
+| Typical home | music, video, podcasts | voice chat, calls |
+
+**AAC was chosen, and Opus is the better codec.** Opus at 32 kbit/s sounds like
+AAC at 64 - about half the bytes for the same thing. The reason it lost is not
+technical merit:
+
+> The audience is mobile-heavy and Vietnamese, which means a lot of iOS. Opus
+> is excellent over WebRTC on Safari and unreliable as a *file* handed to an
+> `<audio>` element there. A file half the size that sometimes will not play is
+> far worse than one that always does.
+
+If the problem were live two-way voice, the answer would be Opus without
+hesitation. It is a different problem, so it gets a different answer - and that
+is the part worth being able to explain, rather than the codec names.
+
+Measured across five chapters:
+
+```
+WAV   58.4 MB   ->   m4a   10.2 MB      5.7x smaller
+```
+
+and the result verified rather than assumed: brand `ftypM4A`, AAC-LC, 24 kHz
+mono at 66 kbit/s, with **faststart confirmed** - the `moov` index sits before
+`mdat`, so a player can begin before the file finishes arriving. Without that
+flag the index lands at the end and playback waits for the whole download.
+
+Opus can still be added later as a second rendition behind a `<source>`
+element. Storage is keyed by content hash, so both can coexist without either
+overwriting the other.
+
+### ffmpeg, without making anyone install ffmpeg
+
+Encoding needs ffmpeg, and requiring a system install on every machine and in
+every image is friction that gets skipped. The binary comes from the
+`ffmpeg-static` package instead, resolved in order: `FFMPEG_PATH` if set, then
+the bundled binary, then whatever is on `PATH`.
+
+If none exists the encoder **passes the WAV through untouched** rather than
+failing. Narration that ships a large file is worth more than narration that
+does not ship, and this is a degradation a reader can live with. A *broken*
+encode is different and does propagate, because silently storing wrong bytes
+under a content hash would poison every future lookup of that hash.
+
+### A timeout that was measuring the wrong thing
+
+The provider call had a 120 second limit. A chapter failed against it twice and
+then succeeded at **195 seconds**, so the timeout was killing work that was
+slow rather than stuck - and every abort still cost a synthesis against a quota
+measured in tens per day.
+
+The number was not wrong when it was written. It came from the era when a
+reader sat on the open HTTP request, where two minutes genuinely was the limit
+of what a person would tolerate. Once the work moved onto a queue that premise
+disappeared and nobody rechecked the number.
+
+It is now 300 seconds and configurable, with the intent recorded in the code so
+the next person does not tune it back down:
+
+> **This is a deadman switch, not a latency budget.**
+
+Patience costs nothing when nobody is waiting; impatience costs a wasted
+attempt and a re-billed synthesis.
+
+### The near miss
+
+The re-encoded files were staged for commit - 13 MB of binary that would have
+sat in history forever, since removing a blob later does not remove it from
+every clone. `.gitignore` said *"generated media - never commit"* and listed
+`*.wav`, `*.mp3`, `*.mp4`. The new extension simply was not in it.
+
+The branch was unpushed, so amending fixed the instance. The more useful fix
+was structural: ignore **the directory** rather than chasing extensions, so the
+next format cannot slip through the same gap. Narration is derived data - it is
+regenerable from the chapter text and addressed by a hash of it - so none of it
+belongs in the repository at any size.
+
+The `.wav` originals were kept as masters rather than deleted. Re-encoding from
+them at a different bitrate, or to Opus, costs nothing; re-synthesising costs
+provider quota.
+
+### 3.10 What large platforms do, and what of it applies
 
 Useful to be able to compare against, and more useful to say which parts you
 deliberately did *not* copy.
