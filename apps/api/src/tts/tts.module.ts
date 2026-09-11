@@ -4,6 +4,7 @@ import { TtsService } from './tts.service';
 import { NarrationWorker } from './narration.worker';
 import { NarrationSweeper } from './narration.sweeper';
 import { AudioEncoder } from './audio-encoder';
+import { NarrationPrerender } from './narration.prerender';
 import { StoriesModule } from '../stories/stories.module';
 import { QueueModule } from '../queue/queue.module';
 
@@ -15,6 +16,12 @@ import { QueueModule } from '../queue/queue.module';
 @Module({
   imports: [StoriesModule, QueueModule],
   controllers: [TtsController],
-  providers: [TtsService, NarrationWorker, NarrationSweeper, AudioEncoder],
+  providers: [
+    TtsService,
+    NarrationWorker,
+    NarrationSweeper,
+    NarrationPrerender,
+    AudioEncoder,
+  ],
 })
 export class TtsModule {}

@@ -13,6 +13,7 @@ import { CurrentUserService } from '../auth/current-user.service';
 import { PaywallService } from '../stories/paywall.service';
 import { StoriesService } from '../stories/stories.service';
 import { NarrationQueue } from '../queue/narration.queue';
+import { DomainEvents } from '../events/domain-events';
 import { PRIORITY, type NarrationJob } from '../queue/queue.constants';
 import { DEFAULT_VOICE, GeminiTtsDriver } from './gemini-tts.driver';
 import type { TtsDriver } from './tts-driver';
@@ -54,6 +55,7 @@ export class TtsService {
     private readonly paywall: PaywallService,
     private readonly currentUser: CurrentUserService,
     private readonly queue: NarrationQueue,
+    private readonly events: DomainEvents,
     private readonly encoder: AudioEncoder,
     @Inject(AUDIO_STORAGE) private readonly storage: StorageDriver,
   ) {
@@ -168,7 +170,97 @@ export class TtsService {
       );
     }
 
-    return this.enqueueOne(branchId, chapter, voice, PRIORITY.INTERACTIVE);
+    const ticket = await this.enqueueOne(
+      branchId,
+      chapter,
+      voice,
+      PRIORITY.INTERACTIVE,
+    );
+
+    // Somebody is about to listen to six minutes of audio. Start the next
+    // chapter now, at bulk priority so it never delays anyone waiting on a
+    // chapter of their own. Deliberately not awaited and deliberately silent:
+    // a failure here costs a head start, not a narration, because asking for
+    // that chapter later queues it the ordinary way.
+    void this.prefetchNext(branchId, contributions, depth, voice);
+
+    return ticket;
+  }
+
+  /**
+   * Queue the chapter after this one, if it exists and has no audio.
+   *
+   * One ahead, never recursive - it calls `enqueueOne` rather than
+   * `enqueueChapter`, so a prefetch cannot trigger another prefetch and walk
+   * the whole branch off one click.
+   *
+   * `contributions` comes from the caller's own `readBranch`, so anything
+   * behind the paywall was already withheld and cannot be pre-rendered by
+   * accident.
+   */
+  private async prefetchNext(
+    branchId: string,
+    contributions: { id: string; depth: number; textPlain: string }[],
+    depth: number,
+    voice: string,
+  ): Promise<void> {
+    const next = contributions.find((c) => c.depth === depth + 1);
+    if (!next) return;
+
+    try {
+      await this.enqueueOne(branchId, next, voice, PRIORITY.BULK);
+    } catch {
+      // Nothing to report and nobody to report it to.
+    }
+  }
+
+  /**
+   * Narrate the chapters a stranger can read, as soon as a story is published.
+   *
+   * The alternative - synthesising when somebody presses play - is what makes
+   * narration feel slow, because a chapter takes anywhere from half a minute to
+   * three and a half minutes depending on the provider's mood. Large audiobook
+   * platforms do not have this problem because they render at publish time and
+   * a reader never meets the synthesiser at all.
+   *
+   * How far to go is decided by the paywall rather than by a setting: this runs
+   * with no signed-in user, so `readBranch` returns exactly what an anonymous
+   * visitor gets. Those are the chapters everyone can reach, so they are the
+   * ones worth having ready.
+   */
+  async prerenderHead(storyId: string): Promise<number> {
+    if (!this.available) return 0;
+
+    const story = await this.prisma.story.findUnique({
+      where: { id: storyId },
+      include: { branches: { select: { id: true, isRoot: true } } },
+    });
+    if (!story) return 0;
+
+    const branchId =
+      story.mainBranchId ?? story.branches.find((b) => b.isRoot)?.id;
+    if (!branchId) return 0;
+
+    const { contributions } = await this.stories.readBranch(branchId);
+    const voice = this.driver.defaultVoice;
+
+    let queued = 0;
+    for (const chapter of contributions) {
+      const ticket = await this.enqueueOne(
+        branchId,
+        chapter,
+        voice,
+        PRIORITY.BULK,
+      );
+      if (ticket.jobId) queued += 1;
+    }
+
+    if (queued > 0) {
+      this.logger.log(
+        `pre-rendering ${queued} free chapter(s) of story ${storyId.slice(0, 8)}`,
+      );
+    }
+    return queued;
   }
 
   /**

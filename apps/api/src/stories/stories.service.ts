@@ -17,6 +17,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { PaywallService } from './paywall.service';
+import { DomainEvents } from '../events/domain-events';
 import type {
   CommitContributionDto,
   CreateStoryDto,
@@ -32,6 +33,7 @@ export class StoriesService {
     private readonly prisma: PrismaService,
     private readonly currentUser: CurrentUserService,
     private readonly paywall: PaywallService,
+    private readonly events: DomainEvents,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -211,7 +213,22 @@ export class StoriesService {
       });
     }
 
-    return this.prisma.story.update({ where: { id }, data: dto });
+    const updated = await this.prisma.story.update({
+      where: { id },
+      data: dto,
+    });
+
+    // Only the transition, not every edit to an already-public story. Going
+    // public is what creates an audience, and an audience is what makes
+    // pre-rendered narration worth paying for.
+    if (
+      story.visibility === Visibility.PRIVATE &&
+      updated.visibility !== Visibility.PRIVATE
+    ) {
+      this.events.emit('story.published', { storyId: updated.id });
+    }
+
+    return updated;
   }
 
   /**
