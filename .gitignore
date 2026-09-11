@@ -43,3 +43,4 @@ venv/
 
 # typescript incremental build cache
 *.tsbuildinfo
+/.piper/
