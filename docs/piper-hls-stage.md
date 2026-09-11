@@ -1,12 +1,27 @@
 # Piper + HLS — measured findings, and where to resume
 
-Status: **investigation done, nothing built.** Change 1 (Piper driver) is
-specified and validated; no application code has been touched. Resume by
-building the driver as described under "The build, in order".
+Status: **Change 1 is built and working end to end.** Piper synthesises real
+chapters through the real queue and worker, encodes to AAC, content-hashes and
+stores exactly as before. It sits behind `TTS_DRIVER`, which still defaults to
+`gemini`. What remains before flipping that default is a listening test, which
+is a human judgement and has not been made. HLS (Change 2) is not started.
 
 Everything below was measured on 2026-09-11 on the dev box (8 logical cores, no
 GPU, Windows), against real Vietnamese chapters from the database — not
 estimated.
+
+## What was built
+
+```
+tools/piper/sidecar.py                    resident voice, HTTP, streams PCM
+apps/api/src/tts/piper-tts.driver.ts      TtsDriver over that sidecar
+```
+
+Selected by `TTS_DRIVER=piper`; everything downstream of the driver is
+unchanged. Proven end to end: a 920-word chapter enqueued in 167 ms, synthesised
+and encoded by the worker, stored as a 1.72 MB `.m4a` under its content hash -
+and the prefetch of the *next* chapter fired on its own, which is the existing
+pipeline confirming it still works under a new driver.
 
 ## Setup that exists on this machine
 
@@ -105,6 +120,64 @@ model, synthesising the first sentence takes **0.11s**. Sub-second first-sound
 is reachable — roughly an order of magnitude better than the stage's own success
 criterion — but only via a sidecar, and not at all via subprocesses.
 
+
+## Found while wiring it up
+
+Four of these would each have cost a day, and none is visible in the design.
+
+**Node's `fetch` refuses port 5060.** The sidecar first listened on 5060, and
+`curl` talked to it happily while the API reported only `fetch failed`. undici
+implements the Fetch spec's blocked-port list, 5060 is SIP, and the cause is the
+bare string `bad port`. The sidecar now defaults to **5062**. The lesson is
+larger than the number: a local service port has to be chosen from outside that
+list, or the failure shows up only in the client you care about.
+
+**The default voice was a Gemini constant.** `DEFAULT_VOICE` - `'Kore'` - was
+imported from `gemini-tts.driver` and used as the default argument in the
+controller and three service methods, so switching drivers produced
+`Unknown voice "Kore"` on every request. The default now comes from
+`this.driver.defaultVoice`. A driver-specific constant used as a global default
+is exactly the kind of thing a driver interface is supposed to prevent, and it
+survived because there had only ever been one driver.
+
+**Piper reads Vietnamese nearly twice as fast as the cloud voice.** Same
+chapter, same counting: Gemini 157 words/min, Piper 276. Audiobooks sit at
+150-160. Left alone, a listening test would have failed on pace and been read as
+a verdict on the voice. `length_scale` fixes it, and its response is sub-linear
+because stretching phonemes does not stretch the silences between them:
+
+```
+scale   1.0    1.3    1.5    1.7    1.9    2.2    2.5    2.8
+wpm     276    246    220    201    186    166    148    136
+```
+
+**2.3** is the default, which lands on the pace this project has been shipping.
+
+**Pace is part of the fingerprint.** It changes the audio, so it belongs in the
+content hash beside the model digest - otherwise re-tuning it would serve every
+listener the old pace forever, out of a cache with nothing to invalidate it.
+
+**The sidecar and the API race at boot.** The sidecar spends five to seven
+seconds loading the model before it binds; an API starting alongside it loses
+that race about half the time, and a single health check at boot left narration
+dead until someone restarted the API. The driver now retries every 15 seconds
+until it connects, which also covers a sidecar redeployed under a running API.
+
+### One thing deliberately left alone
+
+`enqueueOne` looks up `audioClip` by `(contributionId, voice)` **before** it
+computes a content hash, so an existing clip is served whatever produced it.
+That is right for a driver switch - the voice ids differ (`Kore` versus
+`vi_VN-vais1000-medium`), so Piper does not serve Gemini's audio, and nothing
+re-renders a catalogue because a provider changed. But it also means **re-tuning
+the pace does not re-render chapters that already have audio**: the row-level
+cache never reaches the hash that knows about pace.
+
+Making the row cache compare its stored `contentHash` against the expected one
+would fix it in a line, at the cost of re-rendering everything whenever the
+model or pace changes. That is cheap on Piper and expensive on a metered
+provider, so it is a decision rather than a patch, and it is Phuc's to make.
+
 ## Decisions this settles
 
 1. **Sidecar, not subprocess.** A long-lived process holds the voice; the Node
@@ -141,16 +214,15 @@ files is not a different shape of write, just more of them. Write the manifest
 **last** — it is what makes the asset visible, so publishing it before its chunks
 exist is the one ordering that can be observed as broken.
 
-## The build, in order
+## What is left
 
-1. `piper.sidecar.py` — resident voice, HTTP, streams PCM chunked, health at
-   `/healthz`.
-2. `apps/api/src/tts/piper-tts.driver.ts` — implements `TtsDriver`, fingerprint
-   `piper:${voice}:${modelVersion}`, selected by `TTS_DRIVER=piper|gemini`,
-   default `gemini`. Nothing outside the driver changes.
-3. Measure again through the real worker, then flip the default. Keep Gemini.
-4. Only then HLS Mode A, then Mode B. Do not start HLS before the voice has been
-   listened to and accepted.
+1. **Listen.** `scratchpad/pace-*.wav` is the same chapter at eight speeds;
+   `pace-2.3` is the configured default and `pace-1.0` is the model's own. Judge
+   the voice at a pace that is not wrong, then decide between `vais1000-medium`
+   and `25hours_single-low`.
+2. Flip `TTS_DRIVER=piper` by default once the voice is accepted. Keep Gemini.
+3. Decide the cache question above, if pace ends up needing another pass.
+4. Only then HLS Mode A, then Mode B.
 
 ### Open, and deliberately not answered yet
 

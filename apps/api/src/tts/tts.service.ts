@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  type OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { RenderKind, RenderStatus } from '@prisma/client';
@@ -15,8 +16,9 @@ import { StoriesService } from '../stories/stories.service';
 import { NarrationQueue } from '../queue/narration.queue';
 import { DomainEvents } from '../events/domain-events';
 import { PRIORITY, type NarrationJob } from '../queue/queue.constants';
-import { DEFAULT_VOICE, GeminiTtsDriver } from './gemini-tts.driver';
+import { GeminiTtsDriver } from './gemini-tts.driver';
 import type { TtsDriver } from './tts-driver';
+import { PiperTtsDriver } from './piper-tts.driver';
 import { AudioEncoder } from './audio-encoder';
 import {
   AUDIO_STORAGE,
@@ -44,7 +46,7 @@ export interface NarrationTicket {
 }
 
 @Injectable()
-export class TtsService {
+export class TtsService implements OnModuleInit {
   private readonly logger = new Logger(TtsService.name);
   private readonly driver: TtsDriver;
   /** How many chapters are narrated ahead of the first reader. */
@@ -61,15 +63,32 @@ export class TtsService {
     private readonly encoder: AudioEncoder,
     @Inject(AUDIO_STORAGE) private readonly storage: StorageDriver,
   ) {
-    this.driver = new GeminiTtsDriver(
-      this.config.get<string>('GEMINI_API_KEY', ''),
-      this.config.get<string>('TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
-      Number(this.config.get<string>('TTS_TIMEOUT_MS', '300000')),
-    );
+    const timeout = Number(this.config.get<string>('TTS_TIMEOUT_MS', '300000'));
+
+    // Which synthesiser runs is a config change, not a deploy. Both drivers stay
+    // in the build: a self-hosted voice can regress in ways a cloud one cannot -
+    // a bad model file, a box under memory pressure - and the way back has to be
+    // an env var rather than a release.
+    this.driver =
+      this.config.get<string>('TTS_DRIVER', 'gemini') === 'piper'
+        ? new PiperTtsDriver(
+            this.config.get<string>('PIPER_URL', 'http://127.0.0.1:5062'),
+            this.config.get<string>('PIPER_VOICE', 'vi_VN-vais1000-medium'),
+            timeout,
+          )
+        : new GeminiTtsDriver(
+            this.config.get<string>('GEMINI_API_KEY', ''),
+            this.config.get<string>('TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
+            timeout,
+          );
     this.prerenderChapters = Math.max(
       0,
       Number(this.config.get<string>('PRERENDER_CHAPTERS', '3')),
     );
+  }
+
+  async onModuleInit(): Promise<void> {
+    await this.driver.init?.();
   }
 
   get available(): boolean {
@@ -88,7 +107,8 @@ export class TtsService {
    * What the player needs: every chapter the reader is allowed to hear, and
    * which of them already have audio.
    */
-  async list(branchId: string, voice = DEFAULT_VOICE): Promise<ChapterAudio[]> {
+  async list(branchId: string, voice?: string): Promise<ChapterAudio[]> {
+    voice ??= this.driver.defaultVoice;
     const { contributions, access } = await this.stories.readBranch(branchId);
 
     const clips = await this.prisma.audioClip.findMany({
@@ -160,8 +180,9 @@ export class TtsService {
   async enqueueChapter(
     branchId: string,
     depth: number,
-    voice = DEFAULT_VOICE,
+    voice?: string,
   ): Promise<NarrationTicket> {
+    voice ??= this.driver.defaultVoice;
     this.assertUsable(voice);
 
     const { contributions } = await this.stories.readBranch(branchId);
@@ -298,7 +319,8 @@ export class TtsService {
    * This used to run synchronously and in sequence: eight chapters was eight
    * times twenty-eight seconds in one request, which no load balancer allows.
    */
-  async enqueueBranch(branchId: string, voice = DEFAULT_VOICE) {
+  async enqueueBranch(branchId: string, voice?: string) {
+    voice ??= this.driver.defaultVoice;
     this.assertUsable(voice);
 
     // readBranch rather than list(), because enqueueOne now needs the text to

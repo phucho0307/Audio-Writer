@@ -37,6 +37,20 @@ export interface TtsDriver {
   readonly defaultVoice: string;
   isConfigured(): boolean;
   speak(text: string, voice: string): Promise<SpeechResult>;
+  /**
+   * Discover whatever the driver cannot know without asking, once, at boot.
+   *
+   * Optional because a driver holding an API key knows everything about itself
+   * synchronously. A self-hosted one does not: the model it will actually use
+   * lives in another process, and `fingerprint` has to answer before any audio
+   * is requested because it is read while computing a content hash. Resolving
+   * that lazily would hash the first clips of a deploy differently from every
+   * clip after them, quietly splitting one voice's cache in two.
+   *
+   * A driver that fails here must report `isConfigured()` false rather than
+   * throw: an unreachable synthesiser should disable narration, not the app.
+   */
+  init?(): Promise<void>;
 }
 
 /**

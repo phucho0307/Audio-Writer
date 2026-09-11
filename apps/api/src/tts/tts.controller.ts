@@ -12,7 +12,6 @@ import {
 } from '@nestjs/common';
 import { IsOptional, IsString } from 'class-validator';
 import { TtsService } from './tts.service';
-import { DEFAULT_VOICE } from './gemini-tts.driver';
 import { Throttle } from '@nestjs/throttler';
 import { COSTLY_TIER } from '../throttler/tiers';
 
@@ -49,7 +48,7 @@ export class TtsController {
   /** Every chapter the reader may hear, and which already have narration. */
   @Get('branches/:id')
   list(@Param('id', ParseUUIDPipe) id: string, @Query('voice') voice?: string) {
-    return this.tts.list(id, voice ?? DEFAULT_VOICE);
+    return this.tts.list(id, voice);
   }
 
   /** Where a queued narration has got to. The player polls this. */
@@ -72,7 +71,7 @@ export class TtsController {
     @Param('depth', ParseIntPipe) depth: number,
     @Body() dto: VoiceDto,
   ) {
-    return this.tts.enqueueChapter(id, depth, dto.voice ?? DEFAULT_VOICE);
+    return this.tts.enqueueChapter(id, depth, dto.voice);
   }
 
   /** Mode two: queue every chapter that has no narration yet. */
@@ -80,6 +79,6 @@ export class TtsController {
   @Throttle(COSTLY_TIER)
   @HttpCode(HttpStatus.ACCEPTED)
   branch(@Param('id', ParseUUIDPipe) id: string, @Body() dto: VoiceDto) {
-    return this.tts.enqueueBranch(id, dto.voice ?? DEFAULT_VOICE);
+    return this.tts.enqueueBranch(id, dto.voice);
   }
 }
