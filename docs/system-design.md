@@ -175,6 +175,12 @@ The middleware **never rejects** — it only records. Reading a public story whi
 signed out has to keep working, so authorization is enforced at the service layer
 where the resource is known, not at the door.
 
+The store is per-request and is supposed to vanish with it. It does not quite:
+it follows async execution across awaits and microtasks, which is what makes it
+work at all and is also how an identity once leaked into a background job that
+had no business having one. That story is §3.11, and it is the sharpest thing
+to know about this mechanism.
+
 ### 2.9 Session cleanup
 
 A scheduled job deletes session rows where `expiresAt < now`. Deliberately **not**
@@ -749,6 +755,135 @@ deliberately did *not* copy.
 The pattern in that table is the point: most published guidance on auth rate
 limiting is really guidance on *password* rate limiting. Applying it unchanged to
 an OAuth-only system produces machinery that defends nothing.
+
+---
+
+
+### 3.11 Events: why publishing does not call narration
+
+Publishing a story should start narrating it. The obvious way is for the story
+service to call the TTS service, and there are two separate reasons it cannot.
+
+**The import direction already means something.** `TtsModule` imports
+`StoriesModule`, because narration has to read chapters. Having stories import
+TTS as well is a cycle, and Nest refuses to boot. `forwardRef()` would silence
+it, but the direction is telling the truth: narration is a consumer of story
+data, and publishing has no reason to know narration exists.
+
+**And a primary action must not fail for a secondary effect.** `await
+tts.narrate(storyId)` inside publish means that if Redis is unreachable, or the
+queue is misconfigured, the *publish* returns an error. The story was saved and
+the visibility did change; the writer is told it failed and tries again. Their
+action is being rejected for something that has nothing to do with it.
+
+So the story layer announces what happened and stops caring:
+
+```ts
+this.events.emit('story.published', { storyId: updated.id });
+```
+
+`NarrationPrerender` subscribes in `TtsModule`, where importing stories is
+already allowed. Nothing imports in the other direction.
+
+```
+update()  ──emit──▶  DomainEvents
+                          │
+                          └──▶ NarrationPrerender   (today, the only listener)
+                               …analytics, search indexing, notification
+                                 could subscribe later, changing nothing here
+```
+
+Both problems close at once: no cycle, and handler failures are caught inside
+the emitter, so they cannot reach the request that triggered them.
+
+Hand-rolled rather than `@nestjs/event-emitter` — it is about sixty lines, the
+two behaviours that matter are ones I wanted to be explicit about, and adding a
+dependency to get a decorator was not worth it.
+
+### What it deliberately does not give you
+
+Worth saying plainly, because event buses get described as free and they are
+not:
+
+- **No durability.** Events live in this process and die with it. A crash
+  between the database write and the handler loses the reaction entirely. That
+  is exactly the gap a transactional outbox closes, and `outbox_events` is
+  already in the schema waiting for it. Until then the rule is that **nothing
+  may depend on an event as its only path**: pre-rendering is an optimisation,
+  and a reader asking for a chapter still queues it the ordinary way.
+- **No completion guarantee.** `emit` dispatches synchronously but handlers are
+  async and unawaited, so `update()` returns without knowing whether narration
+  was queued. That is the point — it is what stops a queue outage from failing
+  a publish — but it means the response cannot report on it.
+
+### The bug underneath: identity crossing an async boundary
+
+This is the part worth remembering, and it is invisible in code review.
+
+`AsyncLocalStorage` (§2.8) carries the caller's id through a request. It
+survives the microtask queue — that is what makes it work across awaits. So a
+handler *scheduled from inside a request* inherits whoever made that request,
+even though the request is conceptually over.
+
+Publishing therefore pre-rendered **as the story's owner**. And `readBranch`
+answers differently depending on who asks:
+
+| Asking | Gets |
+|---|---|
+| anonymous visitor | the free chapters only |
+| the owner | **every chapter** — the paywall does not apply to your own work |
+
+So instead of the two free chapters, publishing a two-hundred-chapter novel
+would have queued **two hundred syntheses**, against a provider quota measured
+in tens per day. It would not have raised an error. It would have looked like
+the project mysteriously running out of quota, a day later, for no visible
+reason.
+
+The fix is one line, placed in the **emitter** rather than in the handler, so
+every future listener inherits it without anybody having to remember:
+
+```ts
+requestContext.exit(() => { void handler(payload); });
+```
+
+The principle it encodes:
+
+> A reaction to something that happened is not performed on behalf of whoever
+> triggered it, so it gets no identity at all. Anything a handler is allowed to
+> do, it must be allowed to do as nobody.
+
+Depositing a cheque may trigger a fraud check. The fraud check is not acting on
+the depositor's behalf and does not get their credentials — it is the bank's
+own process.
+
+### The consequence that makes it good rather than merely correct
+
+Because pre-rendering now runs as nobody, it renders exactly what an anonymous
+visitor can read. **How far it goes is decided by the paywall, not by a
+setting.** There is no `PRERENDER_CHAPTERS` number to keep in step with
+`freeChapters`; change the paywall from two chapters to five and pre-rendering
+follows on its own.
+
+Two features share one rule instead of duplicating it, which is the difference
+between a configuration option and a design.
+
+### How it was caught
+
+Not by reading the code, which looked right. The first test passed — a story
+published, a job queued, audio produced. The tell was one field in the output:
+
+```
+job userId: 3d948b38-…     ← expected null
+```
+
+The test asserted on something nobody had asked about, the answer was wrong,
+and that was the whole thread. The fix was then verified by the test that would
+have caught it in the first place: a five-chapter story with two free chapters,
+asserting the pre-rendered set is exactly `[0, 1]`.
+
+The general defence, since this class of bug is common in event-driven systems
+and has a large blast radius: at every async boundary, ask what identity is in
+the store right now and whether it should be.
 
 ---
 
