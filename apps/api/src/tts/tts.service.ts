@@ -47,6 +47,8 @@ export interface NarrationTicket {
 export class TtsService {
   private readonly logger = new Logger(TtsService.name);
   private readonly driver: TtsDriver;
+  /** How many chapters are narrated ahead of the first reader. */
+  private readonly prerenderChapters: number;
 
   constructor(
     private readonly config: ConfigService,
@@ -63,6 +65,10 @@ export class TtsService {
       this.config.get<string>('GEMINI_API_KEY', ''),
       this.config.get<string>('TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
       Number(this.config.get<string>('TTS_TIMEOUT_MS', '300000')),
+    );
+    this.prerenderChapters = Math.max(
+      0,
+      Number(this.config.get<string>('PRERENDER_CHAPTERS', '3')),
     );
   }
 
@@ -223,10 +229,23 @@ export class TtsService {
    * platforms do not have this problem because they render at publish time and
    * a reader never meets the synthesiser at all.
    *
-   * How far to go is decided by the paywall rather than by a setting: this runs
-   * with no signed-in user, so `readBranch` returns exactly what an anonymous
-   * visitor gets. Those are the chapters everyone can reach, so they are the
-   * ones worth having ready.
+   * How far to go is a fixed number, and it used to be decided by the paywall.
+   * That was wrong in the ordinary case. Running with no identity means
+   * `readBranch` returns what an anonymous visitor sees - but `unlockPrice`
+   * defaults to zero, an ungated story is readable to the end, and publishing
+   * a two-hundred-chapter novel queued two hundred syntheses against a quota
+   * measured in tens per day. The paywall bounds *permission*, which is not
+   * the same question as how much it is worth spending on a story nobody has
+   * opened yet.
+   *
+   * Three is enough because prefetch covers everything after it: a reader who
+   * presses play on chapter one queues chapter two while six minutes of audio
+   * plays, which is far longer than a synthesis takes. Pre-rendering only has
+   * to bridge the gap until that loop starts, and the extra two chapters buy
+   * margin for a reader who skips ahead.
+   *
+   * The cost of publishing is therefore a constant rather than a function of
+   * how long the book is.
    */
   async prerenderHead(storyId: string): Promise<number> {
     if (!this.available) return 0;
@@ -244,8 +263,14 @@ export class TtsService {
     const { contributions } = await this.stories.readBranch(branchId);
     const voice = this.driver.defaultVoice;
 
+    // Sorted defensively: the bound is only meaningful if these are the first
+    // chapters rather than an arbitrary three of them.
+    const head = [...contributions]
+      .sort((a, b) => a.depth - b.depth)
+      .slice(0, this.prerenderChapters);
+
     let queued = 0;
-    for (const chapter of contributions) {
+    for (const chapter of head) {
       const ticket = await this.enqueueOne(
         branchId,
         chapter,
@@ -257,7 +282,8 @@ export class TtsService {
 
     if (queued > 0) {
       this.logger.log(
-        `pre-rendering ${queued} free chapter(s) of story ${storyId.slice(0, 8)}`,
+        `pre-rendering ${queued} of ${contributions.length} chapter(s) ` +
+          `of story ${storyId.slice(0, 8)}`,
       );
     }
     return queued;

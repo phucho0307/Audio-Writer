@@ -856,16 +856,59 @@ Depositing a cheque may trigger a fraud check. The fraud check is not acting on
 the depositor's behalf and does not get their credentials — it is the bank's
 own process.
 
-### The consequence that makes it good rather than merely correct
+### The elegant conclusion that was wrong
 
-Because pre-rendering now runs as nobody, it renders exactly what an anonymous
-visitor can read. **How far it goes is decided by the paywall, not by a
-setting.** There is no `PRERENDER_CHAPTERS` number to keep in step with
-`freeChapters`; change the paywall from two chapters to five and pre-rendering
-follows on its own.
+Because pre-rendering runs as nobody, it renders exactly what an anonymous
+visitor can read — so the obvious conclusion was that **the paywall decides how
+far it goes, and no `PRERENDER_CHAPTERS` setting is needed.** Two features
+sharing one rule; a design rather than a configuration option.
 
-Two features share one rule instead of duplicating it, which is the difference
-between a configuration option and a design.
+The test agreed. It published a five-chapter story with two free chapters and
+asserted the pre-rendered set was exactly `[0, 1]`, and it passed.
+
+It passed because the fixture set `unlockPrice: 10`. **`unlockPrice` defaults to
+zero**, an ungated story is readable to the last chapter by anybody, and
+`readableDepth()` returns `POSITIVE_INFINITY`. Re-run against the default:
+
+```
+6 chapters, freeChapters=3, unlockPrice=0 (the default)
+walked depths: [0, 1, 2, 3, 4, 5]      ← every chapter
+```
+
+Publishing a two-hundred-chapter free story would have queued two hundred
+syntheses — the identical failure the identity fix was believed to have closed,
+arriving through the front door instead. The fix was real; the conclusion drawn
+from it was not. Free is the *default* configuration, so the case that was never
+tested is the one almost every story is in.
+
+The error is worth naming precisely, because it is not a typo:
+
+> **The paywall answers who may read a chapter. It does not answer what is worth
+> spending to render one.** Those are an authorization question and a cost
+> question, and collapsing them was what made the design feel elegant.
+
+### What replaced it
+
+A flat `PRERENDER_CHAPTERS`, default **3**, for every story regardless of length
+or pricing. The number that felt inelegant is the correct one, and three is
+enough for a structural reason rather than a tuned one:
+
+```
+stranger opens a story   →  ch.1 already rendered      (pre-render, at publish)
+presses play             →  ch.2 queued immediately    (prefetch)
+~6 minutes of ch.1       →  ch.2 lands in 29–195 s     (comfortably ahead)
+presses next             →  ch.3 queued
+```
+
+Pre-rendering only has to bridge the gap until prefetch takes over, which is one
+chapter; the other two are margin for a reader who skips ahead. Everything past
+that is covered by a loop that already works, and paying for it in advance is
+paying for chapters most visitors never reach.
+
+The property that matters is not the value but its shape: **publishing costs a
+constant, not a function of book length.** A three-chapter story and a
+three-hundred-chapter one now cost the same to publish, which is the only
+version of this that survives a writer arriving with a finished novel.
 
 ### How it was caught
 
@@ -877,13 +920,94 @@ job userId: 3d948b38-…     ← expected null
 ```
 
 The test asserted on something nobody had asked about, the answer was wrong,
-and that was the whole thread. The fix was then verified by the test that would
-have caught it in the first place: a five-chapter story with two free chapters,
-asserting the pre-rendered set is exactly `[0, 1]`.
+and that was the whole thread.
 
-The general defence, since this class of bug is common in event-driven systems
-and has a large blast radius: at every async boundary, ask what identity is in
-the store right now and whether it should be.
+Two general defences, one for each half of this:
+
+- **Identity.** This class of bug is common in event-driven systems and has a
+  large blast radius. At every async boundary, ask what identity is in the store
+  right now and whether it should be.
+- **Fixtures.** The regression test for the identity bug passed while the same
+  catastrophe remained wide open, because its fixture priced the story and the
+  schema default does not. **A fixture that sets a field is not testing the
+  default.** Where a default is the case almost every row is in, that is the
+  case worth writing down first.
+
+---
+
+### 3.12 Who pays for narration
+
+Synthesis is the one operation on the platform with a hard external cost and a
+hard external ceiling, so the question of who is charged for it is a design
+decision rather than a billing detail. It has to be answered before the quota
+code is written, because the wrong answer is easy to implement and hard to walk
+back.
+
+### The rule: narration belongs to the story, not to the listener
+
+Pre-rendering happens at publish. Prefetch happens when a *reader* presses play
+on the previous chapter. Charging whoever triggered the work is the obvious move
+and it is wrong on three counts:
+
+- **They did not ask for it.** Prefetch is speculative. The reader clicked
+  chapter one; chapter two was the system's idea.
+- **Early readers subsidise late ones.** Reader #1 pays for chapter two and
+  readers #2 through #1000 get it free, which is an arbitrary tax on being early.
+- **It meters consumption.** Listening should stay free and unmetered. Serving
+  an existing file costs almost nothing, and it is the part that makes stories
+  spread.
+
+So: **the branch owner pays for narration of their branch, whoever triggered
+it.** For the main branch that is the author; for a fork it is the forker, which
+is the right answer because a fork is someone else's story living here.
+
+> Creation is metered. Consumption is not.
+
+This also dissolves the abuse worry that prompted the question — publishing a
+story to get it narrated, then unpublishing. Publishing *is* the legitimate way
+to spend narration quota, priced identically to every other route, so there is
+no trick left to play.
+
+### The tiers
+
+| | Free | Reader premium | Author premium |
+|---|---|---|---|
+| First 3 chapters of any story | ✓ | ✓ | ✓ |
+| Narration beyond chapter 3 | on demand, queued | any chapter, any story | — |
+| Whole book rendered at publish | — | — | ✓ |
+| Queue priority | bulk | interactive | ahead of both |
+| Voice selection | default | multiple, regional | per story |
+| Offline download | — | ✓ | ✓ |
+| Listener analytics | — | — | ✓ |
+
+**The free tier is the acquisition tool, and it is why `PRERENDER_CHAPTERS` is
+flat.** Three narrated chapters exist for every published story, paid for by the
+platform, because a stranger who presses play and hears nothing does not come
+back. That cost is a constant per story rather than per chapter, which is the
+only reason it is affordable to give away at all.
+
+**Reader premium sells latency, not access.** Every chapter can be narrated by
+anyone; what a subscriber buys is not waiting — their jobs enter at
+`PRIORITY.INTERACTIVE` rather than `PRIORITY.BULK`. That distinction already
+exists in the queue, so the tier is a policy on top of built mechanism rather
+than new machinery.
+
+**Author premium sells the thing that costs real money**, which is rendering a
+whole book up front against a quota measured in tens per day. It is priced above
+reader premium for that reason and no other.
+
+### What this implies that is not built yet
+
+- `EntitlementKind.TTS_CREDITS`, charged in `enqueueOne` against
+  `branch.ownerId` — explicitly *not* the caller, and not the anonymous identity
+  the handler runs under. Permission and billing are separate lookups, and §3.11
+  is the story of what happens when two questions get collapsed into one.
+- **Cache hits are free.** Content-addressed audio (§3.6) means a fork that
+  changed nothing charges nothing, which has to be true or forking becomes
+  expensive for no reason.
+- Reserve on enqueue, commit on success, **release on failure** — a provider
+  timeout must not bill a narration that does not exist.
+- A third priority band above `INTERACTIVE` for author premium.
 
 ---
 
