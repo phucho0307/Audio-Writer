@@ -151,25 +151,222 @@
     font-variant-numeric: tabular-nums;
   }
 
-  .ribbon {
-    background: var(--accent-soft);
+  /* A quiet marker rather than a banner: visible to anyone who looks, but it
+     no longer sits across the page like a warning. */
+  .chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 2px 8px;
+  }
+
+  .ticker {
     border-bottom: 1px solid var(--line);
-    font-size: 12.5px;
+    background: var(--surface);
+    overflow: hidden;
   }
 
-  .ribbon .wrap {
-    padding-block: 7px;
+  .ticker .wrap {
+    padding-block: 8px;
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px 10px;
-    align-items: baseline;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+    min-height: 34px;
   }
 
-  .ribbon b {
+  .pulse {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--accent);
+    flex: none;
+    animation: blip 2.4s ease-in-out infinite;
+  }
+
+  @keyframes blip {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+  }
+
+  .ticker-line {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: opacity 0.4s ease;
+  }
+
+  .ticker-line .who {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--accent);
+  }
+
+  .ticker-line time {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .live {
+    margin-left: auto;
+    flex: none;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* trending rail */
+
+  .rail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 2px 18px;
+    border-block: 1px solid var(--line);
+    padding-block: 12px;
+    margin-bottom: 26px;
+  }
+
+  .rail-item {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    text-align: left;
+    padding-block: 4px;
+    min-width: 0;
+  }
+
+  .rail-item .rank {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    flex: none;
+  }
+
+  .rail-item .nm {
+    font-size: 13px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
+
+  .rail-item:hover .nm {
+    color: var(--accent);
+  }
+
+  .rail-item .n {
+    margin-left: auto;
+    flex: none;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .spark {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 16px;
+    flex: none;
+  }
+
+  .spark i {
+    width: 3px;
+    background: var(--accent);
+    opacity: 0.45;
+    border-radius: 1px;
+  }
+
+  .spark i:last-child {
+    opacity: 1;
+  }
+
+  /* comments */
+
+  .thread {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .cm {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 10px;
+  }
+
+  .av {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+  }
+
+  .cm-head {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+
+  .cm-head b {
+    font-size: 13px;
     font-weight: 600;
   }
 
-  .ribbon span {
+  .cm-head time {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+  }
+
+  .cm p {
+    margin: 2px 0 0;
+    font-size: 13.5px;
+  }
+
+  .cm .likes {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .composer {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+  }
+
+  .composer input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 13.5px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 7px 10px;
+  }
+
+  .composer input::placeholder {
     color: var(--muted);
   }
 
@@ -776,18 +973,17 @@
     <button class="brand" id="home">Audio Writer</button>
     <nav>
       <button id="nav-shelf" aria-current="true">Khám phá</button>
+      <span class="chip" title="Trang giới thiệu: truyện và số liệu là dữ liệu mẫu">demo</span>
       <span class="wallet" id="wallet">— credit</span>
     </nav>
   </div>
 </header>
 
-<div class="ribbon">
+<div class="ticker">
   <div class="wrap">
-    <b>Bản demo</b>
-    <span
-      >Truyện, giọng đọc và số liệu là dữ liệu mẫu. Chạy hoàn toàn trong trình
-      duyệt — không có máy chủ nào phía sau trang này.</span
-    >
+    <span class="pulse" aria-hidden="true"></span>
+    <span class="ticker-line" id="ticker" aria-live="off"></span>
+    <span class="live" id="live"></span>
   </div>
 </div>
 
@@ -853,6 +1049,33 @@
       'co-dai-y-nu': { reads: 15310, price: 12, forks: [] },
     };
 
+    // Fictional handles for the demo's activity feed and comment threads.
+    var HANDLES = [
+      'linhmai', 'thao.ng', 'cucai', 'bequan', 'mint', 'haiyen',
+      'docgia_2k3', 'trangiang', 'nhim.con', 'quynhanh',
+    ];
+
+    var ACTIVITY = [
+      { t: 'vừa nghe xong', what: 'chương' },
+      { t: 'vừa mở khoá', what: 'truyện' },
+      { t: 'vừa rẽ nhánh từ', what: 'chương' },
+      { t: 'vừa bình luận ở', what: 'chương' },
+      { t: 'vừa thêm vào kệ', what: 'truyện' },
+    ];
+
+    var COMMENTS = [
+      'Đoạn này đọc xong không dám tắt đèn.',
+      'Giọng đọc nghe lúc đêm hợp kinh khủng.',
+      'Tui đoán được twist rồi mà vẫn sợ.',
+      'Chương sau ra chưa tác giả ơi 😭',
+      'Nhánh của @linhmai hay hơn bản gốc, thật lòng.',
+      'Nghe trên đường đi làm, suýt lỡ bến.',
+      'Cách tả cái hộp thiếc ám ảnh thật sự.',
+      'Đọc lại lần hai mới thấy chi tiết sợi tóc được gài từ đầu.',
+      'Ai nghe bản Vais1000 chưa, nghe đỡ gấp hơn.',
+      'Mình mở khoá luôn cả truyện, không chịu được nữa.',
+    ];
+
     var FREE_CHAPTERS = 3;
     var PRERENDERED = 3; // what publishing renders ahead of the first reader
     var WPM = 157; // the cloud voice's measured pace
@@ -873,6 +1096,8 @@
       unlocked: {},
       ready: {}, // "slug:ch:voice" -> true once narrated in this session
       job: null,
+      posted: {}, // comments the viewer adds, per chapter
+      listeners: {},
     };
 
     /* ------------------------------------------------------------ storage */
@@ -933,6 +1158,58 @@
       return SEED[slug] || { reads: 0, price: 0, forks: [] };
     }
 
+    /** Deterministic pseudo-random, so the same story keeps the same shape. */
+    function hash(str) {
+      var h = 2166136261;
+      for (var i = 0; i < str.length; i++) {
+        h ^= str.charCodeAt(i);
+        h = Math.imul(h, 16777619);
+      }
+      return function () {
+        h = Math.imul(h ^ (h >>> 15), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        return ((h ^= h >>> 16) >>> 0) / 4294967296;
+      };
+    }
+
+    function weekly(slug) {
+      var rand = hash(slug);
+      var bars = [];
+      for (var i = 0; i < 7; i++) bars.push(0.35 + rand() * 0.65);
+      return bars;
+    }
+
+    function pick(list, rand) {
+      return list[Math.floor(rand() * list.length)];
+    }
+
+    function commentsFor(slug, i) {
+      var rand = hash(slug + ':' + i);
+      var n = 2 + Math.floor(rand() * 3);
+      var out = [];
+      var used = {};
+      for (var k = 0; k < n; k++) {
+        var who = pick(HANDLES, rand);
+        var body = pick(COMMENTS, rand);
+        if (used[body]) continue;
+        used[body] = true;
+        out.push({
+          who: who,
+          body: body,
+          mins: 8 + Math.floor(rand() * 2600),
+          likes: Math.floor(rand() * 46),
+        });
+      }
+      out.sort(function (a, b) { return a.mins - b.mins; });
+      return out;
+    }
+
+    function ago(mins) {
+      if (mins < 60) return mins + ' phút trước';
+      if (mins < 1440) return Math.round(mins / 60) + ' giờ trước';
+      return Math.round(mins / 1440) + ' ngày trước';
+    }
+
     function isUnlocked(slug) {
       return seedOf(slug).price === 0 || state.unlocked[slug] === true;
     }
@@ -971,6 +1248,79 @@
         return Math.round((speech / 5 + 3) * 1000);
       }
       return Math.round(20000 + ch.text.length * 6);
+    }
+
+    /* -------------------------------------------------------------- live */
+
+    /**
+     * Listener counts that drift, and a feed of things happening.
+     *
+     * Both are generated in the browser from the seeded numbers: there is no
+     * server here and nobody else is reading. A page that shows a frozen
+     * "0 đang nghe" reads as broken, so the demo shows plausible movement and
+     * says in the header that the data is sample data.
+     */
+    function startLive() {
+      state.stories.forEach(function (s) {
+        var rand = hash(s.slug + ':live');
+        state.listeners[s.slug] = 40 + Math.floor(rand() * (seedOf(s.slug).reads / 180));
+      });
+      paintLive();
+      setInterval(drift, 4200);
+
+      tickerNext();
+      setInterval(tickerNext, 5200);
+    }
+
+    function drift() {
+      state.stories.forEach(function (s) {
+        var n = state.listeners[s.slug];
+        var step = Math.round((Math.random() - 0.45) * Math.max(3, n * 0.05));
+        state.listeners[s.slug] = Math.max(11, n + step);
+      });
+      paintLive();
+    }
+
+    function paintLive() {
+      var total = 0;
+      state.stories.forEach(function (s) {
+        total += state.listeners[s.slug];
+      });
+      var live = document.getElementById('live');
+      if (live) live.textContent = thousands(total) + ' người đang nghe';
+
+      var nodes = document.querySelectorAll('[data-live]');
+      for (var i = 0; i < nodes.length; i++) {
+        var slug = nodes[i].getAttribute('data-live');
+        nodes[i].textContent = thousands(state.listeners[slug] || 0) + ' đang nghe';
+      }
+    }
+
+    function tickerNext() {
+      var el = document.getElementById('ticker');
+      if (!el || !state.stories.length) return;
+      var rand = hash(String(Date.now()));
+      var s = state.stories[Math.floor(rand() * state.stories.length)];
+      var act = pick(ACTIVITY, rand);
+      var ch = 1 + Math.floor(rand() * s.chapters.length);
+      var line =
+        '<span class="who">@' +
+        esc(pick(HANDLES, rand)) +
+        '</span> ' +
+        act.t +
+        ' ' +
+        (act.what === 'chương' ? 'chương ' + ch + ' của ' : '') +
+        '<b>' +
+        esc(s.title) +
+        '</b> <time>' +
+        (1 + Math.floor(rand() * 40)) +
+        ' phút trước</time>';
+
+      el.style.opacity = '0';
+      setTimeout(function () {
+        el.innerHTML = line;
+        el.style.opacity = '1';
+      }, 260);
     }
 
     /* ------------------------------------------------------------ chrome */
@@ -1108,6 +1458,7 @@
         'aria-current',
         state.view === 'shelf' ? 'true' : 'false',
       );
+      paintLive();
     }
 
     function shelf() {
@@ -1151,11 +1502,45 @@
         })
         .join('');
 
+      var ranked = state.stories
+        .slice()
+        .sort(function (a, b) {
+          return seedOf(b.slug).reads - seedOf(a.slug).reads;
+        })
+        .slice(0, 4)
+        .map(function (s, n) {
+          var bars = weekly(s.slug)
+            .map(function (h) {
+              return '<i style="height:' + Math.round(h * 16) + 'px"></i>';
+            })
+            .join('');
+          return (
+            '<button class="rail-item" data-story="' +
+            s.slug +
+            '">' +
+            '<span class="rank">' +
+            (n + 1) +
+            '</span><span class="nm">' +
+            esc(s.title) +
+            '</span>' +
+            '<span class="spark" aria-hidden="true">' +
+            bars +
+            '</span>' +
+            '<span class="n" data-live="' +
+            s.slug +
+            '">—</span></button>'
+          );
+        })
+        .join('');
+
       return (
         '<div class="lede">' +
         '<h1>Truyện người viết, AI viết tiếp, ai cũng nghe được.</h1>' +
         '<p>Ba chương đầu của mọi truyện đều có bản đọc sẵn, miễn phí. ' +
         'Thích một nhánh khác? Rẽ nhánh và viết tiếp theo ý bạn.</p>' +
+        '</div>' +
+        '<div class="rail">' +
+        ranked +
         '</div>' +
         '<div class="grid">' +
         cards +
@@ -1275,6 +1660,9 @@
         ' phút</span><span>' +
         thousands(seed.reads) +
         ' lượt đọc</span>' +
+        '<span data-live="' +
+        s.slug +
+        '">—</span>' +
         (open ? '<span>Đã mở khoá</span>' : '') +
         '</div>' +
         '</div></div>' +
@@ -1376,6 +1764,7 @@
         '<div class="prose">' +
         paras +
         '</div>' +
+        thread(s.slug, i) +
         '<div class="pager">' +
         '<button data-go="' +
         (i - 1) +
@@ -1398,6 +1787,46 @@
         '</div>' +
         foot() +
         '</div>'
+      );
+    }
+
+    function thread(slug, i) {
+      var list = commentsFor(slug, i);
+      var mine = (state.posted[slug + ':' + i] || []).map(function (body) {
+        return { who: 'bạn', body: body, mins: 0, likes: 0 };
+      });
+      var items = mine
+        .concat(list)
+        .map(function (c) {
+          return (
+            '<div class="cm">' +
+            '<div class="av" aria-hidden="true">' +
+            esc(c.who.slice(0, 2)) +
+            '</div><div><div class="cm-head"><b>' +
+            (c.who === 'bạn' ? 'Bạn' : '@' + esc(c.who)) +
+            '</b><time>' +
+            (c.mins === 0 ? 'vừa xong' : ago(c.mins)) +
+            '</time></div>' +
+            '<p>' +
+            esc(c.body) +
+            '</p>' +
+            '<div class="likes">♥ ' +
+            c.likes +
+            '</div></div></div>'
+          );
+        })
+        .join('');
+
+      return (
+        '<section class="block"><div class="block-head"><h2>Bình luận · ' +
+        (list.length + mine.length) +
+        '</h2></div>' +
+        '<div class="thread">' +
+        items +
+        '<div class="composer">' +
+        '<input id="say" placeholder="Viết bình luận…" autocomplete="off" />' +
+        '<button class="btn" id="post">Gửi</button>' +
+        '</div></div></section>'
       );
     }
 
@@ -1502,6 +1931,14 @@
           save();
           render();
         }
+      } else if (t.id === 'post') {
+        var box = document.getElementById('say');
+        var text = box && box.value.trim();
+        if (text) {
+          var key = state.slug + ':' + state.ch;
+          state.posted[key] = [text].concat(state.posted[key] || []);
+          render();
+        }
       } else if (t.id === 'fork') {
         var seed = seedOf(state.slug);
         seed.forks = seed.forks.concat([
@@ -1528,6 +1965,7 @@
       .then(function (data) {
         state.stories = data;
         render();
+        startLive();
       })
       .catch(function () {
         app.innerHTML =
