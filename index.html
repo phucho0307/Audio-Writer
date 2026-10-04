@@ -730,8 +730,21 @@
     object-fit: cover;
   }
 
+  .art.photo::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, #05080b00 42%, #05080bcc 100%);
+  }
+
+  .art.photo img {
+    filter: saturate(0.82) contrast(1.06);
+  }
+
   .badge {
     position: absolute;
+    z-index: 2;
     left: 9px;
     bottom: 9px;
     font-family: var(--mono);
@@ -753,6 +766,7 @@
 
   .fab {
     position: absolute;
+    z-index: 2;
     right: 9px;
     bottom: 9px;
     width: 34px;
@@ -814,6 +828,73 @@
     font-size: 10.5px;
     color: var(--muted);
     font-variant-numeric: tabular-nums;
+  }
+
+  .pages {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 7px;
+    margin-top: 38px;
+    flex-wrap: wrap;
+  }
+
+  .pg {
+    min-width: 34px;
+    height: 34px;
+    padding-inline: 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    background: var(--card);
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-2);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 0.14s ease, color 0.14s ease;
+  }
+
+  .pg:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .pg[aria-current='true'] {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--card);
+    font-weight: 500;
+  }
+
+  .pg[disabled] {
+    opacity: 0.35;
+    cursor: default;
+    border-color: var(--line);
+    color: var(--muted);
+  }
+
+  .soon-note {
+    border: 1px dashed var(--line);
+    border-radius: var(--r);
+    padding: 26px 22px;
+    text-align: center;
+    color: var(--muted);
+    background: var(--card);
+  }
+
+  .soon-note h3 {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 500;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+
+  .soon-note p {
+    margin: 0;
+    font-size: 13.5px;
   }
 
   /* -------------------------------------------------------------- story */
@@ -1750,7 +1831,19 @@
         price: 0,
         forks: [{ name: 'Đèn của dì Năm', who: 'mint', at: 3, len: 5 }],
       },
+      'mua-tren-doi-che': { reads: 4120, price: 0, forks: [] },
+      'ga-tau-khong-ten': { reads: 9860, price: 8, forks: [] },
+      'tiem-may-ao-cuoi': { reads: 6730, price: 0, forks: [] },
+      'deo-ma-phuc': { reads: 15240, price: 10, forks: [] },
+      'nguoi-ban-giac-mo': { reads: 21390, price: 12, forks: [] },
+      'mua-ca-cuoi-cung': { reads: 7480, price: 0, forks: [] },
+      'can-phong-99': { reads: 28110, price: 10, forks: [] },
+      'thu-gui-tu-nam-sau': { reads: 12050, price: 8, forks: [] },
+      'ban-do-khong-co-duong-ve': { reads: 10430, price: 0, forks: [] },
+      'quan-ca-phe-mo-luc-4h': { reads: 17820, price: 0, forks: [] },
     };
+
+    var PER_PAGE = 8;
 
     var HANDLES = [
       'linhmai', 'thao.ng', 'cucai', 'bequan', 'mint', 'haiyen',
@@ -1804,6 +1897,7 @@
       now: null,
       featured: [],
       featIdx: 0,
+      page: 0,
     };
 
     /* ----------------------------------------------------------- storage */
@@ -1879,7 +1973,13 @@
     }
 
     function cover(slug) {
-      return './covers/' + slug + '.svg';
+      var s = story(slug);
+      return s && s.photo ? './photos/' + slug + '.jpg' : './covers/' + slug + '.svg';
+    }
+
+    /** Catalogue entries: a cover and a page, no chapters yet. */
+    function isSoon(s) {
+      return !s.chapters || s.chapters.length === 0;
     }
 
     function clipFor(i) {
@@ -1968,7 +2068,9 @@
      */
     function startHero() {
       state.featured = state.stories
-        .slice()
+        .filter(function (s) {
+          return !isSoon(s);
+        })
         .sort(function (a, b) {
           return seedOf(b.slug).reads - seedOf(a.slug).reads;
         })
@@ -2254,7 +2356,9 @@
       var hero = '<section class="hero" id="hero">' + heroHtml(feat) + '</section>';
 
       var ranked = state.stories
-        .slice()
+        .filter(function (s) {
+          return !isSoon(s);
+        })
         .sort(function (a, b) {
           return seedOf(b.slug).reads - seedOf(a.slug).reads;
         })
@@ -2275,26 +2379,26 @@
         })
         .join('');
 
+      var pages = Math.ceil(state.stories.length / PER_PAGE);
+      if (state.page >= pages) state.page = 0;
       var cards = state.stories
-        .map(function (s) {
-          var seed = seedOf(s.slug);
-          var badge = seed.price
-            ? '<span class="badge gold">' + seed.price + ' credit</span>'
-            : '<span class="badge">Miễn phí</span>';
-          return (
-            '<button class="card" data-story="' + s.slug + '">' +
-            '<span class="art"><img src="' + cover(s.slug) + '" alt="Bìa ' +
-            esc(s.title) + '" width="600" height="1080" loading="lazy" />' +
-            badge +
-            '<span class="fab" data-listen="' + s.slug + '">▶</span></span>' +
-            '<span class="genres">' + esc(s.genres.join(' · ')) + '</span>' +
-            '<h3>' + esc(s.title) + '</h3>' +
-            '<p>' + esc(s.synopsis) + '</p>' +
-            '<span class="meta"><span>' + s.chapters.length + ' chương</span>' +
-            '<span>' + num(seed.reads) + ' lượt đọc</span></span></button>'
-          );
-        })
+        .slice(state.page * PER_PAGE, state.page * PER_PAGE + PER_PAGE)
+        .map(card)
         .join('');
+
+      var nums = '';
+      for (var n = 0; n < pages; n++) {
+        nums +=
+          '<button class="pg" data-page="' + n + '" aria-current="' +
+          (n === state.page) + '">' + (n + 1) + '</button>';
+      }
+      var pager =
+        '<nav class="pages" aria-label="Phân trang">' +
+        '<button class="pg" data-page="' + (state.page - 1) + '"' +
+        (state.page === 0 ? ' disabled' : '') + '>←</button>' +
+        nums +
+        '<button class="pg" data-page="' + (state.page + 1) + '"' +
+        (state.page >= pages - 1 ? ' disabled' : '') + '>→</button></nav>';
 
       return (
         hero +
@@ -2305,7 +2409,35 @@
         '<span class="note">' + state.stories.length +
         ' truyện · 3 chương đầu miễn phí</span></div>' +
         '<div class="grid">' + cards + '</div>' +
+        pager +
         foot()
+      );
+    }
+
+    function card(s) {
+      var seed = seedOf(s.slug);
+      var soon = isSoon(s);
+      var badge = soon
+        ? '<span class="badge">Sắp ra mắt</span>'
+        : seed.price
+          ? '<span class="badge gold">' + seed.price + ' credit</span>'
+          : '<span class="badge">Miễn phí</span>';
+      return (
+        '<button class="card" data-story="' + s.slug + '">' +
+        '<span class="art' + (s.photo ? ' photo' : '') + '">' +
+        '<img src="' + cover(s.slug) + '" alt="Bìa ' + esc(s.title) +
+        '" width="600" height="1080" loading="lazy" />' +
+        badge +
+        (soon ? '' : '<span class="fab" data-listen="' + s.slug + '">▶</span>') +
+        '</span>' +
+        '<span class="genres">' + esc(s.genres.join(' · ')) + '</span>' +
+        '<h3>' + esc(s.title) + '</h3>' +
+        '<p>' + esc(s.synopsis) + '</p>' +
+        '<span class="meta">' +
+        (soon
+          ? '<span>Sắp ra mắt</span>'
+          : '<span>' + s.chapters.length + ' chương</span>') +
+        '<span>' + num(seed.reads) + ' lượt đọc</span></span></button>'
       );
     }
 
@@ -2332,24 +2464,7 @@
         );
       }
 
-      var cards = all
-        .map(function (s) {
-          var seed = seedOf(s.slug);
-          return (
-            '<button class="card" data-story="' + s.slug + '">' +
-            '<span class="art"><img src="' + cover(s.slug) + '" alt="Bìa ' +
-            esc(s.title) + '" width="600" height="1080" loading="lazy" />' +
-            (state.unlocked[s.slug]
-              ? '<span class="badge">Đã mở khoá</span>'
-              : '<span class="badge">Đang nghe</span>') +
-            '<span class="fab" data-listen="' + s.slug + '">▶</span></span>' +
-            '<span class="genres">' + esc(s.genres.join(' · ')) + '</span>' +
-            '<h3>' + esc(s.title) + '</h3>' +
-            '<span class="meta"><span>' + s.chapters.length + ' chương</span></span>' +
-            '</button>'
-          );
-        })
-        .join('');
+      var cards = all.map(card).join('');
 
       return (
         '<div class="sec-head"><h2>Kệ của tôi</h2>' +
@@ -2384,7 +2499,7 @@
         })
         .join('');
 
-      var unlockCard = open
+      var unlockCard = open || isSoon(s)
         ? ''
         : '<div class="panelcard gold"><h3>Mở khoá cả truyện</h3>' +
           '<p>Ba chương đầu luôn miễn phí. Mở khoá một lần, đọc và nghe mãi mãi — người viết nhận 70%.</p>' +
@@ -2417,8 +2532,8 @@
         '<button class="back" id="back">← Khám phá</button>' +
         '<div class="story-grid"><div>' +
         '<div class="story-top">' +
-        '<span class="art"><img src="' + cover(s.slug) + '" alt="Bìa ' +
-        esc(s.title) + '" /></span>' +
+        '<span class="art' + (s.photo ? ' photo' : '') + '"><img src="' +
+        cover(s.slug) + '" alt="Bìa ' + esc(s.title) + '" /></span>' +
         '<div><h1>' + esc(s.title) + '</h1>' +
         '<div class="author"><span class="av" aria-hidden="true">HP</span>' +
         '<span><span class="nm">' + esc(AUTHOR) + '</span>' +
@@ -2432,15 +2547,21 @@
           .join('') +
         (open ? '<span class="pill">đã mở khoá</span>' : '') +
         '</div>' +
-        '<div class="cta">' +
-        '<button class="btn" data-listen="' + s.slug + '">▶ Nghe từ đầu</button>' +
-        '<button class="btn quiet" data-ch="0">Đọc chương 1</button>' +
-        '</div></div></div>' +
-        '<div class="sec-head"><h2>Mục lục</h2>' +
-        '<button class="gear" id="gear">' + esc(voiceLabel(state.voice)) +
-        ' · ' + state.rate + '× ' + (state.panel ? '▴' : '▾') + '</button></div>' +
-        (state.panel ? '<div class="narr">' + panel() + '</div>' : '') +
-        '<ol class="chapters">' + rows + '</ol>' +
+        (isSoon(s)
+          ? ''
+          : '<div class="cta">' +
+            '<button class="btn" data-listen="' + s.slug + '">▶ Nghe từ đầu</button>' +
+            '<button class="btn quiet" data-ch="0">Đọc chương 1</button>' +
+            '</div>') +
+        '</div></div>' +
+        (isSoon(s)
+          ? '<div class="soon-note"><h3>Sắp ra mắt</h3><p>Truyện này đã lên lịch ' +
+            'xuất bản. Ba chương đầu sẽ có bản đọc ngay khi đăng.</p></div>'
+          : '<div class="sec-head"><h2>Mục lục</h2>' +
+            '<button class="gear" id="gear">' + esc(voiceLabel(state.voice)) +
+            ' · ' + state.rate + '× ' + (state.panel ? '▴' : '▾') + '</button></div>' +
+            (state.panel ? '<div class="narr">' + panel() + '</div>' : '') +
+            '<ol class="chapters">' + rows + '</ol>') +
         '</div><aside class="side">' +
         unlockCard +
         '<div class="panelcard"><h3>Số liệu</h3>' +
@@ -2588,6 +2709,7 @@
         '<span>Chương sau tạo trước khi bạn nghe tới</span>' +
         '<span>Giọng Gemini hoặc Piper tự chạy</span>' +
         '<span>Nội dung và số liệu trong trang là dữ liệu mẫu</span>' +
+        '<span>Ảnh bìa một số truyện từ Unsplash</span>' +
         '</footer>'
       );
     }
@@ -2617,6 +2739,11 @@
         go('reader', state.slug, Number(t.dataset.ch));
       } else if (t.dataset.go !== undefined) {
         go('reader', state.slug, Number(t.dataset.go));
+      } else if (t.dataset.page !== undefined) {
+        state.page = Number(t.dataset.page);
+        render();
+        var grid = document.querySelector('.grid');
+        if (grid) grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
       } else if (t.id === 'gear') {
         state.panel = !state.panel;
         render();
