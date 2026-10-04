@@ -2796,7 +2796,11 @@
 
     load();
 
-    fetch('./data/stories.json')
+    // Versioned on purpose. An earlier deploy served this file as immutable for
+    // a year, so browsers that loaded it then will not re-request the same URL
+    // no matter what the headers say now. Changing the URL is the only way to
+    // reach them; bump this whenever the catalogue changes.
+    fetch('./data/stories.json?v=22')
       .then(function (r) {
         return r.json();
       })
