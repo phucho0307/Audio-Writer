@@ -1871,6 +1871,9 @@
       'Mình mở khoá luôn cả truyện, không chịu được nữa.',
     ];
 
+    /** Everyone listening across the whole site, right now. */
+    var TOTAL_LISTENERS = 300;
+
     var FREE_CHAPTERS = 3;
     var PRERENDERED = 3;
     var WPM = 157;
@@ -1893,6 +1896,7 @@
       ready: {},
       posted: {},
       listeners: {},
+      base: {},
       job: null,
       now: null,
       featured: [],
@@ -2093,12 +2097,32 @@
       }, 7000);
     }
 
+    /**
+     * Listeners are split out of one total rather than invented per story.
+     *
+     * Each story takes a share proportional to how much it is read, with a
+     * floor so nothing sits at zero, and only stories that have chapters count -
+     * nobody is listening to something unpublished. The total is the number that
+     * has to look right, so that is the number that is set.
+     */
     function startLive() {
-      state.stories.forEach(function (s) {
-        var rand = hash(s.slug + ':live');
-        state.listeners[s.slug] =
-          40 + Math.floor(rand() * (seedOf(s.slug).reads / 180));
+      var live = state.stories.filter(function (s) {
+        return !isSoon(s);
       });
+      var totalReads = live.reduce(function (n, s) {
+        return n + seedOf(s.slug).reads;
+      }, 0);
+
+      live.forEach(function (s) {
+        var share = seedOf(s.slug).reads / totalReads;
+        var rand = hash(s.slug + ':live');
+        // ±12% of the share, so the split is uneven the way a real one is.
+        var jitter = 0.88 + rand() * 0.24;
+        var n = Math.round(TOTAL_LISTENERS * share * jitter);
+        state.listeners[s.slug] = Math.max(4, n);
+        state.base[s.slug] = state.listeners[s.slug];
+      });
+
       paintLive();
       setInterval(drift, 4200);
       tickerNext();
@@ -2106,10 +2130,17 @@
     }
 
     function drift() {
-      state.stories.forEach(function (s) {
-        var n = state.listeners[s.slug];
-        var step = Math.round((Math.random() - 0.45) * Math.max(3, n * 0.05));
-        state.listeners[s.slug] = Math.max(11, n + step);
+      Object.keys(state.listeners).forEach(function (slug) {
+        var base = state.base[slug];
+        var n = state.listeners[slug];
+        var step = Math.round((Math.random() - 0.5) * Math.max(2, base * 0.12));
+        // Kept inside a band around its own share, so the total stays put
+        // instead of wandering off over an afternoon.
+        var next = Math.min(
+          Math.round(base * 1.3),
+          Math.max(Math.max(3, Math.round(base * 0.7)), n + step),
+        );
+        state.listeners[slug] = next;
       });
       paintLive();
     }
@@ -2566,7 +2597,10 @@
         unlockCard +
         '<div class="panelcard"><h3>Số liệu</h3>' +
         '<div class="statrow"><span>Lượt đọc</span><span>' + num(seed.reads) + '</span></div>' +
-        '<div class="statrow"><span>Đang nghe</span><span data-live="' + s.slug + '">—</span></div>' +
+        (isSoon(s)
+          ? ''
+          : '<div class="statrow"><span>Đang nghe</span>' +
+            '<span data-live="' + s.slug + '">—</span></div>') +
         '<div class="statrow"><span>Số từ</span><span>' + num(s.words) + '</span></div>' +
         '<div class="statrow"><span>Thời lượng</span><span>' +
         Math.round(s.words / WPM) + ' phút</span></div></div>' +
