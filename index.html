@@ -190,16 +190,42 @@
     margin-left: auto;
   }
 
-  .chip {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    border: 1px solid var(--line);
-    border-radius: 999px;
-    padding: 3px 9px;
+  .navlink {
+    font-size: 13.5px;
+    color: var(--ink-2);
+    padding: 4px 2px;
     white-space: nowrap;
+  }
+
+  .navlink:hover {
+    color: var(--accent);
+  }
+
+  .navlink[aria-current='true'] {
+    color: var(--accent);
+    font-weight: 500;
+    box-shadow: inset 0 -2px 0 var(--accent);
+  }
+
+  .empty {
+    border: 1px dashed var(--line);
+    border-radius: var(--r);
+    padding: 34px 24px;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .empty h3 {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 500;
+    color: var(--ink);
+    margin: 0 0 6px;
+  }
+
+  .empty p {
+    margin: 0 0 16px;
+    font-size: 13.5px;
   }
 
   .wallet {
@@ -1496,7 +1522,8 @@
       <span class="nm">Audio Writer</span>
     </button>
     <nav>
-      <span class="chip" title="Trang giới thiệu: truyện và số liệu là dữ liệu mẫu">demo</span>
+      <button class="navlink" id="nav-shelf">Khám phá</button>
+      <button class="navlink" id="nav-mine">Kệ của tôi</button>
       <span class="wallet" id="wallet"><b>—</b> credit</span>
     </nav>
   </div>
@@ -2002,8 +2029,16 @@
       document.getElementById('wallet').innerHTML =
         '<b>' + state.credits + '</b> credit';
       if (state.view === 'shelf') app.innerHTML = shelf();
+      else if (state.view === 'mine') app.innerHTML = mine();
       else if (state.view === 'story') app.innerHTML = storyView();
       else app.innerHTML = reader();
+
+      document
+        .getElementById('nav-shelf')
+        .setAttribute('aria-current', state.view === 'shelf' ? 'true' : 'false');
+      document
+        .getElementById('nav-mine')
+        .setAttribute('aria-current', state.view === 'mine' ? 'true' : 'false');
       paintLive();
     }
 
@@ -2083,6 +2118,56 @@
         '<div class="sec-head"><h2>Tất cả truyện</h2>' +
         '<span class="note">' + state.stories.length +
         ' truyện · 3 chương đầu miễn phí</span></div>' +
+        '<div class="grid">' + cards + '</div>' +
+        foot()
+      );
+    }
+
+    function mine() {
+      var unlocked = state.stories.filter(function (s) {
+        return state.unlocked[s.slug];
+      });
+      var heard = {};
+      Object.keys(state.ready).forEach(function (k) {
+        heard[k.split(':')[0]] = true;
+      });
+      var listened = state.stories.filter(function (s) {
+        return heard[s.slug] && !state.unlocked[s.slug];
+      });
+      var all = unlocked.concat(listened);
+
+      if (!all.length) {
+        return (
+          '<div class="sec-head"><h2>Kệ của tôi</h2></div>' +
+          '<div class="empty"><h3>Kệ của bạn còn trống</h3>' +
+          '<p>Truyện bạn mở khoá hoặc đã nghe sẽ nằm ở đây.</p>' +
+          '<button class="btn" id="nav-shelf-2">Tìm truyện để nghe</button></div>' +
+          foot()
+        );
+      }
+
+      var cards = all
+        .map(function (s) {
+          var seed = seedOf(s.slug);
+          return (
+            '<button class="card" data-story="' + s.slug + '">' +
+            '<span class="art"><img src="' + cover(s.slug) + '" alt="Bìa ' +
+            esc(s.title) + '" width="600" height="1080" loading="lazy" />' +
+            (state.unlocked[s.slug]
+              ? '<span class="badge">Đã mở khoá</span>'
+              : '<span class="badge">Đang nghe</span>') +
+            '<span class="fab" data-listen="' + s.slug + '">▶</span></span>' +
+            '<span class="genres">' + esc(s.genres.join(' · ')) + '</span>' +
+            '<h3>' + esc(s.title) + '</h3>' +
+            '<span class="meta"><span>' + s.chapters.length + ' chương</span></span>' +
+            '</button>'
+          );
+        })
+        .join('');
+
+      return (
+        '<div class="sec-head"><h2>Kệ của tôi</h2>' +
+        '<span class="note">' + all.length + ' truyện</span></div>' +
         '<div class="grid">' + cards + '</div>' +
         foot()
       );
@@ -2316,7 +2401,7 @@
         '<span>3 chương đầu được tạo sẵn khi xuất bản</span>' +
         '<span>Chương sau tạo trước khi bạn nghe tới</span>' +
         '<span>Giọng Gemini hoặc Piper tự chạy</span>' +
-        '<span>Dữ liệu mẫu</span>' +
+        '<span>Nội dung và số liệu trong trang là dữ liệu mẫu</span>' +
         '</footer>'
       );
     }
@@ -2334,8 +2419,10 @@
       var t = e.target.closest('button');
       if (!t) return;
 
-      if (t.id === 'home' || t.id === 'back') {
+      if (t.id === 'home' || t.id === 'back' || t.id === 'nav-shelf' || t.id === 'nav-shelf-2') {
         go('shelf', null);
+      } else if (t.id === 'nav-mine') {
+        go('mine', null);
       } else if (t.dataset.story) {
         go('story', t.dataset.story);
       } else if (t.id === 'back-story') {
