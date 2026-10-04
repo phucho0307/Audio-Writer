@@ -341,6 +341,118 @@
     object-position: 50% 30%;
     filter: blur(2px);
     transform: scale(1.08);
+    animation: drift 24s ease-in-out infinite alternate;
+  }
+
+  /* A slow push on the cover art, so the hero breathes instead of sitting
+     still. Long and small on purpose: visible only if you stay a while. */
+  @keyframes drift {
+    from { transform: scale(1.08) translate3d(0, 0, 0); }
+    to { transform: scale(1.16) translate3d(-1.5%, -2%, 0); }
+  }
+
+  .hero-inner > div,
+  .hero-art {
+    animation: rise 0.55s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  .hero.swap .hero-inner > div,
+  .hero.swap .hero-art,
+  .hero.swap .hero-bg img {
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  .dots {
+    position: absolute;
+    right: 18px;
+    top: 18px;
+    display: flex;
+    gap: 6px;
+  }
+
+  .dots i {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: #ffffff4d;
+    transition: background 0.25s ease, width 0.25s ease;
+  }
+
+  .dots i.on {
+    background: #ffffffdd;
+    width: 18px;
+  }
+
+  /* The page fades its content in on every view change: short enough not to
+     delay anything, long enough that navigation reads as movement. */
+  #app > * {
+    animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  }
+
+  .card .art::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(115deg, transparent 38%, #ffffff26 48%, transparent 58%);
+    transform: translateX(-120%);
+    transition: transform 0.6s ease;
+  }
+
+  .card:hover .art::after {
+    transform: translateX(120%);
+  }
+
+  .spark i {
+    animation: grow 0.6s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+    transform-origin: bottom;
+  }
+
+  @keyframes grow {
+    from { transform: scaleY(0.15); }
+    to { transform: scaleY(1); }
+  }
+
+  /* Four bars that move only while audio is actually playing. */
+  .eq {
+    display: none;
+    align-items: flex-end;
+    gap: 2px;
+    height: 15px;
+    flex: none;
+  }
+
+  .dock.playing .eq {
+    display: flex;
+  }
+
+  .eq i {
+    width: 3px;
+    background: var(--accent);
+    border-radius: 1px;
+    animation: bounce 0.9s ease-in-out infinite;
+  }
+
+  .eq i:nth-child(2) { animation-delay: 0.18s; }
+  .eq i:nth-child(3) { animation-delay: 0.36s; }
+  .eq i:nth-child(4) { animation-delay: 0.12s; }
+
+  @keyframes bounce {
+    0%, 100% { height: 4px; }
+    50% { height: 15px; }
+  }
+
+  .dock-art img {
+    transition: transform 0.4s ease;
+  }
+
+  .dock.playing .dock-art img {
+    transform: scale(1.06);
   }
 
   .hero-scrim {
@@ -1544,6 +1656,7 @@
 <div class="dock" id="dock" hidden>
   <div class="wrap">
     <span class="dock-art"><img id="dock-img" alt="" /></span>
+    <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
     <span class="dock-txt">
       <b id="dock-title">—</b>
       <span id="dock-sub">—</span>
@@ -1608,6 +1721,35 @@
         forks: [{ name: 'Cô trả lời', who: 'mint', at: 6, len: 5 }],
       },
       'co-dai-y-nu': { reads: 15310, price: 12, forks: [] },
+      'tiem-sach-cuoi-pho': {
+        reads: 24188,
+        price: 0,
+        forks: [{ name: 'Quyển thứ mười bảy', who: 'haiyen', at: 3, len: 7 }],
+      },
+      'nguoi-giu-den-bien': {
+        reads: 20644,
+        price: 8,
+        forks: [{ name: 'Ca trực của ông Tư', who: 'trangiang', at: 2, len: 5 }],
+      },
+      'quan-pho-ba-muoi-nam': { reads: 28903, price: 0, forks: [] },
+      'lop-hoc-khong-co-tiet-ba': {
+        reads: 35712,
+        price: 10,
+        forks: [
+          { name: 'Người đếm năm 2021', who: 'nhim.con', at: 2, len: 8 },
+          { name: 'Tiết ba của Khoa', who: 'docgia2k3', at: 3, len: 4 },
+        ],
+      },
+      'thuat-toan-nho-nguoi': {
+        reads: 16480,
+        price: 10,
+        forks: [{ name: 'Nếu Vy không nhấn Enter', who: 'quynhanh', at: 4, len: 6 }],
+      },
+      'dong-song-chay-nguoc': {
+        reads: 11257,
+        price: 0,
+        forks: [{ name: 'Đèn của dì Năm', who: 'mint', at: 3, len: 5 }],
+      },
     };
 
     var HANDLES = [
@@ -1660,6 +1802,8 @@
       listeners: {},
       job: null,
       now: null,
+      featured: [],
+      featIdx: 0,
     };
 
     /* ----------------------------------------------------------- storage */
@@ -1815,6 +1959,38 @@
 
     /* -------------------------------------------------------------- live */
 
+    /**
+     * The hero cycles through the three most-read stories.
+     *
+     * Only the hero is swapped, never the whole view: a re-render would reset
+     * scroll and interrupt anything the reader was doing. It pauses whenever the
+     * shelf is not on screen.
+     */
+    function startHero() {
+      state.featured = state.stories
+        .slice()
+        .sort(function (a, b) {
+          return seedOf(b.slug).reads - seedOf(a.slug).reads;
+        })
+        .slice(0, 3)
+        .map(function (s) {
+          return s.slug;
+        });
+
+      setInterval(function () {
+        if (state.view !== 'shelf') return;
+        var el = document.getElementById('hero');
+        if (!el) return;
+        state.featIdx = (state.featIdx + 1) % state.featured.length;
+        el.classList.add('swap');
+        setTimeout(function () {
+          el.innerHTML = heroHtml(story(state.featured[state.featIdx]));
+          el.classList.remove('swap');
+          paintLive();
+        }, 400);
+      }, 7000);
+    }
+
     function startLive() {
       state.stories.forEach(function (s) {
         var rand = hash(s.slug + ':live');
@@ -1913,6 +2089,7 @@
 
     function paintPP() {
       document.getElementById('pp').textContent = player.paused ? '▶' : '❚❚';
+      dock.classList.toggle('playing', !player.paused);
     }
 
     player.addEventListener('play', paintPP);
@@ -2044,11 +2221,13 @@
 
     /* ------------------------------------------------------------- views */
 
-    function shelf() {
-      var feat = state.stories[0];
-
-      var hero =
-        '<section class="hero">' +
+    function heroHtml(feat) {
+      var dots = state.featured
+        .map(function (slug, n) {
+          return '<i class="' + (slug === feat.slug ? 'on' : '') + '"></i>';
+        })
+        .join('');
+      return (
         '<span class="hero-bg"><img src="' + cover(feat.slug) + '" alt="" /></span>' +
         '<span class="hero-scrim"></span>' +
         '<div class="hero-inner"><div>' +
@@ -2065,7 +2244,14 @@
         '</div>' +
         '<span class="hero-art"><img src="' + cover(feat.slug) +
         '" alt="Bìa ' + esc(feat.title) + '" /></span>' +
-        '</div></section>';
+        '<span class="dots" aria-hidden="true">' + dots + '</span>' +
+        '</div>'
+      );
+    }
+
+    function shelf() {
+      var feat = story(state.featured[state.featIdx]) || state.stories[0];
+      var hero = '<section class="hero" id="hero">' + heroHtml(feat) + '</section>';
 
       var ranked = state.stories
         .slice()
@@ -2489,6 +2675,7 @@
       })
       .then(function (data) {
         state.stories = data;
+        startHero();
         render();
         startLive();
       })
