@@ -49,6 +49,23 @@ function styleRule(card?: StyleCard): string {
     .join('\n');
 }
 
+/**
+ * Craft guidance, kept apart from continuity.
+ *
+ * Phrased as considerations rather than rules: these notes describe what tends
+ * to work in a genre, and a model told to obey them will produce the genre's
+ * most generic version of a scene. The point is to raise the floor, not to
+ * flatten the writing.
+ */
+function craftRule(notes?: string[]): string {
+  if (!notes?.length) return '';
+  return [
+    '',
+    'How this genre tends to work, for reference. Apply what fits the scene; ignore what does not:',
+    ...notes.map((n) => `- ${n}`),
+  ].join('\n');
+}
+
 function continuityRule(notes?: string[]): string {
   if (!notes?.length) return '';
   return [
@@ -130,6 +147,7 @@ export function buildContinuePrompt(req: ContinueRequest): {
     'Advance the story by one beat. Do not skip ahead or cover large spans of time.',
     styleRule(req.styleCard),
     continuityRule(req.continuityNotes),
+    craftRule(req.craftNotes),
   ].join('\n');
 
   const user = [

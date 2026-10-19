@@ -390,12 +390,22 @@ export default function StoryPage({
       <main className="flex min-w-0 max-w-3xl flex-1 flex-col gap-8">
         {/* ---- header ---- */}
         <div className="flex flex-col gap-2">
-          <Link
-            href="/"
-            className="font-mono text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
-          >
-            ← tất cả truyện
-          </Link>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link
+              href="/"
+              className="font-mono text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+            >
+              ← tất cả truyện
+            </Link>
+            {branchId && (
+              <Link
+                href={`/stories/${id}/viet?branch=${branchId}`}
+                className="font-mono text-[11px] text-[var(--color-accent)] hover:underline"
+              >
+                ✎ phòng viết chung
+              </Link>
+            )}
+          </div>
           {titleDraft !== null ? (
             <input
               autoFocus

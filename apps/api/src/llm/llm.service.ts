@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { ChunkKind } from '@prisma/client';
 import type {
   ContinueRequest,
   LlmDriver,
@@ -13,6 +14,7 @@ import { RateLimitedError } from '@aw/shared';
 import { GeminiDriver } from './drivers/gemini.driver';
 import { StoriesService } from '../stories/stories.service';
 import { AiQuotaService, type QuotaStatus } from './ai-quota.service';
+import { RagService, firstKnownGenre } from '../rag/rag.service';
 import { CurrentUserService } from '../auth/current-user.service';
 
 @Injectable()
@@ -24,6 +26,7 @@ export class LlmService {
     private readonly config: ConfigService,
     private readonly stories: StoriesService,
     private readonly quota: AiQuotaService,
+    private readonly rag: RagService,
     private readonly currentUser: CurrentUserService,
   ) {
     // Ordered failover chain. More drivers land here as they are written; the
@@ -106,12 +109,19 @@ export class LlmService {
 
     await this.quota.consume(await this.currentUser.current());
 
+    const retrieved = await this.retrieve(
+      text,
+      branch.story.genres,
+      branch.storyId,
+    );
+
     const req: ContinueRequest = {
       mode: 'continue',
       language: branch.story.language === 'en' ? 'en' : 'vi',
       pov: opts.pov ?? 'third_limited',
       storySoFar: text,
       paragraphs: opts.paragraphs ?? 1,
+      ...retrieved,
     };
 
     yield* this.streamWithFailover(req);
@@ -148,6 +158,50 @@ export class LlmService {
    * rate limit. Any other failure is a real error and propagates - retrying a
    * malformed request against a second provider just wastes its quota too.
    */
+  /**
+   * What to put in front of the model besides the story itself.
+   *
+   * The query is the tail of the draft rather than the whole thing: retrieval
+   * should answer "what is about to happen", and the opening chapters are the
+   * least relevant part of that. Two searches rather than one, because the two
+   * corpora land in different parts of the prompt - facts that must hold, and
+   * technique that may help.
+   *
+   * Failure here is silent on purpose. Retrieval makes a continuation better;
+   * it is not what makes it possible, and an embedding provider having a bad
+   * minute should not stop a writer working.
+   */
+  private async retrieve(
+    storySoFar: string,
+    genres: string[],
+    storyId: string,
+  ): Promise<{ continuityNotes?: string[]; craftNotes?: string[] }> {
+    const tail = storySoFar.slice(-1200);
+    const genre = firstKnownGenre(genres);
+
+    try {
+      const [craft, continuity] = await Promise.all([
+        this.rag.search(tail, { genre, kinds: [ChunkKind.CRAFT], limit: 3 }),
+        this.rag.search(tail, {
+          storyId,
+          kinds: [ChunkKind.CHAPTER],
+          limit: 3,
+        }),
+      ]);
+
+      return {
+        craftNotes: craft.map((p) => `${p.label}: ${p.text}`),
+        // Trimmed harder than craft notes: these are reminders of what is
+        // already established, and pasting whole chapters back in crowds out
+        // the part of the prompt that matters, the last few lines.
+        continuityNotes: continuity.map((p) => p.text.slice(0, 280)),
+      };
+    } catch (err) {
+      this.logger.warn(`retrieval unavailable: ${(err as Error).message}`);
+      return {};
+    }
+  }
+
   private async *streamWithFailover(
     req: SeedRequest | ContinueRequest,
   ): AsyncIterable<string> {

@@ -101,6 +101,16 @@ export interface ContinueRequest {
   storySoFar: string;
   /** Passages retrieved for continuity - names, established facts, callbacks. */
   continuityNotes?: string[];
+  /**
+   * Retrieved craft guidance for this genre: how it usually turns, where a
+   * chapter is cut, which devices are worn out.
+   *
+   * Deliberately not `continuityNotes`. Those are facts the continuation must
+   * not contradict; these are technique it should apply. Rendering both under
+   * one heading tells the model that "ngôn tình hiệu quả khi trở ngại nằm
+   * trong tính cách" is a fact about this story, which it is not.
+   */
+  craftNotes?: string[];
   styleCard?: StyleCard;
   paragraphs?: Paragraphs;
 }

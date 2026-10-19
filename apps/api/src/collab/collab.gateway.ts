@@ -14,6 +14,7 @@ import type { Duplex } from 'node:stream';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { PrismaService } from '../prisma/prisma.service';
 import { CollabAccessService } from './collab-access.service';
+import { BODY, textOf, wordsIn } from './ydoc';
 
 /** Room names are `branch:<uuid>`; nothing else is addressable. */
 const ROOM = /^branch:([0-9a-f-]{36})$/i;
@@ -140,8 +141,7 @@ export class CollabGateway implements OnModuleInit, OnModuleDestroy {
             const branchId = this.branchOf(documentName);
             if (!branchId) return;
 
-            const text = document.getText('body').toString();
-            const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+            const words = wordsIn(textOf(document.getXmlFragment(BODY)));
 
             const bytes = Uint8Array.from(state);
             await this.prisma.draftDoc.upsert({

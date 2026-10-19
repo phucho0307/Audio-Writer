@@ -7,6 +7,8 @@ export interface DomainEventMap {
   'story.published': { storyId: string };
   /** Somebody asked to hear a chapter, so the next one is probably next. */
   'chapter.played': { branchId: string; depth: number; voice: string };
+  /** A chapter became part of a branch, and so part of what can be retrieved. */
+  'chapter.committed': { contributionId: string; branchId: string };
 }
 
 /**

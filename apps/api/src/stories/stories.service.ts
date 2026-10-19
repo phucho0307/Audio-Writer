@@ -888,7 +888,7 @@ export class StoriesService {
   async commit(branchId: string, dto: CommitContributionDto) {
     const user = await this.currentUser.current();
 
-    return this.prisma.$transaction(async (tx) => {
+    const contribution = await this.prisma.$transaction(async (tx) => {
       const branch = await tx.branch.findUnique({ where: { id: branchId } });
       if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
 
@@ -949,6 +949,16 @@ export class StoriesService {
 
       return contribution;
     });
+
+    // Announced, not awaited. Indexing a chapter costs an embedding round trip,
+    // and a writer pressing "đăng chương" should not wait on the retrieval
+    // index any more than they wait on narration.
+    this.events.emit('chapter.committed', {
+      contributionId: contribution.id,
+      branchId,
+    });
+
+    return contribution;
   }
 
   async fork(branchId: string, dto: ForkBranchDto): Promise<Branch> {

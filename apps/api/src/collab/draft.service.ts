@@ -11,11 +11,15 @@ import { StoriesService } from '../stories/stories.service';
 import { LlmService } from '../llm/llm.service';
 import { CollabAccessService } from './collab-access.service';
 import { CollabGateway } from './collab.gateway';
-
-/** The shared text every client binds its editor to. */
-const BODY = 'body';
-/** Small facts about the room that are not part of the prose. */
-const META = 'meta';
+import {
+  appendParagraph,
+  BODY,
+  META,
+  paragraphsOf,
+  textOf,
+  toProseMirror,
+  wordsIn,
+} from './ydoc';
 
 export interface DraftState {
   branchId: string;
@@ -54,11 +58,11 @@ export class DraftService {
 
     const live = this.gateway.server?.documents.get(this.room(branchId));
     if (live) {
-      const text = live.getText(BODY).toString();
+      const text = textOf(live.getXmlFragment(BODY));
       return {
         branchId,
         text,
-        wordCount: this.words(text),
+        wordCount: wordsIn(text),
         version: -1, // in memory, newer than anything stored
         updatedAt: null,
       };
@@ -76,8 +80,8 @@ export class DraftService {
     }
 
     const doc = new Y.Doc();
-    Y.applyUpdate(doc, new Uint8Array(row.state));
-    const text = doc.getText(BODY).toString();
+    Y.applyUpdate(doc, Uint8Array.from(row.state));
+    const text = textOf(doc.getXmlFragment(BODY));
     doc.destroy();
 
     return {
@@ -106,7 +110,7 @@ export class DraftService {
     }
 
     const contribution = await this.stories.commit(branchId, {
-      content: this.toProseMirror(draft.text),
+      content: toProseMirror(draft.text.split(/\n\n+/).filter(Boolean)),
       textPlain: draft.text.trim(),
       title: title?.trim() || undefined,
       authorType: AuthorType.HUMAN,
@@ -126,8 +130,8 @@ export class DraftService {
     );
     if (connection) {
       await connection.transact((doc: Y.Doc) => {
-        const body = doc.getText(BODY);
-        body.delete(0, body.length);
+        const body = doc.getXmlFragment(BODY);
+        if (body.length) body.delete(0, body.length);
         doc.getMap(META).set('ai', null);
       });
       await connection.disconnect();
@@ -174,13 +178,12 @@ export class DraftService {
         startedAt: Date.now(),
       });
 
-      // A blank line first, so the model's paragraph never runs into the
-      // sentence a human is in the middle of typing.
+      // Its own paragraph, so the model never continues the sentence a human
+      // is in the middle of typing. Held across the stream: every chunk lands
+      // in this node rather than making a paragraph each.
+      let target: Y.XmlText | null = null;
       await connection.transact((doc: Y.Doc) => {
-        const body = doc.getText(BODY);
-        if (body.length > 0 && !body.toString().endsWith('\n\n')) {
-          body.insert(body.length, '\n\n');
-        }
+        target = appendParagraph(doc.getXmlFragment(BODY));
       });
 
       const stream = this.llm.continue(branchId, {
@@ -193,9 +196,9 @@ export class DraftService {
         // One transaction per chunk: each is a separate CRDT update, which is
         // what makes the text appear progressively for everyone rather than in
         // one lump at the end.
-        await connection.transact((doc: Y.Doc) => {
-          const body = doc.getText(BODY);
-          body.insert(body.length, chunk);
+        await connection.transact(() => {
+          const node = target as Y.XmlText | null;
+          if (node) node.insert(node.length, chunk);
         });
         written += chunk.length;
       }
@@ -227,30 +230,9 @@ export class DraftService {
     return { count: doc.getConnectionsCount(), people };
   }
 
-  private words(text: string): number {
-    const t = text.trim();
-    return t ? t.split(/\s+/).length : 0;
-  }
-
-  /**
-   * Plain text to the shape the chapter column expects.
-   *
-   * The editor is rich-text capable, but the shared document holds a plain
-   * `Y.Text`: prose here is paragraphs, and keeping the CRDT free of formatting
-   * means a chapter is the same text whether it came from the editor, the model
-   * or an import.
-   */
-  private toProseMirror(text: string) {
-    return {
-      type: 'doc',
-      content: text
-        .split(/\n\n+/)
-        .map((p) => p.trim())
-        .filter(Boolean)
-        .map((p) => ({
-          type: 'paragraph',
-          content: [{ type: 'text', text: p }],
-        })),
-    };
+  /** Paragraph count, for a draft list that should not decode the whole CRDT. */
+  paragraphs(branchId: string): number {
+    const live = this.gateway.server?.documents.get(this.room(branchId));
+    return live ? paragraphsOf(live.getXmlFragment(BODY)).length : 0;
   }
 }

@@ -231,7 +231,8 @@ model Contribution {
 
   createdAt DateTime @default(now())
 
-  audio AudioClip[]
+  audio     AudioClip[]
+  ragChunks RagChunk[]
 
   @@unique([branchId, depth])
   @@index([branchId, depth])
@@ -306,6 +307,140 @@ model DraftDoc {
   updatedAt DateTime @updatedAt
 
   @@map("draft_docs")
+}
+
+/// The five the platform is built around. Stored as slugs on Story.genres so
+/// a story can still carry free-form tags alongside them.
+enum Genre {
+  /// kinh dị
+  HORROR
+  /// giật gân, hồi hộp
+  THRILLER
+  /// ngôn tình
+  ROMANCE
+  /// hành động
+  ACTION
+  /// ngoại tình
+  INFIDELITY
+}
+
+enum SourceKind {
+  /// Free audio-story sites: nghetruyenma.net, audioma.vn and the like.
+  AUDIO_SITE
+  /// Narrator channels, where the performance is the draw.
+  CHANNEL
+  /// Licensed audiobook apps: Fonos, Voiz FM, Waka.
+  APP
+  /// Out of copyright, and therefore quotable.
+  PUBLIC_DOMAIN
+}
+
+/// Where Vietnamese audio fiction actually lives, for writers to study.
+///
+/// Links and a line on what each is good for - deliberately not their text.
+/// These are commercial catalogues; copying their stories into a product that
+/// sells generated ones is the kind of shortcut that ends in a takedown. What
+/// gets indexed is our own craft notes, written from reading them, which is
+/// what a human studying the genre would produce anyway.
+model ReferenceSource {
+  id    String     @id @default(uuid()) @db.Uuid
+  slug  String     @unique
+  name  String
+  url   String
+  kind  SourceKind
+  /// Which of the five this is worth studying for.
+  genres Genre[]
+  /// One line: what a writer gets here that they will not get elsewhere.
+  note   String
+  /// Roughly how much is there, when the site says. Free text on purpose.
+  scale  String?
+
+  craftNotes CraftNote[]
+  createdAt  DateTime    @default(now())
+
+  @@map("reference_sources")
+}
+
+enum CraftKind {
+  /// A recurring device: the thing readers of this genre came for.
+  TROPE
+  /// How a chapter is shaped: where the turn goes, where to cut.
+  BEAT
+  /// Ways in. The first paragraph does most of the work in serial fiction.
+  OPENING
+  /// Reveals, and the cost of placing one too early.
+  TWIST
+  /// Places that carry the genre: a flooded alley, a Tết dinner, a night shift.
+  SETTING
+}
+
+/// Our own writing about how these genres work.
+///
+/// This is the corpus the model retrieves from. Written here rather than
+/// scraped, so it can be licensed, corrected and deleted - and so a retrieved
+/// passage is a note about craft rather than somebody's chapter.
+model CraftNote {
+  id    String    @id @default(uuid()) @db.Uuid
+  kind  CraftKind
+  genre Genre
+  title String
+  /// The note itself. A few sentences a writer can act on.
+  body  String
+
+  /// What reading suggested it. Attribution, not a licence to copy.
+  sourceId String?          @db.Uuid
+  source   ReferenceSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+
+  chunks    RagChunk[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([genre, kind])
+  @@map("craft_notes")
+}
+
+enum ChunkKind {
+  /// A craft note, split if long.
+  CRAFT
+  /// A chapter from this platform, indexed with its author's consent.
+  CHAPTER
+}
+
+/// The retrieval index: one row per passage, with its embedding.
+///
+/// Both kinds live in one table so a single query can mix "how this genre
+/// usually turns" with "how this story has been going" - which is what makes a
+/// continuation sound like the story rather than like the genre.
+///
+/// `embedding` is pgvector's type, which Prisma has no mapping for: it is
+/// created by the migration and read through raw SQL. The generated client
+/// still manages every other column, so the table is not second-class.
+model RagChunk {
+  id   String    @id @default(uuid()) @db.Uuid
+  kind ChunkKind
+
+  craftNoteId String?    @db.Uuid
+  craftNote   CraftNote? @relation(fields: [craftNoteId], references: [id], onDelete: Cascade)
+
+  contributionId String?       @db.Uuid
+  contribution   Contribution? @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  storyId        String?       @db.Uuid
+
+  genre Genre?
+  /// The passage as indexed, which is what gets shown back as a citation.
+  text   String
+  /// Characters, not tokens - close enough to budget a prompt with.
+  length Int
+
+  /// Which model produced the embedding. Changing models invalidates the index,
+  /// and without this nobody can tell which rows are stale.
+  embeddedBy String?
+
+  createdAt DateTime @default(now())
+
+  @@index([kind, genre])
+  @@index([storyId])
+  @@map("rag_chunks")
 }
 
 model AudioClip {

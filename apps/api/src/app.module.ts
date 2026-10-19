@@ -9,6 +9,7 @@ import { StoriesModule } from './stories/stories.module';
 import { LlmModule } from './llm/llm.module';
 import { EventsModule } from './events/events.module';
 import { StorageModule } from './storage/storage.module';
+import { RagModule } from './rag/rag.module';
 import { CollabModule } from './collab/collab.module';
 import { TtsModule } from './tts/tts.module';
 
@@ -31,6 +32,7 @@ import { TtsModule } from './tts/tts.module';
     StorageModule,
     TtsModule,
     CollabModule,
+    RagModule,
   ],
 })
 export class AppModule {}

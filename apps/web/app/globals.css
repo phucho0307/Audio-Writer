@@ -52,3 +52,53 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ----------------------------------------------------------- draft room */
+
+.prose-editor {
+  font-family: var(--font-serif);
+  font-size: 17.5px;
+  line-height: 1.7;
+  min-height: 42vh;
+  outline: none;
+}
+
+.prose-editor p {
+  margin: 0 0 1em;
+}
+
+.prose-editor p.is-editor-empty:first-child::before {
+  content: 'Bắt đầu viết chương mới…';
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--color-muted);
+}
+
+/* Another writer's caret. Theirs is a real element in the document, so it has
+   to be taken out of the layout or it would push the prose around as they
+   move. */
+.collaboration-carets__caret {
+  position: relative;
+  margin-left: -1px;
+  margin-right: -1px;
+  border-left: 1px solid;
+  border-right: 1px solid;
+  word-break: normal;
+  pointer-events: none;
+}
+
+.collaboration-carets__label {
+  position: absolute;
+  top: -1.4em;
+  left: -1px;
+  padding: 1px 6px;
+  border-radius: 3px 3px 3px 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: #fff;
+  user-select: none;
+}

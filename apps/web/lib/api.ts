@@ -51,6 +51,28 @@ export type Contribution = {
   author: { handle: string; displayName: string } | null;
 };
 
+export type DraftState = {
+  branchId: string;
+  text: string;
+  wordCount: number;
+  version: number;
+  updatedAt: string | null;
+};
+
+export type Collaborator = {
+  id: string;
+  handle: string;
+  displayName: string;
+  avatarUrl: string | null;
+  role: 'EDITOR' | 'VIEWER';
+  since: string;
+};
+
+export type Room = {
+  owner: { id: string; handle: string; displayName: string; avatarUrl: string | null };
+  collaborators: Collaborator[];
+};
+
 export type Access = {
   freeChapters: number;
   unlockPrice: number;
@@ -358,6 +380,50 @@ export const api = {
     }),
 
   quota: () => call<Quota>('/ai/quota'),
+
+  // --------------------------------------------------------------- drafts
+  //
+  // The draft itself travels over the WebSocket, not through here. These are
+  // the things around it: who may be in the room, what the text is for anyone
+  // not holding a socket, and the two actions that end a drafting session.
+
+  draft: (branchId: string) =>
+    call<DraftState>(`/branches/${branchId}/draft`),
+
+  draftPresence: (branchId: string) =>
+    call<{ count: number; people: { handle: string }[] }>(
+      `/branches/${branchId}/draft/presence`,
+    ),
+
+  room: (branchId: string) =>
+    call<Room>(`/branches/${branchId}/draft/collaborators`),
+
+  invite: (branchId: string, handle: string, role: 'EDITOR' | 'VIEWER') =>
+    call<Room>(`/branches/${branchId}/draft/collaborators`, {
+      method: 'POST',
+      body: JSON.stringify({ handle, role }),
+    }),
+
+  revoke: (branchId: string, userId: string) =>
+    call<Room>(`/branches/${branchId}/draft/collaborators/${userId}`, {
+      method: 'DELETE',
+    }),
+
+  commitDraft: (branchId: string, title?: string) =>
+    call<Contribution>(`/branches/${branchId}/draft/commit`, {
+      method: 'POST',
+      body: JSON.stringify({ title }),
+    }),
+
+  /** The model writes into the room; nothing comes back but a byte count. */
+  draftAi: (
+    branchId: string,
+    opts: { paragraphs?: number; pov?: 'first' | 'third_limited' } = {},
+  ) =>
+    call<{ written: number }>(`/branches/${branchId}/draft/ai`, {
+      method: 'POST',
+      body: JSON.stringify(opts),
+    }),
 
   recordView: (storyId: string) =>
     call<{ viewCount: number }>(`/stories/${storyId}/view`, { method: 'POST' }),

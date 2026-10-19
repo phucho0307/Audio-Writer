@@ -1,0 +1,364 @@
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { EditorContent, useEditor } from '@tiptap/react';
+import StarterKit from '@tiptap/starter-kit';
+import Collaboration from '@tiptap/extension-collaboration';
+import CollaborationCaret from '@tiptap/extension-collaboration-caret';
+import { HocuspocusProvider, WebSocketStatus } from '@hocuspocus/provider';
+import * as Y from 'yjs';
+import { ApiError, api, type Collaborator, type Room } from '@/lib/api';
+import { getToken } from '@/lib/auth';
+import { collabUrl, colorFor, roomFor } from '@/lib/collab';
+
+type Peer = { handle: string; color: string };
+type AiState = { state: 'writing' | 'failed'; by?: string; message?: string } | null;
+
+/**
+ * One chapter, several writers, and the model, in the same document.
+ *
+ * The editor is bound to a Yjs document rather than to React state: every
+ * keystroke is a CRDT update that goes to everyone in the room and merges with
+ * theirs, so there is no save button, no "someone else is editing" banner and
+ * no last-write-wins. React here only draws the furniture around it.
+ */
+export default function DraftRoom({
+  branchId,
+  storyId,
+  me,
+  canEdit,
+}: {
+  branchId: string;
+  storyId: string;
+  me: { handle: string; displayName: string };
+  canEdit: boolean;
+}) {
+  const [status, setStatus] = useState<WebSocketStatus>(
+    WebSocketStatus.Connecting,
+  );
+  const [denied, setDenied] = useState<string | null>(null);
+  const [peers, setPeers] = useState<Peer[]>([]);
+  const [ai, setAi] = useState<AiState>(null);
+  const [room, setRoom] = useState<Room | null>(null);
+  const [busy, setBusy] = useState<'ai' | 'commit' | 'invite' | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [title, setTitle] = useState('');
+  const [handle, setHandle] = useState('');
+  const [words, setWords] = useState(0);
+
+  // One document and one socket for the life of the component. Recreating
+  // either on a re-render would drop everyone's cursor and re-sync the room.
+  const doc = useMemo(() => new Y.Doc(), []);
+  const providerRef = useRef<HocuspocusProvider | null>(null);
+  const [provider, setProvider] = useState<HocuspocusProvider | null>(null);
+
+  useEffect(() => {
+    const p = new HocuspocusProvider({
+      url: collabUrl(),
+      name: roomFor(branchId),
+      document: doc,
+      token: () => getToken() ?? '',
+      onStatus: ({ status }) => setStatus(status),
+      onAuthenticationFailed: ({ reason }) =>
+        setDenied(reason || 'Bạn không có quyền mở bản nháp này.'),
+    });
+
+    p.setAwarenessField('user', {
+      name: me.handle,
+      color: colorFor(me.handle),
+    });
+
+    const onAwareness = () => {
+      const seen = new Map<string, Peer>();
+      p.awareness?.getStates().forEach((state, clientId) => {
+        const u = (state as { user?: Peer & { name?: string } }).user;
+        if (!u?.name) return;
+        if (clientId === doc.clientID) return; // not myself
+        seen.set(u.name, { handle: u.name, color: u.color });
+      });
+      setPeers([...seen.values()]);
+    };
+    p.on('awarenessUpdate', onAwareness);
+
+    providerRef.current = p;
+    setProvider(p);
+
+    return () => {
+      p.off('awarenessUpdate', onAwareness);
+      p.destroy();
+      providerRef.current = null;
+    };
+  }, [branchId, doc, me.handle]);
+
+  // The model's progress is a field in the shared document, so it converges
+  // like the prose does and cannot be left switched on by a client that
+  // disappears halfway through.
+  useEffect(() => {
+    const meta = doc.getMap('meta');
+    const read = () => setAi((meta.get('ai') as AiState) ?? null);
+    meta.observe(read);
+    read();
+    return () => meta.unobserve(read);
+  }, [doc]);
+
+  const editor = useEditor(
+    {
+      editable: canEdit,
+      immediatelyRender: false,
+      extensions: [
+        // History is Yjs's own: ProseMirror's undo stack would undo other
+        // people's typing as readily as your own.
+        StarterKit.configure({ undoRedo: false }),
+        Collaboration.configure({ document: doc, field: 'body' }),
+        ...(provider
+          ? [
+              CollaborationCaret.configure({
+                provider,
+                user: { name: me.handle, color: colorFor(me.handle) },
+              }),
+            ]
+          : []),
+      ],
+      editorProps: {
+        attributes: {
+          class: 'prose-editor',
+          spellcheck: 'false',
+        },
+      },
+      onUpdate: ({ editor }) => {
+        const text = editor.getText().trim();
+        setWords(text ? text.split(/\s+/).length : 0);
+      },
+    },
+    [provider, canEdit],
+  );
+
+  useEffect(() => {
+    api.room(branchId).then(setRoom).catch(() => undefined);
+  }, [branchId]);
+
+  async function runAi() {
+    setBusy('ai');
+    setError(null);
+    try {
+      await api.draftAi(branchId, { paragraphs: 1 });
+    } catch (e) {
+      setError(
+        e instanceof ApiError && e.code === 'AI_QUOTA_EXHAUSTED'
+          ? 'Hết lượt AI hôm nay.'
+          : (e as Error).message,
+      );
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function commit() {
+    if (!words) {
+      setError('Bản nháp đang trống.');
+      return;
+    }
+    setBusy('commit');
+    setError(null);
+    try {
+      await api.commitDraft(branchId, title.trim() || undefined);
+      setTitle('');
+      window.location.href = `/stories/${storyId}`;
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(null);
+    }
+  }
+
+  async function invite(role: 'EDITOR' | 'VIEWER') {
+    const h = handle.trim().replace(/^@/, '');
+    if (!h) return;
+    setBusy('invite');
+    setError(null);
+    try {
+      setRoom(await api.invite(branchId, h, role));
+      setHandle('');
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function revoke(c: Collaborator) {
+    try {
+      setRoom(await api.revoke(branchId, c.id));
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  }
+
+  if (denied) {
+    return (
+      <div className="rounded border border-[var(--color-line)] p-6 text-center">
+        <p className="font-mono text-[13px] text-amber-600 dark:text-amber-400">
+          {denied}
+        </p>
+      </div>
+    );
+  }
+
+  const live = status === WebSocketStatus.Connected;
+
+  return (
+    <div className="flex flex-col gap-4">
+      {/* who is here */}
+      <div className="flex flex-wrap items-center gap-3 border-y border-[var(--color-line)] py-2.5">
+        <span
+          className={`h-1.5 w-1.5 flex-none rounded-full ${
+            live ? 'bg-emerald-500' : 'bg-amber-500'
+          }`}
+          aria-hidden
+        />
+        <span className="font-mono text-[11px] text-[var(--color-muted)]">
+          {live ? 'đang kết nối phòng viết' : 'đang kết nối lại…'}
+        </span>
+
+        <div className="flex items-center gap-1.5">
+          <Dot handle={me.handle} color={colorFor(me.handle)} self />
+          {peers.map((p) => (
+            <Dot key={p.handle} handle={p.handle} color={p.color} />
+          ))}
+        </div>
+
+        <span className="ml-auto font-mono text-[11px] tabular-nums text-[var(--color-muted)]">
+          {words} từ
+        </span>
+      </div>
+
+      {ai?.state === 'writing' && (
+        <p className="font-mono text-[11.5px] text-[var(--color-accent)]">
+          ✍ AI đang viết tiếp{ai.by ? ` (${ai.by} yêu cầu)` : ''}…
+        </p>
+      )}
+      {ai?.state === 'failed' && (
+        <p className="font-mono text-[11.5px] text-amber-600 dark:text-amber-400">
+          AI dừng giữa chừng: {ai.message}
+        </p>
+      )}
+
+      <EditorContent editor={editor} />
+
+      {!canEdit && (
+        <p className="font-mono text-[11px] text-[var(--color-muted)]">
+          Bạn đang xem. Chỉ người được mời mới viết được.
+        </p>
+      )}
+
+      {canEdit && (
+        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--color-line)] pt-3">
+          <button
+            onClick={runAi}
+            disabled={busy !== null}
+            className="font-mono text-[12px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
+          >
+            {busy === 'ai' ? '✍ AI đang viết…' : '✍ để AI viết tiếp'}
+          </button>
+
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Tên chương (tuỳ chọn)"
+            className="min-w-0 flex-1 rounded border border-[var(--color-line)] bg-transparent px-2.5 py-1.5 text-[13px]"
+          />
+
+          <button
+            onClick={commit}
+            disabled={busy !== null || !words}
+            className="rounded border border-[var(--color-accent)] px-3 py-1.5 font-mono text-[12px] text-[var(--color-accent)] disabled:opacity-40"
+          >
+            {busy === 'commit' ? 'đang lưu…' : 'đăng chương này'}
+          </button>
+        </div>
+      )}
+
+      {error && (
+        <p className="font-mono text-[11.5px] text-amber-600 dark:text-amber-400">
+          {error}
+        </p>
+      )}
+
+      {/* invitations */}
+      {room && (
+        <details className="border-t border-[var(--color-line)] pt-3">
+          <summary className="cursor-pointer font-mono text-[11px] text-[var(--color-muted)]">
+            Người viết chung ({room.collaborators.length + 1})
+          </summary>
+
+          <ul className="mt-3 flex flex-col gap-2">
+            <li className="flex items-center gap-2 text-[13px]">
+              <Dot handle={room.owner.handle} color={colorFor(room.owner.handle)} />
+              <span>@{room.owner.handle}</span>
+              <span className="font-mono text-[10.5px] text-[var(--color-muted)]">
+                chủ nhánh
+              </span>
+            </li>
+            {room.collaborators.map((c) => (
+              <li key={c.id} className="flex items-center gap-2 text-[13px]">
+                <Dot handle={c.handle} color={colorFor(c.handle)} />
+                <span>@{c.handle}</span>
+                <span className="font-mono text-[10.5px] text-[var(--color-muted)]">
+                  {c.role === 'VIEWER' ? 'chỉ xem' : 'viết được'}
+                </span>
+                <button
+                  onClick={() => revoke(c)}
+                  className="ml-auto font-mono text-[10.5px] text-[var(--color-muted)] hover:text-amber-600"
+                >
+                  gỡ
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <input
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              placeholder="@tên người dùng"
+              className="min-w-0 flex-1 rounded border border-[var(--color-line)] bg-transparent px-2.5 py-1.5 text-[13px]"
+            />
+            <button
+              onClick={() => invite('EDITOR')}
+              disabled={busy !== null}
+              className="font-mono text-[11.5px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
+            >
+              mời viết
+            </button>
+            <button
+              onClick={() => invite('VIEWER')}
+              disabled={busy !== null}
+              className="font-mono text-[11.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)] disabled:opacity-40"
+            >
+              mời xem
+            </button>
+          </div>
+        </details>
+      )}
+    </div>
+  );
+}
+
+function Dot({
+  handle,
+  color,
+  self,
+}: {
+  handle: string;
+  color: string;
+  self?: boolean;
+}) {
+  return (
+    <span
+      title={self ? `${handle} (bạn)` : handle}
+      className="grid h-6 w-6 flex-none place-items-center rounded-full font-mono text-[10px] font-medium text-white"
+      style={{ background: color }}
+    >
+      {handle.slice(0, 2)}
+    </span>
+  );
+}
