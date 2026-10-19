@@ -39,14 +39,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  stories       Story[]
-  branches      Branch[]
-  contributions Contribution[]
-  sessions      Session[]
-  entitlements  Entitlement[]
-  renderJobs    RenderJob[]
-  unlocks       StoryUnlock[]
-  ledger        LedgerEntry[]
+  stories        Story[]
+  branches       Branch[]
+  contributions  Contribution[]
+  sessions       Session[]
+  entitlements   Entitlement[]
+  renderJobs     RenderJob[]
+  unlocks        StoryUnlock[]
+  ledger         LedgerEntry[]
+  collaborations BranchCollaborator[]
 
   @@map("users")
 }
@@ -183,6 +184,8 @@ model Branch {
   contributions Contribution[]
   scenes        Scene[]
   renderJobs    RenderJob[]
+  collaborators BranchCollaborator[]
+  draft         DraftDoc?
 
   @@index([storyId])
   @@index([lineage], type: Gin)
@@ -243,6 +246,68 @@ model Contribution {
 ///
 /// Unique on (contribution, voice) so asking twice costs one synthesis. That
 /// matters more than usual here: the free TTS tier is metered per request.
+enum CollabRole {
+  /// May type in the draft.
+  EDITOR
+  /// May watch it being written, cursor included, but not change it.
+  VIEWER
+}
+
+/// Who, besides the owner, may open a branch's draft room.
+///
+/// Forking is how a reader takes a story somewhere else; this is the opposite -
+/// several people writing the same branch together. Kept separate from the
+/// branch's own ownership so revoking access is one row, and so a viewer can be
+/// let in to watch without being able to type.
+model BranchCollaborator {
+  id       String     @id @default(uuid()) @db.Uuid
+  branchId String     @db.Uuid
+  branch   Branch     @relation(fields: [branchId], references: [id], onDelete: Cascade)
+  userId   String     @db.Uuid
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role     CollabRole @default(EDITOR)
+
+  invitedById String?  @db.Uuid
+  createdAt   DateTime @default(now())
+
+  @@unique([branchId, userId])
+  @@index([userId])
+  @@map("branch_collaborators")
+}
+
+/// The live, shared draft of a branch's next chapter.
+///
+/// A CRDT document rather than a row of text: several writers (and the model)
+/// type into it at once, and every client merges the same edits into the same
+/// result without a server deciding who won. `state` is the Yjs document
+/// encoded as a single update - the whole history collapsed into one blob,
+/// which is what Yjs hands back when asked to persist.
+///
+/// This is deliberately *not* a Contribution. Contributions are immutable and
+/// are what a branch is made of; this is the scratch space before one exists.
+/// Committing turns the draft into a Contribution and clears the room.
+model DraftDoc {
+  id       String @id @default(uuid()) @db.Uuid
+  branchId String @unique @db.Uuid
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  /// Yjs state, as produced by Y.encodeStateAsUpdate.
+  state Bytes
+
+  /// Bumped on every store. Lets a reader tell whether anything changed without
+  /// decoding the document, and makes a stale write obvious.
+  version Int @default(0)
+
+  /// Denormalised so the dashboard can list drafts without loading the CRDT.
+  title     String?
+  wordCount Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("draft_docs")
+}
+
 model AudioClip {
   id             String       @id @default(uuid()) @db.Uuid
   contributionId String       @db.Uuid
@@ -418,16 +483,16 @@ enum LedgerKind {
 /// reconcile; a ledger is summed on demand and can always be explained line by
 /// line, which is what you want the first time a writer disputes a number.
 model LedgerEntry {
-  id       String     @id @default(uuid()) @db.Uuid
-  userId   String     @db.Uuid
-  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kind     LedgerKind
+  id        String     @id @default(uuid()) @db.Uuid
+  userId    String     @db.Uuid
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      LedgerKind
   /// Credits. Positive is earned, negative is paid out.
-  amount   Int
-  storyId  String?    @db.Uuid
+  amount    Int
+  storyId   String?    @db.Uuid
   /// Free-text explanation shown to the writer.
-  note     String?
-  createdAt DateTime  @default(now())
+  note      String?
+  createdAt DateTime   @default(now())
 
   @@index([userId, createdAt])
   @@map("ledger_entries")

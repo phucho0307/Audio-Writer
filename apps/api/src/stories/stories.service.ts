@@ -906,6 +906,7 @@ export class StoriesService {
           depth: nextDepth,
           authorId: user.id,
           authorType: dto.authorType,
+          title: dto.title?.trim() || null,
           content: dto.content as never,
           textPlain: dto.textPlain,
           wordCount: countWords(dto.textPlain),

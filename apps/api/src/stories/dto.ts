@@ -88,6 +88,15 @@ export class CommitContributionDto {
   @IsObject()
   content!: Record<string, unknown>;
 
+  /**
+   * Chapter heading. Optional because a writer committing mid-session should
+   * not be made to name it; the contents page falls back to the opening line.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  title?: string;
+
   @IsString()
   @MinLength(1)
   textPlain!: string;

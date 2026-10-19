@@ -9,6 +9,7 @@ import { StoriesModule } from './stories/stories.module';
 import { LlmModule } from './llm/llm.module';
 import { EventsModule } from './events/events.module';
 import { StorageModule } from './storage/storage.module';
+import { CollabModule } from './collab/collab.module';
 import { TtsModule } from './tts/tts.module';
 
 @Module({
@@ -29,6 +30,7 @@ import { TtsModule } from './tts/tts.module';
     EventsModule,
     StorageModule,
     TtsModule,
+    CollabModule,
   ],
 })
 export class AppModule {}

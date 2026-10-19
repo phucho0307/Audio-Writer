@@ -8,5 +8,6 @@ import { StoriesModule } from '../stories/stories.module';
   imports: [StoriesModule],
   controllers: [LlmController],
   providers: [LlmService, AiQuotaService],
+  exports: [LlmService],
 })
 export class LlmModule {}
