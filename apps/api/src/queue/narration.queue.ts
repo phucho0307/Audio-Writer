@@ -5,6 +5,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { Queue } from 'bullmq';
+import { createHash } from 'node:crypto';
 import { QueueConnection } from './queue-connection';
 import {
   NARRATE_CHAPTER,
@@ -12,6 +13,20 @@ import {
   PRIORITY,
   type NarrationJob,
 } from './queue.constants';
+
+/**
+ * The BullMQ id for one chapter in one voice.
+ *
+ * The voice is hashed rather than embedded. BullMQ rejects a custom id with a
+ * colon unless it splits into exactly three parts - a compatibility rule its own
+ * source marks for removal, after which any colon fails. `audio:<id>:Kore`
+ * happened to fit; `piper:vi_VN-vivos-x_low#20@1.3` does not, and failed every
+ * enqueue with a 500. A digest is colon-free whatever a voice id looks like.
+ */
+function jobIdFor(contributionId: string, voice: string): string {
+  const v = createHash('sha256').update(voice).digest('hex').slice(0, 16);
+  return `audio-${contributionId}-${v}`;
+}
 
 @Injectable()
 export class NarrationQueue implements OnModuleInit, OnModuleDestroy {
@@ -51,7 +66,7 @@ export class NarrationQueue implements OnModuleInit, OnModuleDestroy {
     job: NarrationJob,
     priority: number = PRIORITY.INTERACTIVE,
   ): Promise<string> {
-    const jobId = `audio:${job.contributionId}:${job.voice}`;
+    const jobId = jobIdFor(job.contributionId, job.voice);
 
     // A finished job keeps its id until it is evicted, and `add` on an id that
     // already exists is a silent no-op. That made retrying a failed narration
@@ -73,14 +88,14 @@ export class NarrationQueue implements OnModuleInit, OnModuleDestroy {
 
     await this.queue.add(NARRATE_CHAPTER, job, { jobId, priority });
     this.logger.log(
-      `queued ${jobId} (priority ${priority === PRIORITY.BULK ? 'bulk' : 'interactive'})`,
+      `queued ${jobId} [${job.voice}] (priority ${priority === PRIORITY.BULK ? 'bulk' : 'interactive'})`,
     );
     return jobId;
   }
 
   /** The live job for a chapter, if BullMQ still has one. Used by the sweeper. */
   async find(contributionId: string, voice: string) {
-    return this.queue.getJob(`audio:${contributionId}:${voice}`);
+    return this.queue.getJob(jobIdFor(contributionId, voice));
   }
 
   /** Queue depth, for the health endpoint and later for metrics. */

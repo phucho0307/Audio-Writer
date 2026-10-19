@@ -49,7 +49,11 @@ export default function Contents({
         if (!branch) return;
         const r = await api.readBranch(branch.id);
         setRead(r);
-        api.chapterAudio(branch.id, 'Kore').then(setAudio).catch(() => {});
+        api
+          .voices()
+          .then((v) => api.chapterAudio(branch.id, v.default))
+          .then(setAudio)
+          .catch(() => {});
       } catch (e) {
         setError((e as Error).message);
       }

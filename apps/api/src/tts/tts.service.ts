@@ -19,6 +19,7 @@ import { PRIORITY, type NarrationJob } from '../queue/queue.constants';
 import { GeminiTtsDriver } from './gemini-tts.driver';
 import type { TtsDriver } from './tts-driver';
 import { PiperTtsDriver } from './piper-tts.driver';
+import { MultiTtsDriver } from './multi-tts.driver';
 import { AudioEncoder } from './audio-encoder';
 import {
   AUDIO_STORAGE,
@@ -43,6 +44,11 @@ export interface NarrationTicket {
   url: string | null;
   durationMs: number | null;
   cached: boolean;
+  /**
+   * Roughly how long synthesis will take, for a progress bar. Null when nothing
+   * was queued.
+   */
+  estimatedMs: number | null;
 }
 
 @Injectable()
@@ -65,22 +71,32 @@ export class TtsService implements OnModuleInit {
   ) {
     const timeout = Number(this.config.get<string>('TTS_TIMEOUT_MS', '300000'));
 
-    // Which synthesiser runs is a config change, not a deploy. Both drivers stay
-    // in the build: a self-hosted voice can regress in ways a cloud one cannot -
-    // a bad model file, a box under memory pressure - and the way back has to be
-    // an env var rather than a release.
-    this.driver =
-      this.config.get<string>('TTS_DRIVER', 'gemini') === 'piper'
-        ? new PiperTtsDriver(
-            this.config.get<string>('PIPER_URL', 'http://127.0.0.1:5062'),
-            this.config.get<string>('PIPER_VOICE', 'vi_VN-vais1000-medium'),
-            timeout,
-          )
-        : new GeminiTtsDriver(
-            this.config.get<string>('GEMINI_API_KEY', ''),
-            this.config.get<string>('TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
-            timeout,
-          );
+    // Which synthesisers run is a config change, not a deploy. A comma list
+    // offers several at once, routed by voice, and the first one named supplies
+    // the default - so `gemini,piper` adds Piper's voices to the picker without
+    // moving anybody who does not choose one.
+    const build: Record<string, () => TtsDriver> = {
+      gemini: () =>
+        new GeminiTtsDriver(
+          this.config.get<string>('GEMINI_API_KEY', ''),
+          this.config.get<string>('TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
+          timeout,
+        ),
+      piper: () =>
+        new PiperTtsDriver(
+          this.config.get<string>('PIPER_URL', 'http://127.0.0.1:5062'),
+          this.config.get<string>('PIPER_VOICE', 'vi_VN-vais1000-medium'),
+          Number(this.config.get<string>('PIPER_LENGTH_SCALE', '1.5')),
+          timeout,
+        ),
+    };
+    const names = this.config
+      .get<string>('TTS_DRIVER', 'gemini')
+      .split(',')
+      .map((n) => n.trim())
+      .filter((n) => n in build);
+    const drivers = (names.length ? names : ['gemini']).map((n) => build[n]());
+    this.driver = drivers.length === 1 ? drivers[0] : new MultiTtsDriver(drivers);
     this.prerenderChapters = Math.max(
       0,
       Number(this.config.get<string>('PRERENDER_CHAPTERS', '3')),
@@ -364,7 +380,9 @@ export class TtsService implements OnModuleInit {
    */
   private contentHash(textPlain: string, voice: string): string {
     return createHash('sha256')
-      .update(`${this.driver.fingerprint}\u0000${voice}\u0000${textPlain}`)
+      .update(
+        `${this.driver.fingerprintFor?.(voice) ?? this.driver.fingerprint}\u0000${voice}\u0000${textPlain}`,
+      )
       .digest('hex');
   }
 
@@ -399,6 +417,7 @@ export class TtsService implements OnModuleInit {
         url: existing.url,
         durationMs: existing.durationMs,
         cached: true,
+        estimatedMs: null,
       };
     }
 
@@ -415,6 +434,7 @@ export class TtsService implements OnModuleInit {
         url: clip.url,
         durationMs: clip.durationMs,
         cached: true,
+        estimatedMs: null,
       };
     }
 
@@ -441,6 +461,7 @@ export class TtsService implements OnModuleInit {
       url: null,
       durationMs: null,
       cached: false,
+      estimatedMs: this.driver.estimateMs?.(chapter.textPlain, voice) ?? null,
     };
   }
 

@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, api, type RenderStatus, type Voice } from '@/lib/api';
 import { awaitNarration, NarrationFailed } from '@/lib/narration';
+import NarrationProgress from '@/app/NarrationProgress';
+import VoicePicker from '@/app/VoicePicker';
 
 function mmss(ms: number | null): string {
   if (!ms) return '--:--';
@@ -25,13 +27,19 @@ export default function ChapterNarration({
   depth: number;
 }) {
   const [voices, setVoices] = useState<Voice[]>([]);
-  const [voice, setVoice] = useState('Kore');
+  // Empty until the server says which voice is the default. Guessing a name
+  // here ties the page to one provider: under any other driver the guess is an
+  // unknown voice, and the first request races the real one.
+  const [voice, setVoice] = useState('');
   const [url, setUrl] = useState<string | null>(null);
   const [durationMs, setDurationMs] = useState<number | null>(null);
   const [rate, setRate] = useState(1.5);
   /** Queued behind other work, or actually being synthesised right now. */
   const [stage, setStage] = useState<RenderStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [estimatedMs, setEstimatedMs] = useState<number | null>(null);
+  /** Held briefly at 100% so the bar is seen to finish before it disappears. */
+  const [finished, setFinished] = useState(false);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +59,7 @@ export default function ChapterNarration({
     setUrl(null);
     setDurationMs(null);
     setError(null);
+    if (!voice) return;
     api
       .chapterAudio(branchId, voice)
       .then((all) => {
@@ -72,13 +81,20 @@ export default function ChapterNarration({
   async function narrate() {
     setBusy(true);
     setStage('QUEUED');
+    setEstimatedMs(null);
+    setFinished(false);
     setError(null);
     try {
       // Returns a job, not a clip. The wait happens here rather than in the
       // request, so nothing is lost if the reader navigates away - the audio
       // is still being made and will be there when they come back.
       const ticket = await api.narrateChapter(branchId, depth, voice);
+      setEstimatedMs(ticket.estimatedMs);
       const clip = await awaitNarration(ticket, { onStatus: setStage });
+      if (!ticket.cached) {
+        setFinished(true);
+        await new Promise((r) => setTimeout(r, 450));
+      }
       setUrl(clip.url);
       setDurationMs(clip.durationMs);
       setTimeout(() => void audioRef.current?.play().catch(() => {}), 60);
@@ -93,8 +109,11 @@ export default function ChapterNarration({
     } finally {
       setBusy(false);
       setStage(null);
+      setFinished(false);
     }
   }
+
+  const label = voices.find((v) => v.id === voice)?.label ?? voice;
 
   return (
     <section className="flex flex-col gap-3 border-y border-[var(--color-line)] py-3.5">
@@ -111,7 +130,7 @@ export default function ChapterNarration({
           <div className="flex items-center gap-3 font-mono text-[10.5px] text-[var(--color-muted)]">
             <span>{mmss(durationMs === null ? null : durationMs / rate)}</span>
             <span className="opacity-40">·</span>
-            <span>{voice}</span>
+            <span>{label}</span>
             <button
               onClick={() => setOpen((v) => !v)}
               className="ml-auto hover:text-[var(--color-accent)]"
@@ -122,44 +141,34 @@ export default function ChapterNarration({
         </div>
       ) : (
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            onClick={narrate}
-            disabled={busy}
-            className="font-mono text-[12px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
-          >
-            {busy
-              ? stage === 'QUEUED'
-                ? '♪ đang xếp hàng…'
-                : '♪ đang tạo giọng đọc…'
-              : '♪ nghe chương này'}
-          </button>
-          <button
-            onClick={() => setOpen((v) => !v)}
-            className="font-mono text-[10.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
-          >
-            {voice} · {rate}× {open ? '▴' : '▾'}
-          </button>
+          {busy ? (
+            <NarrationProgress
+              status={stage}
+              estimatedMs={estimatedMs}
+              done={finished}
+            />
+          ) : (
+            <>
+              <button
+                onClick={narrate}
+                className="font-mono text-[12px] text-[var(--color-accent)] hover:underline"
+              >
+                ♪ nghe chương này
+              </button>
+              <button
+                onClick={() => setOpen((v) => !v)}
+                className="font-mono text-[10.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+              >
+                {label} · {rate}× {open ? '▴' : '▾'}
+              </button>
+            </>
+          )}
         </div>
       )}
 
       {open && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-0.5">
-          <div className="flex flex-wrap items-center gap-3">
-            {voices.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => setVoice(v.id)}
-                aria-pressed={voice === v.id}
-                className={`text-[12px] transition-colors ${
-                  voice === v.id
-                    ? 'font-medium text-[var(--color-accent)]'
-                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
-                }`}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
+          <VoicePicker voices={voices} value={voice} onChange={setVoice} />
           <div className="ml-auto flex items-center gap-2.5">
             {[1, 1.25, 1.5, 1.75, 2].map((r) => (
               <button

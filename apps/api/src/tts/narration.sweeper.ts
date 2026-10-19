@@ -49,7 +49,15 @@ export class NarrationSweeper implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     if (this.config.get<string>('RUN_WORKER', 'true') !== 'true') return;
-    this.timer = setInterval(() => void this.sweep(), EVERY_MS);
+    // Caught here, not left to `void`. A rejected promise nobody handles is fatal
+    // in Node, so one query during a database blip - the laptop sleeping, a
+    // Postgres restart - used to take the whole API down with it. Housekeeping
+    // gets skipped for a round instead; the next tick tries again.
+    this.timer = setInterval(() => {
+      this.sweep().catch((err: Error) =>
+        this.logger.error(`sweep failed, will retry: ${err.message}`),
+      );
+    }, EVERY_MS);
     // Not on boot: the worker has only just connected, and every in-flight job
     // would look abandoned for the first few seconds.
     this.timer.unref();

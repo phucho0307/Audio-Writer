@@ -142,7 +142,11 @@ class Handler(BaseHTTPRequestHandler):
                 "loaded": self.registry.loaded(),
                 "default": self.default_voice,
                 "fingerprints": {
-                    n: self.registry.fingerprint(n) for n in self.registry.loaded()
+                    n: self.registry.fingerprint(n) for n in self.registry.available()
+                },
+                "speakers": {
+                    n: self.registry.get(n).config.num_speakers
+                    for n in self.registry.loaded()
                 },
                 "inFlight": Handler.in_flight,
                 "maxConcurrency": self.max_concurrency,
@@ -160,8 +164,14 @@ class Handler(BaseHTTPRequestHandler):
         name = (query.get("voice") or [self.default_voice])[0]
         try:
             length_scale = float((query.get("length") or [self.length_scale])[0])
+            speaker = int((query.get("speaker") or ["0"])[0])
         except ValueError:
-            self._json(HTTPStatus.BAD_REQUEST, {"error": "length must be a number"})
+            # The body has not been read yet, so this connection cannot be
+            # reused - the next request would be parsed out of the unread text.
+            self.close_connection = True
+            self._json(
+                HTTPStatus.BAD_REQUEST, {"error": "length and speaker must be numbers"}
+            )
             return
         length = int(self.headers.get("Content-Length") or 0)
         raw = self.rfile.read(length)
@@ -196,13 +206,13 @@ class Handler(BaseHTTPRequestHandler):
         with Handler._counter_lock:
             Handler.in_flight += 1
         try:
-            self._stream(name, text, length_scale)
+            self._stream(name, text, length_scale, speaker)
         finally:
             with Handler._counter_lock:
                 Handler.in_flight -= 1
             self.slots.release()
 
-    def _stream(self, name: str, text: str, length_scale: float) -> None:
+    def _stream(self, name: str, text: str, length_scale: float, speaker: int) -> None:
         try:
             voice = self.registry.get(name)
         except KeyError:
@@ -223,8 +233,14 @@ class Handler(BaseHTTPRequestHandler):
         # 2.2 -> 166, 2.5 -> 148. 2.3 lands on the cloud voice's pace, which is
         # the pace this project has been shipping and the one worth matching
         # while the voice itself is being judged.
+        # Multi-speaker models (VIVOS has 65) pick a voice by index; single-speaker
+        # models reject anything but None, so 0 is sent as "not specified".
         chunks = voice.synthesize(
-            text, SynthesisConfig(length_scale=length_scale)
+            text,
+            SynthesisConfig(
+                length_scale=length_scale,
+                speaker_id=speaker if voice.config.num_speakers > 1 else None,
+            ),
         )
 
         # Pull the first chunk before committing to 200. Everything that tends to
@@ -317,13 +333,15 @@ def main() -> int:
     Handler.length_scale = args.length_scale
     Handler.slots = threading.Semaphore(args.concurrency)
 
-    # Load the default before binding the port, so the first real request does
-    # not pay the five seconds that this process exists to avoid.
-    try:
-        registry.get(args.voice)
-    except KeyError:
+    if args.voice not in available:
         log.error("default voice %r not in %s", args.voice, model_dir)
         return 1
+
+    # Load every voice before binding the port. Several are offered side by side,
+    # and whichever one a listener picks first should not pay the five seconds
+    # this process exists to avoid. ~140 MB each, which is cheap next to that.
+    for name in available:
+        registry.get(name)
 
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     server.daemon_threads = True

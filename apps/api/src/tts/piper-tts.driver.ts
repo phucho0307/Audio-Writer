@@ -20,12 +20,58 @@ import {
  * See `tools/piper/sidecar.py` and `docs/piper-hls-stage.md`.
  */
 
-/** Human labels for the voices worth offering; the sidecar is the source of truth. */
-const LABELS: Record<string, string> = {
-  'vi_VN-vais1000-medium': 'Vais1000 · nữ, kể chuyện',
-  'vi_VN-25hours_single-low': '25hours · nữ, nhẹ',
-  'vi_VN-vivos-x_low': 'VIVOS · nhiều giọng',
+/**
+ * What is offered, as model x speaker x pace.
+ *
+ * Pace is part of the voice rather than a setting beside it. It changes the
+ * audio, and the row-level cache is keyed on (chapter, voice) - so a pace that
+ * lived anywhere else would keep serving the old speed out of that cache after
+ * it was changed. As part of the id, a different pace is simply a different
+ * recording.
+ *
+ * Measured on vais1000: pace 1.0 reads at ~276 words/min, 1.5 at ~220, 2.0 at
+ * ~180. Audiobooks sit near 160. The spread is here to be listened to, not
+ * because all of it is expected to survive.
+ */
+const PRESETS: {
+  model: string;
+  name: string;
+  speaker?: number;
+  pace: number;
+}[] = [
+  { model: 'vi_VN-vais1000-medium', name: 'Vais1000', pace: 1.0 },
+  { model: 'vi_VN-vais1000-medium', name: 'Vais1000', pace: 1.5 },
+  { model: 'vi_VN-vais1000-medium', name: 'Vais1000', pace: 2.0 },
+  { model: 'vi_VN-25hours_single-low', name: '25hours', pace: 1.0 },
+  { model: 'vi_VN-25hours_single-low', name: '25hours', pace: 1.5 },
+  { model: 'vi_VN-25hours_single-low', name: '25hours', pace: 2.0 },
+  // VIVOS is 65 people reading for speech recognition. Three spread across the
+  // set, since there is no metadata saying which of them sound like a narrator.
+  { model: 'vi_VN-vivos-x_low', name: 'VIVOS 1', speaker: 0, pace: 1.3 },
+  { model: 'vi_VN-vivos-x_low', name: 'VIVOS 2', speaker: 20, pace: 1.3 },
+  { model: 'vi_VN-vivos-x_low', name: 'VIVOS 3', speaker: 40, pace: 1.3 },
+];
+
+const PACE_LABEL: Record<string, string> = {
+  '1': 'tự nhiên',
+  '1.3': 'vừa',
+  '1.5': 'chậm vừa',
+  '2': 'chậm',
 };
+
+/** `piper:<model>[#speaker]@<pace>` - everything the sidecar needs, in the id. */
+function voiceId(p: { model: string; speaker?: number; pace: number }): string {
+  const speaker = p.speaker === undefined ? '' : `#${p.speaker}`;
+  return `piper:${p.model}${speaker}@${p.pace}`;
+}
+
+function parseVoice(
+  id: string,
+): { model: string; speaker: number; pace: number } | null {
+  const m = /^piper:([^#@]+)(?:#(\d+))?@([\d.]+)$/.exec(id);
+  if (!m) return null;
+  return { model: m[1], speaker: Number(m[2] ?? 0), pace: Number(m[3]) };
+}
 
 interface Health {
   ok: boolean;
@@ -34,7 +80,6 @@ interface Health {
   default: string;
   fingerprints: Record<string, string>;
   maxConcurrency: number;
-  lengthScale: number;
 }
 
 function pcmToWav(pcm: Buffer, sampleRate: number, channels: number): Buffer {
@@ -63,7 +108,9 @@ export class PiperTtsDriver implements TtsDriver {
 
   constructor(
     private readonly baseUrl: string,
-    private readonly voice: string,
+    /** The model the default voice uses. */
+    private readonly model: string,
+    private readonly defaultPace: number,
     private readonly timeoutMs = 300_000,
   ) {}
 
@@ -109,17 +156,16 @@ export class PiperTtsDriver implements TtsDriver {
       if (!res.ok) throw new Error(`health returned ${res.status}`);
       const health = (await res.json()) as Health;
 
-      if (!health.available.includes(this.voice)) {
+      if (!health.available.includes(this.model)) {
         this.logger.error(
-          `voice ${this.voice} is not on the sidecar (has: ${health.available.join(', ')})`,
+          `model ${this.model} is not on the sidecar (has: ${health.available.join(', ')})`,
         );
         return;
       }
       this.health = health;
       this.logger.log(
-        `piper ready at ${this.baseUrl} | voice=${this.voice} ` +
-          `| model=${health.fingerprints[this.voice] ?? 'unloaded'} ` +
-          `| pace=${health.lengthScale} | concurrency=${health.maxConcurrency}`,
+        `piper ready at ${this.baseUrl} | ${this.voices.length} voices from ` +
+          `${health.available.length} models | concurrency=${health.maxConcurrency}`,
       );
     } catch (err) {
       // Not fatal, and not shouted about on every retry. The driver stays
@@ -140,45 +186,72 @@ export class PiperTtsDriver implements TtsDriver {
   }
 
   get voices(): readonly Voice[] {
-    const ids = this.health?.available ?? [this.voice];
-    return ids.map((id) => ({ id, label: LABELS[id] ?? id }));
+    const have = new Set(this.health?.available ?? []);
+    return PRESETS.filter((p) => have.has(p.model)).map((p) => ({
+      id: voiceId(p),
+      label: `${p.name} · ${PACE_LABEL[String(p.pace)] ?? `×${p.pace}`}`,
+      provider: 'piper',
+    }));
   }
 
   get defaultVoice(): string {
-    return this.voice;
+    return voiceId({ model: this.model, pace: this.defaultPace });
   }
 
   /**
    * Identifies the weights rather than the filename.
    *
-   * The sidecar reports a digest of the `.onnx` itself, so swapping a model in
-   * place - same name, different weights - produces new audio instead of
-   * silently serving the old voice from cache under the new one. A version in a
-   * filename would not survive that, because nobody remembers to bump it.
+   * The sidecar reports a digest of each `.onnx`, so swapping a model in place -
+   * same name, different weights - produces new audio instead of silently
+   * serving the old voice from cache. Pace and speaker are not in here because
+   * they are already in the voice id, which the content hash also covers.
    */
   get fingerprint(): string {
-    const digest = this.health?.fingerprints[this.voice];
-    const pace = this.health?.lengthScale;
-    if (!digest || pace === undefined) {
-      // Unreachable in practice: nothing hashes content while unconfigured,
-      // because an unconfigured driver refuses to queue. Loud rather than
-      // silently poisoning every hash with a placeholder.
-      throw new TtsError('piper fingerprint requested before init()');
+    return this.fingerprintFor(this.defaultVoice);
+  }
+
+  fingerprintFor(voice: string): string {
+    const parsed = parseVoice(voice);
+    const digest = parsed && this.health?.fingerprints[parsed.model];
+    if (!digest) {
+      // Unreachable in practice: nothing hashes content for a voice that is not
+      // offered, and nothing is offered before init(). Loud rather than
+      // poisoning a hash with a placeholder.
+      throw new TtsError(`no piper fingerprint for voice ${voice}`);
     }
-    // Pace belongs in here with the weights. It changes the audio, so two
-    // clips of the same words at different speeds are different recordings -
-    // and leaving it out would mean re-tuning the pace silently served every
-    // listener the old one forever, out of a cache nothing could invalidate.
-    return `piper:${this.voice}:${digest}:l${pace}`;
+    return `piper:${digest}`;
+  }
+
+  /**
+   * Seconds of speech, divided by how much faster than realtime the box runs.
+   *
+   * ~276 words/min at pace 1.0, stretched sub-linearly by pace (the silences
+   * between words do not stretch). The divisor is 5 rather than the 10x measured
+   * alone because the worker runs jobs side by side, plus a few seconds of AAC
+   * encoding at the end.
+   */
+  estimateMs(text: string, voice: string): number {
+    const pace = parseVoice(voice)?.pace ?? 1;
+    const words = text.split(/\s+/).filter(Boolean).length;
+    const speechSec = (words / 276) * 60 * (1 + 0.55 * (pace - 1));
+    return Math.round((speechSec / 5 + 3) * 1000);
   }
 
   async speak(text: string, voice: string): Promise<SpeechResult> {
     if (!this.health) throw new TtsError('piper sidecar is not available');
+    const parsed = parseVoice(voice);
+    if (!parsed) throw new TtsError(`not a piper voice: ${voice}`);
+
+    const query = new URLSearchParams({
+      voice: parsed.model,
+      length: String(parsed.pace),
+      speaker: String(parsed.speaker),
+    });
 
     let res: Response;
     try {
       res = await fetch(
-        `${this.baseUrl}/speak?voice=${encodeURIComponent(voice)}`,
+        `${this.baseUrl}/speak?${query.toString()}`,
         {
           method: 'POST',
           // Explicit UTF-8. Vietnamese that crosses this boundary as anything
@@ -224,7 +297,7 @@ export class PiperTtsDriver implements TtsDriver {
       wav: pcmToWav(pcm, sampleRate, channels),
       durationMs: Math.round((pcm.length / 2 / channels / sampleRate) * 1000),
       voice,
-      provider: `piper:${this.voice}`,
+      provider: `piper:${parsed.model}`,
     };
   }
 }

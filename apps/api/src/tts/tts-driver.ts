@@ -14,6 +14,8 @@
 export interface Voice {
   id: string;
   label: string;
+  /** Which engine speaks it, so a picker can group a mixed list. */
+  provider?: string;
 }
 
 export interface SpeechResult {
@@ -33,6 +35,22 @@ export interface TtsDriver {
    * rather than silently reusing the old voice under a new one.
    */
   readonly fingerprint: string;
+  /**
+   * The fingerprint for one voice, when a driver's voices do not all come from
+   * the same weights.
+   *
+   * A driver with one model per voice (Piper) or several engines behind it (the
+   * composite) cannot answer with a single string without making every voice's
+   * cache depend on every other voice's model. Falls back to `fingerprint`.
+   */
+  fingerprintFor?(voice: string): string;
+  /**
+   * Rough wall-clock time to synthesise this text, for a progress bar.
+   *
+   * An estimate, not a promise: it shapes how fast the bar moves, and the bar
+   * never reaches the end on the estimate alone.
+   */
+  estimateMs?(text: string, voice: string): number;
   readonly voices: readonly Voice[];
   readonly defaultVoice: string;
   isConfigured(): boolean;

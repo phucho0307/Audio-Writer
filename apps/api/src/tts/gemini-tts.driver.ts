@@ -20,10 +20,10 @@ export type { SpeechResult };
  * without sounding like an announcement. Names are the provider's.
  */
 export const VOICES: readonly Voice[] = [
-  { id: 'Kore', label: 'Kore · nữ, trầm ấm' },
-  { id: 'Aoede', label: 'Aoede · nữ, nhẹ' },
-  { id: 'Charon', label: 'Charon · nam, trầm' },
-  { id: 'Puck', label: 'Puck · nam, linh hoạt' },
+  { id: 'Kore', label: 'Kore · nữ, trầm ấm', provider: 'gemini' },
+  { id: 'Aoede', label: 'Aoede · nữ, nhẹ', provider: 'gemini' },
+  { id: 'Charon', label: 'Charon · nam, trầm', provider: 'gemini' },
+  { id: 'Puck', label: 'Puck · nam, linh hoạt', provider: 'gemini' },
 ];
 
 export const DEFAULT_VOICE = 'Kore';
@@ -70,6 +70,15 @@ export class GeminiTtsDriver implements TtsDriver {
 
   get fingerprint(): string {
     return `${this.name}:${this.model}`;
+  }
+
+  /**
+   * Measured between 29 and 195 seconds for an ordinary chapter, and length
+   * explains little of that - the provider's load does. This aims near the
+   * typical case; the progress bar is built not to finish on an estimate.
+   */
+  estimateMs(text: string): number {
+    return Math.round(20_000 + text.length * 6);
   }
 
   private readonly logger = new Logger(GeminiTtsDriver.name);

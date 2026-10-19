@@ -94,7 +94,12 @@ export type Quota = {
   resetsAt: string;
 };
 
-export type Voice = { id: string; label: string };
+export type Voice = {
+  id: string;
+  label: string;
+  /** Which engine speaks it - `gemini` or `piper` - so the picker can group. */
+  provider?: string;
+};
 
 export type ChapterAudio = {
   depth: number;
@@ -126,6 +131,8 @@ export type NarrationTicket = {
   url: string | null;
   durationMs: number | null;
   cached: boolean;
+  /** Rough synthesis time, for the progress bar. Null when nothing was queued. */
+  estimatedMs: number | null;
 };
 
 export type NarrationJobState = {
@@ -366,7 +373,11 @@ export const api = {
     ),
 
   chapterAudio: (branchId: string, voice: string) =>
-    call<ChapterAudio[]>(`/audio/branches/${branchId}?voice=${voice}`),
+    // Encoded: self-hosted voice ids carry `:`, `#` and `@`, and an unencoded
+    // `#` ends the URL right there - the server would never see the voice.
+    call<ChapterAudio[]>(
+      `/audio/branches/${branchId}?voice=${encodeURIComponent(voice)}`,
+    ),
 
   /** Mode one: queue a single chapter. Returns a job, not a clip. */
   narrateChapter: (branchId: string, depth: number, voice: string) =>

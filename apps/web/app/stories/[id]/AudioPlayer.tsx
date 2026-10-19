@@ -1,8 +1,16 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ApiError, api, type ChapterAudio, type Voice } from '@/lib/api';
+import {
+  ApiError,
+  api,
+  type ChapterAudio,
+  type RenderStatus,
+  type Voice,
+} from '@/lib/api';
 import { awaitNarration, NarrationFailed } from '@/lib/narration';
+import NarrationProgress from '@/app/NarrationProgress';
+import VoicePicker from '@/app/VoicePicker';
 
 function mmss(ms: number | null): string {
   if (!ms) return '--:--';
@@ -24,11 +32,20 @@ function mmss(ms: number | null): string {
  */
 export default function AudioPlayer({ branchId }: { branchId: string }) {
   const [voices, setVoices] = useState<Voice[]>([]);
-  const [voice, setVoice] = useState('Kore');
+  // Empty until the server says which voice is the default. Guessing a name
+  // here ties the page to one provider: under any other driver the guess is an
+  // unknown voice, and the first request races the real one.
+  const [voice, setVoice] = useState('');
   const [chapters, setChapters] = useState<ChapterAudio[] | null>(null);
 
   const [playing, setPlaying] = useState<number | null>(null);
   const [working, setWorking] = useState<number | 'all' | null>(null);
+  /** The single chapter being made: where it is, and how long it should take. */
+  const [job, setJob] = useState<{
+    status: RenderStatus;
+    estimatedMs: number | null;
+    done: boolean;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Whole-story mode: keep going when a track ends. */
   const [continuous, setContinuous] = useState(false);
@@ -51,6 +68,7 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
 
   useEffect(() => {
     setChapters(null);
+    if (!voice) return;
     api
       .chapterAudio(branchId, voice)
       .then(setChapters)
@@ -116,18 +134,29 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
 
     if (!chapter?.url) {
       setWorking(depth);
+      setJob({ status: 'QUEUED', estimatedMs: null, done: false });
       try {
         // Queued, not performed. Waiting happens on the client so the request
         // returns immediately and nothing is lost if the page is closed.
         const ticket = await api.narrateChapter(branchId, depth, voice);
-        await awaitNarration(ticket);
+        setJob({ status: ticket.status, estimatedMs: ticket.estimatedMs, done: false });
+        await awaitNarration(ticket, {
+          onStatus: (status) =>
+            setJob((j) => (j ? { ...j, status } : j)),
+        });
+        if (!ticket.cached) {
+          setJob((j) => (j ? { ...j, done: true } : j));
+          await new Promise((r) => setTimeout(r, 450));
+        }
         await refresh();
       } catch (e) {
         fail(e);
         setWorking(null);
+        setJob(null);
         return;
       }
       setWorking(null);
+      setJob(null);
     }
     setPlaying(depth);
   }
@@ -245,28 +274,14 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
           onClick={() => setOpen((v) => !v)}
           className="ml-auto font-mono text-[10.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
         >
-          {voice} · {rate}× {open ? '▴' : '▾'}
+          {voices.find((v) => v.id === voice)?.label ?? voice} · {rate}×{' '}
+          {open ? '▴' : '▾'}
         </button>
       </div>
 
       {open && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <div className="flex flex-wrap items-center gap-3">
-            {voices.map((v) => (
-              <button
-                key={v.id}
-                onClick={() => setVoice(v.id)}
-                aria-pressed={voice === v.id}
-                className={`text-[12px] transition-colors ${
-                  voice === v.id
-                    ? 'font-medium text-[var(--color-accent)]'
-                    : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
-                }`}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
+          <VoicePicker voices={voices} value={voice} onChange={setVoice} />
           <div className="ml-auto flex items-center gap-2.5">
             {[1, 1.25, 1.5, 1.75, 2].map((r) => (
               <button
@@ -306,7 +321,14 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
                 </span>
                 <span className="flex-none font-mono text-[10.5px] text-[var(--color-muted)]">
                   {working === c.depth
-                    ? 'đang đọc…'
+                    ? job && (
+                        <NarrationProgress
+                          compact
+                          status={job.status}
+                          estimatedMs={job.estimatedMs}
+                          done={job.done}
+                        />
+                      )
                     : c.url
                       ? mmss(c.durationMs === null ? null : c.durationMs / rate)
                       : '—'}
