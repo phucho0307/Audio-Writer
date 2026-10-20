@@ -31,8 +31,8 @@ const SOURCES = [
     name: 'Audio Ma',
     url: 'https://audioma.vn/',
     kind: SourceKind.AUDIO_SITE,
-    genres: [Genre.HORROR, Genre.ROMANCE],
-    note: 'Có cả truyện ma lẫn ngôn tình. Tốt để so cách dẫn chuyện giữa hai thể loại trên cùng một giọng đọc.',
+    genres: [Genre.HORROR, Genre.ROMANCE, Genre.INFIDELITY],
+    note: 'Có cả truyện ma lẫn ngôn tình, và các tuyến ngoại tình nằm trong mảng ngôn tình đó. Tốt để so cách dẫn chuyện giữa hai thể loại trên cùng một giọng đọc.',
     scale: null,
   },
   {
@@ -60,6 +60,15 @@ const SOURCES = [
     kind: SourceKind.CHANNEL,
     genres: [Genre.HORROR],
     note: 'Một trong những giọng đọc đông người theo nhất. Nghe để hiểu nhịp đọc ảnh hưởng thế nào đến cách viết câu.',
+    scale: null,
+  },
+  {
+    slug: 'radiotoday',
+    name: 'RadioToday',
+    url: 'https://radiotoday.net/truyen-audio/audio-truyen-tinh-yeu-ngon-tinh',
+    kind: SourceKind.AUDIO_SITE,
+    genres: [Genre.ROMANCE, Genre.INFIDELITY],
+    note: 'Mảng tình cảm, đô thị, tâm lý - nơi phần lớn tuyến ngoại tình của truyện Việt nằm. Nghe để thấy người ta dựng nghi ngờ bằng chi tiết đời thường thế nào.',
     scale: null,
   },
   {
