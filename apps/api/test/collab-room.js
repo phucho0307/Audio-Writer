@@ -33,6 +33,24 @@ async function tokenFor(userId, tag) {
   return (await r.json()).accessToken;
 }
 
+/**
+ * Write a paragraph the way TipTap does.
+ *
+ * The shared field is a Y.XmlFragment of <paragraph> nodes, not a Y.Text. The
+ * difference is invisible until it matters: Yjs hands back an empty fragment
+ * when the name was claimed as a Text, so the server counts zero words and
+ * reports nothing wrong. Tests have to build the real shape or they pass while
+ * the app is broken.
+ */
+function write(fragment, text) {
+  const paragraph = new Y.XmlElement('paragraph');
+  const node = new Y.XmlText();
+  node.insert(0, text);
+  paragraph.insert(0, [node]);
+  fragment.insert(fragment.length, [paragraph]);
+  return node;
+}
+
 function join(branchId, token, name) {
   const doc = new Y.Doc();
   const provider = new HocuspocusProvider({
@@ -46,7 +64,7 @@ function join(branchId, token, name) {
     },
   });
   provider.setAwarenessField?.('user', { name });
-  return { doc, provider, text: doc.getText('body') };
+  return { doc, provider, body: doc.getXmlFragment('body') };
 }
 
 (async () => {
@@ -104,23 +122,28 @@ function join(branchId, token, name) {
 
   // Interleaved writes from both ends, with no coordination at all.
   const t0 = Date.now();
+  const paraA = write(a.body, 'A: ');
+  const paraB = write(b.body, 'B: ');
+  await sleep(300);
   for (let i = 0; i < 20; i++) {
-    a.text.insert(a.text.length, `A${i} `);
-    b.text.insert(b.text.length, `B${i} `);
+    paraA.insert(paraA.length, `A${i} `);
+    paraB.insert(paraB.length, `B${i} `);
     await sleep(10);
   }
   await sleep(900);
-  const converged = a.text.toString() === b.text.toString();
-  console.log('  converged         :', ok(converged), `in ~${Date.now() - t0}ms`);
-  console.log('  both saw everything:', ok(a.text.toString().includes('A19') && a.text.toString().includes('B19')));
-  console.log('  same length       :', a.text.length, '/', b.text.length);
+  const textA = a.body.toString();
+  const textB = b.body.toString();
+  console.log('  converged         :', ok(textA === textB), `in ~${Date.now() - t0}ms`);
+  console.log('  both saw everything:', ok(textA.includes('A19') && textA.includes('B19')));
+  console.log('  same length       :', textA.length, '/', textB.length);
 
   // ------------------------------------------------------- 3. persistence
   console.log('\n=== persistence ===');
-  const snapshot = a.text.toString();
+  const snapshot = a.body.toString();
   await sleep(2600); // past the store debounce
   const row = await p.draftDoc.findUnique({ where: { branchId } });
-  console.log('  row written       :', ok(!!row), row ? `${row.state.length} bytes, v${row.version}, ${row.wordCount} words` : '');
+  console.log('  row written       :', ok(!!row), row ? `${row.state.length} bytes, v${row.version}` : '');
+  console.log('  word count real   :', ok((row?.wordCount ?? 0) > 0), `${row?.wordCount ?? 0} words`);
 
   a.provider.destroy();
   b.provider.destroy();
@@ -128,7 +151,7 @@ function join(branchId, token, name) {
 
   const c = join(branchId, ownerToken, 'phúc again');
   await sleep(1500);
-  console.log('  reconnect restores:', ok(c.text.toString() === snapshot));
+  console.log('  reconnect restores:', ok(c.body.toString() === snapshot));
   c.provider.destroy();
 
   // ------------------------------------------------------- 4. read-only
@@ -140,15 +163,15 @@ function join(branchId, token, name) {
   });
   const watcher = join(branchId, mateToken, 'người xem');
   await sleep(1500);
-  const before = watcher.text.toString();
+  const before = watcher.body.toString();
   console.log('  viewer connected  :', ok(watcher.provider.isAuthenticated));
-  watcher.text.insert(0, 'XIN CHAO ');
+  write(watcher.body, 'XIN CHAO ');
   await sleep(1200);
   const stored = await p.draftDoc.findUnique({ where: { branchId } });
   const doc = new Y.Doc();
   Y.applyUpdate(doc, new Uint8Array(stored.state));
-  const serverText = doc.getText('body').toString();
-  console.log('  server ignored it :', ok(!serverText.startsWith('XIN CHAO')));
+  const serverText = doc.getXmlFragment('body').toString();
+  console.log('  server ignored it :', ok(!serverText.includes('XIN CHAO')));
   console.log('  viewer saw text   :', ok(before.length > 0));
   watcher.provider.destroy();
 
@@ -159,7 +182,7 @@ function join(branchId, token, name) {
       headers: { authorization: `Bearer ${ownerToken}` },
     })
   ).json();
-  console.log('  GET /draft        :', ok(typeof read.text === 'string'), `${read.wordCount} words`);
+  console.log('  GET /draft        :', ok(typeof read.text === 'string' && read.text.length > 0), `${read.wordCount} words`);
 
   await sleep(400);
   await p.draftDoc.deleteMany({ where: { branchId } });

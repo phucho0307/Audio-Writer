@@ -26,3 +26,15 @@ export const AUTH_TIER = {
 export const COSTLY_TIER = {
   default: { limit: 6, ttl: MINUTE, blockDuration: 2 * MINUTE },
 };
+
+/**
+ * Retrieval: an embedding call and two indexed queries.
+ *
+ * Not free, so not unlimited - but nothing like generation, and a writer
+ * exploring the reference shelf types several searches in a row. Six a minute
+ * (the generation tier) cut that off mid-thought, which is the wrong failure
+ * for a search box.
+ */
+export const SEARCH_TIER = {
+  default: { limit: 30, ttl: MINUTE, blockDuration: MINUTE },
+};

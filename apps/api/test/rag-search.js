@@ -34,10 +34,35 @@ const ok = (b) => (b ? 'PASS' : '**FAIL**');
     console.log();
   }
 
+  // A rate limit is not a retrieval failure, and reporting it as one sent me
+  // looking for a bug in the index that was never there.
+  async function search(q) {
+    const res = await fetch(`${API}/rag/search?q=${encodeURIComponent(q)}`);
+    if (res.status === 429) return { throttled: true, hits: [] };
+    return { throttled: false, hits: await res.json() };
+  }
+
   // Lexical half: a rare exact word the embedding may not place.
-  const rare = await (await fetch(`${API}/rag/search?q=${encodeURIComponent('bùa ngải')}`)).json();
-  console.log('rare word "bùa ngải" found:', ok(Array.isArray(rare)), Array.isArray(rare) ? `${rare.length} hits` : '');
+  const rare = await search('bùa ngải');
+  console.log(
+    'rare word "bùa ngải" found:',
+    rare.throttled ? 'SKIPPED (rate limited)' : ok(rare.hits.length > 0),
+    rare.throttled ? '' : `${rare.hits.length} hits`,
+  );
+
   // Unaccented spelling should reach the same place.
-  const noTone = await (await fetch(`${API}/rag/search?q=${encodeURIComponent('bua ngai')}`)).json();
-  console.log('without tones finds it too:', ok(Array.isArray(noTone) && noTone.length > 0));
+  const noTone = await search('bua ngai');
+  console.log(
+    'without tones finds it too:',
+    noTone.throttled ? 'SKIPPED (rate limited)' : ok(noTone.hits.length > 0),
+  );
+  if (!rare.throttled && !noTone.throttled) {
+    // Overlap, not identical order. The lexical half unaccents both queries, but
+    // the dense half embeds the raw string, so dropping tones genuinely changes
+    // the semantic ranking. Expecting the same top hit was testing a property
+    // hybrid search does not have.
+    const ids = new Set(rare.hits.map((h) => h.id));
+    const shared = noTone.hits.filter((h) => ids.has(h.id)).length;
+    console.log('  both reach the same material:', ok(shared > 0), `${shared} shared passage(s)`);
+  }
 })();

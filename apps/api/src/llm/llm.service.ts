@@ -96,12 +96,24 @@ export class LlmService {
     yield* this.streamWithFailover(req);
   }
 
+  /**
+   * Continue the story.
+   *
+   * `unpublished` is what is sitting in the draft room right now. Without it
+   * the model continues the last *committed* chapter and ignores the paragraph
+   * someone just typed, which in a shared editor is the one thing it must not
+   * do: the writer is watching the cursor and expects it to pick up where they
+   * stopped, not where the story was published to.
+   */
   async *continue(
     branchId: string,
-    opts: { pov?: Pov; paragraphs?: Paragraphs },
+    opts: { pov?: Pov; paragraphs?: Paragraphs; unpublished?: string },
   ): AsyncIterable<string> {
     const { branch, text } = await this.stories.readBranch(branchId);
-    if (!text.trim()) {
+    const draft = opts.unpublished?.trim() ?? '';
+    const storySoFar = [text.trim(), draft].filter(Boolean).join('\n\n');
+
+    if (!storySoFar) {
       throw new BadRequestException(
         'Nothing written yet - use the opening generator instead.',
       );
@@ -110,7 +122,7 @@ export class LlmService {
     await this.quota.consume(await this.currentUser.current());
 
     const retrieved = await this.retrieve(
-      text,
+      storySoFar,
       branch.story.genres,
       branch.storyId,
     );
@@ -119,7 +131,7 @@ export class LlmService {
       mode: 'continue',
       language: branch.story.language === 'en' ? 'en' : 'vi',
       pov: opts.pov ?? 'third_limited',
-      storySoFar: text,
+      storySoFar,
       paragraphs: opts.paragraphs ?? 1,
       ...retrieved,
     };

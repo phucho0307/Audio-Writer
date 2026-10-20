@@ -61,6 +61,10 @@ export default function DraftRoom({
       onStatus: ({ status }) => setStatus(status),
       onAuthenticationFailed: ({ reason }) =>
         setDenied(reason || 'Bạn không có quyền mở bản nháp này.'),
+      // A refusal can be transient - an expired token that the next reconnect
+      // carries a fresh one for - so it is cleared on success rather than
+      // stranding the writer on an error screen until they reload.
+      onAuthenticated: () => setDenied(null),
     });
 
     p.setAwarenessField('user', {
@@ -90,6 +94,29 @@ export default function DraftRoom({
     };
   }, [branchId, doc, me.handle]);
 
+  /**
+   * Count from the document, not from editor events.
+   *
+   * `onUpdate` fires on edits, and an initial sync is not an edit: opening a
+   * draft that already has text left the count at zero and the commit button
+   * disabled, with the prose sitting right there on screen. The shared
+   * fragment is also exactly what the server counts, so the two cannot
+   * disagree.
+   */
+  useEffect(() => {
+    const body = doc.getXmlFragment('body');
+    const recount = () => {
+      const text = body
+        .toString()
+        .replace(/<[^>]+>/g, ' ')
+        .trim();
+      setWords(text ? text.split(/\s+/).length : 0);
+    };
+    body.observeDeep(recount);
+    recount();
+    return () => body.unobserveDeep(recount);
+  }, [doc]);
+
   // The model's progress is a field in the shared document, so it converges
   // like the prose does and cannot be left switched on by a client that
   // disappears halfway through.
@@ -101,37 +128,46 @@ export default function DraftRoom({
     return () => meta.unobserve(read);
   }, [doc]);
 
+  /**
+   * Built once, when the socket exists.
+   *
+   * The dependency list is the whole point. Rebuilding a collaborative editor
+   * re-binds it to the document and drops every caret in the room, so it must
+   * not happen for anything that can change while someone is typing - which is
+   * why `canEdit` is applied through `setEditable` below rather than being a
+   * dependency here.
+   */
   const editor = useEditor(
     {
       editable: canEdit,
       immediatelyRender: false,
-      extensions: [
-        // History is Yjs's own: ProseMirror's undo stack would undo other
-        // people's typing as readily as your own.
-        StarterKit.configure({ undoRedo: false }),
-        Collaboration.configure({ document: doc, field: 'body' }),
-        ...(provider
-          ? [
-              CollaborationCaret.configure({
-                provider,
-                user: { name: me.handle, color: colorFor(me.handle) },
-              }),
-            ]
-          : []),
-      ],
+      extensions: provider
+        ? [
+            // History is Yjs's own: ProseMirror's undo stack would undo other
+            // people's typing as readily as your own.
+            StarterKit.configure({ undoRedo: false }),
+            Collaboration.configure({ document: doc, field: 'body' }),
+            CollaborationCaret.configure({
+              provider,
+              user: { name: me.handle, color: colorFor(me.handle) },
+            }),
+          ]
+        : [],
       editorProps: {
         attributes: {
           class: 'prose-editor',
           spellcheck: 'false',
         },
       },
-      onUpdate: ({ editor }) => {
-        const text = editor.getText().trim();
-        setWords(text ? text.split(/\s+/).length : 0);
-      },
     },
-    [provider, canEdit],
+    [provider],
   );
+
+  // Permission arrives a moment after the room does, and flipping it must not
+  // cost anyone their cursor.
+  useEffect(() => {
+    editor?.setEditable(canEdit);
+  }, [editor, canEdit]);
 
   useEffect(() => {
     api.room(branchId).then(setRoom).catch(() => undefined);
@@ -242,7 +278,13 @@ export default function DraftRoom({
         </p>
       )}
 
-      <EditorContent editor={editor} />
+      {editor ? (
+        <EditorContent editor={editor} />
+      ) : (
+        <p className="min-h-[42vh] font-mono text-[12px] text-[var(--color-muted)]">
+          Đang mở tài liệu…
+        </p>
+      )}
 
       {!canEdit && (
         <p className="font-mono text-[11px] text-[var(--color-muted)]">

@@ -163,6 +163,8 @@ export class DraftService {
       throw new ServiceUnavailableException('Phòng viết chung đang tắt.');
     }
 
+    const draftText = (await this.read(branchId)).text;
+
     const connection = await server.openDirectConnection(this.room(branchId));
     let written = 0;
 
@@ -186,9 +188,12 @@ export class DraftService {
         target = appendParagraph(doc.getXmlFragment(BODY));
       });
 
+      // Read before the paragraph is appended, so the model is given what the
+      // room actually contains rather than its own empty node.
       const stream = this.llm.continue(branchId, {
         pov: opts.pov ?? 'third_limited',
         paragraphs: (opts.paragraphs ?? 1) as 1 | 2 | 3,
+        unpublished: draftText,
       });
 
       for await (const chunk of stream) {

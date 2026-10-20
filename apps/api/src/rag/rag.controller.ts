@@ -4,7 +4,7 @@ import { Throttle } from '@nestjs/throttler';
 import { PrismaService } from '../prisma/prisma.service';
 import { RagService } from './rag.service';
 import { DevOnlyGuard } from '../auth/dev-only.guard';
-import { COSTLY_TIER } from '../throttler/tiers';
+import { SEARCH_TIER } from '../throttler/tiers';
 
 @Controller()
 export class RagController {
@@ -51,7 +51,7 @@ export class RagController {
    * read?" is the difference between debugging it and guessing.
    */
   @Get('rag/search')
-  @Throttle(COSTLY_TIER)
+  @Throttle(SEARCH_TIER)
   search(
     @Query('q') q: string,
     @Query('genre') genre?: Genre,
