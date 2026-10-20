@@ -10,6 +10,7 @@ import Account from './Account';
  */
 const LINKS = [
   { href: '/kham-pha', label: 'khám phá', match: ['/kham-pha', '/doc'] },
+  { href: '/tham-khao', label: 'tham khảo', match: ['/tham-khao'] },
   { href: '/', label: 'truyện của tôi', match: ['/stories'] },
 ];
 

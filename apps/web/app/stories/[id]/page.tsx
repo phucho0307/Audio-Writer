@@ -20,14 +20,19 @@ import {
   type Wallet,
 } from "@/lib/api";
 
+// The first five are what the platform is built around: they drive which craft
+// notes the generator retrieves, so the labels here must match the ones the
+// server knows. The rest are ordinary tags and carry no behaviour.
 const GENRES = [
-  "ngoại tình",
   "kinh dị",
-  "lãng mạn",
+  "giật gân",
+  "ngôn tình",
   "hành động",
+  "ngoại tình",
   "trinh thám",
   "huyền bí",
   "tâm lý",
+  "lãng mạn",
   "hài hước",
 ];
 

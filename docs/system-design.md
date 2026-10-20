@@ -1011,6 +1011,178 @@ reader premium for that reason and no other.
 
 ---
 
+### 3.13 Writing together: why a CRDT rather than saves
+
+Two people editing one chapter through ordinary writes has exactly two
+outcomes, and both are bad. Either the second save overwrites the first, or the
+product locks the document to one person and calls it a feature. Google Docs
+exists because neither is acceptable.
+
+A **CRDT** removes the question instead of answering it. Every edit is a small
+operation that carries enough information to be merged with any other edit, in
+any order, and still produce the same result everywhere. Two writers typing into
+the same sentence do not race: both operations apply, both clients converge, and
+no server adjudicates. The server stops being an arbiter and becomes a relay
+with a disk.
+
+Yjs for the data structure, Hocuspocus for the transport. Not written by hand:
+the sync protocol, awareness and debounced persistence are all solved, and all
+subtly wrong the first time.
+
+### Why it lives inside the API
+
+The obvious shape is a second service — a websocket server beside the API. It
+was not built that way, for one reason that outweighs the rest:
+
+> **A draft is private.** Deciding who may open one means knowing about
+> sessions, branches, forks and collaborators. A separate process either
+> duplicates that logic or calls back into the API for every connection.
+
+Running inside the API, the socket is authorised against the same tokens and
+the same tables as every HTTP request, through the same Prisma client. The
+day it needs to scale separately, the boundary to cut along is already obvious;
+until then, a second deployment buys nothing and costs a copy of the
+authorisation rules.
+
+Three states, enforced server-side:
+
+| Who | What happens |
+|---|---|
+| Branch owner, or the story's owner | writes |
+| Invited `EDITOR` | writes |
+| Invited `VIEWER` | joins, sees cursors, server drops their edits |
+| Everyone else, and bad tokens | refused at the handshake |
+
+The viewer case is the one worth stating: the client is told it is read-only,
+but the *server* is what enforces it, because a client is not in a position to
+be trusted about its own permissions.
+
+### The model as a participant, not an endpoint
+
+The ordinary way to add AI to an editor is a request that returns text, which
+one client then inserts. That puts the result in exactly one person's editor
+and leaves everyone else in the room to receive it as a surprise.
+
+Here the model joins the room. It opens a direct connection to the same
+document and types into it, so every writer watches the words appear in place,
+and anything they type meanwhile merges around it. Each streamed chunk is its
+own CRDT update, which is what makes it arrive progressively rather than in one
+lump.
+
+Its progress is a field in the same document:
+
+```ts
+doc.getMap('meta').set('ai', { state: 'writing', by: handle })
+```
+
+That is not decoration. A status pushed over a side channel can be missed by a
+client that joins late, and left switched on by one that disappears mid-stream.
+A field in the document converges like the prose does — late joiners see the
+true state, and clearing it is an edit like any other.
+
+### What committing means
+
+The draft is mutable and shared; a chapter is neither. Committing turns one into
+the other: the CRDT is read out as paragraphs, written as an ordinary immutable
+`Contribution`, and the room is emptied. The fork-and-commit model underneath
+(§on forking) does not change at all — collaboration happens *before* a chapter
+exists, never to one that already does.
+
+### The bug that looked like an auth failure
+
+Hocuspocus v4 hands back a connection object and expects the integrator to feed
+it: its own listener forwards `message`, `close` and `pong` to that object. Mine
+did not. The socket opened, stayed open, reported `connected` — and never
+authenticated or synced, because the server was never shown a single message.
+
+It presented as a silent authorisation failure, which is the worst thing it
+could have presented as, because that is a real possibility worth hours of
+investigation. What found it was checking the layer below the symptom: a raw
+WebSocket connected fine, so the handshake was not the problem; the server's own
+reference implementation then showed the three lines that were missing.
+
+---
+
+### 3.14 Retrieval: giving the model something to read first
+
+A model continuing a Vietnamese horror chapter from the chapter alone writes
+competent, generic horror. It does not know that this genre cuts a chapter just
+before the explanation, or that this story established a tin box four chapters
+ago. Both are retrievable; neither is in the prompt unless something puts it
+there.
+
+### Two corpora, deliberately
+
+| Corpus | Answers | In the prompt as |
+|---|---|---|
+| Craft notes | how this genre works | technique that *may* apply |
+| This story's chapters | what is already true here | facts that must **not** be contradicted |
+
+Keeping them apart is a correctness matter, not tidiness. They were briefly
+merged under one heading, which tells the model that *"ngôn tình works when the
+obstacle is a character trait"* is an established fact about this story. It is
+not; it is advice. Facts constrain, advice informs, and a prompt that confuses
+the two produces prose that treats genre convention as plot.
+
+### Hybrid search, fused by rank
+
+Vector search finds passages that mean the same thing in different words.
+Full-text finds the ones sharing a rare word — a character's name, *bùa ngải*.
+Each fails exactly where the other works: embeddings miss exact names, keywords
+miss paraphrase.
+
+Combining them is where it goes wrong in practice. A cosine distance and a
+`ts_rank` are not on the same scale, and no constant makes them comparable —
+tuning a weighted sum is tuning a number that means nothing. **Reciprocal rank
+fusion** uses position instead of score:
+
+```
+score(d) = Σ  1 / (k + rank(d))      k = 60
+```
+
+Ranks are commensurable by construction, so there is nothing to tune, and
+nothing to re-tune when either side changes.
+
+### Decisions worth defending
+
+**HNSW, not IVFFlat.** IVFFlat needs a training pass over existing rows to
+build its lists, so an index built on an empty table is wrong and stays wrong.
+Chapters arrive one at a time, forever. HNSW needs no training pass.
+
+**Embeddings normalised on the way in.** Gemini normalises its full-width
+output but not a truncated one, and we ask for 768 of 3072. Cosine distance
+over unnormalised vectors ranks partly by magnitude, which silently favours
+longer passages — a quality loss that produces no error and no log line.
+
+**`simple`, unaccented, for the lexical half.** Postgres ships no Vietnamese
+stemmer; running English rules over Vietnamese mangles it. Unaccenting means
+`bua ngai` finds `bùa ngải`, which is how people actually type. `unaccent()` is
+only *stable*, so a generated column needs an immutable wrapper pinning the
+dictionary by name — Postgres is right to refuse the naive version.
+
+**Chapters index themselves on commit**, through the same event bus as
+pre-rendering (§3.11), and for the same two reasons: the index is a consumer of
+chapters and should not be imported by the thing that writes them, and a writer
+pressing *đăng chương* should not wait on an embedding round trip.
+
+### What is in the index, and why that was a legal decision
+
+The obvious corpus is the one the writer asked for: scrape the Vietnamese audio
+sites and embed their stories. That is also how a commercial product that sells
+generated fiction acquires a copyright problem.
+
+So the sites are a **reading list** — linked, described, credited — and the
+indexed corpus is written by us: craft notes about how each genre works, the
+same thing a human studying the genre would produce. Plus the platform's own
+chapters, which its writers put there.
+
+The constraint turned out to improve the product. A retrieved craft note is
+*advice a writer can read* — so the same corpus the model retrieves from is
+published as a page writers browse. A retrieved stolen chapter could never have
+been shown to anyone.
+
+---
+
 ## 4. The data model
 
 ### 4.1 Git-shaped, on purpose

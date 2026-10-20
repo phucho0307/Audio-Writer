@@ -51,6 +51,33 @@ export type Contribution = {
   author: { handle: string; displayName: string } | null;
 };
 
+export type Genre =
+  | 'HORROR'
+  | 'THRILLER'
+  | 'ROMANCE'
+  | 'ACTION'
+  | 'INFIDELITY';
+
+export type ReferenceSource = {
+  id: string;
+  slug: string;
+  name: string;
+  url: string;
+  kind: 'AUDIO_SITE' | 'CHANNEL' | 'APP' | 'PUBLIC_DOMAIN';
+  genres: Genre[];
+  note: string;
+  scale: string | null;
+};
+
+export type CraftNote = {
+  id: string;
+  kind: 'TROPE' | 'BEAT' | 'OPENING' | 'TWIST' | 'SETTING';
+  genre: Genre;
+  title: string;
+  body: string;
+  source: { name: string; url: string } | null;
+};
+
 export type DraftState = {
   branchId: string;
   text: string;
@@ -380,6 +407,12 @@ export const api = {
     }),
 
   quota: () => call<Quota>('/ai/quota'),
+
+  /** The reading list and the craft notes behind the generator. */
+  references: (genre?: Genre) =>
+    call<{ sources: ReferenceSource[]; notes: CraftNote[] }>(
+      `/references${genre ? `?genre=${genre}` : ''}`,
+    ),
 
   // --------------------------------------------------------------- drafts
   //
