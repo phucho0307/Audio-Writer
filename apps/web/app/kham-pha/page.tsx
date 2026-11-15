@@ -6,6 +6,8 @@ import { api, type Story } from '@/lib/api';
 import Reveal from '../Reveal';
 import SpiritText from '../SpiritText';
 import Tilt, { Sheen } from '../Tilt';
+import RatingBadge from '../Rating';
+import { storyRating } from '@/lib/ratings';
 import { calm, gsap, useGSAP } from '@/lib/motion';
 
 /**
@@ -221,6 +223,15 @@ function Featured({ story }: { story: Story }) {
             />
           </Link>
 
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <RatingBadge rating={storyRating(story.id)} variant="full" />
+            {story.owner && (
+              <span className="text-[13px] text-[var(--color-muted)]">
+                · @{story.owner.handle}
+              </span>
+            )}
+          </div>
+
           {story.synopsis && (
             <p className="max-w-[54ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
               {story.synopsis}
@@ -300,9 +311,17 @@ function StoryCard({ story: s }: { story: Story }) {
         <p className="line-clamp-2 text-[13px] leading-relaxed text-[var(--color-muted)]">
           {s.synopsis}
         </p>
-        <p className="text-[11.5px] text-[var(--color-faint)]">
+        <p className="truncate text-[11.5px] text-[var(--color-faint)]">
           {s.genres.join(' · ')}
         </p>
+        {/* Who wrote it and how it is rated, on one line at the foot of the
+            card, so a row of covers can be scanned for both at a glance. */}
+        <div className="flex items-center justify-between gap-2 border-t border-[var(--color-line)] pt-2 text-[12px]">
+          <span className="truncate text-[var(--color-muted)]">
+            {s.owner ? `@${s.owner.handle}` : ''}
+          </span>
+          <RatingBadge rating={storyRating(s.id)} className="flex-none text-[12px]" />
+        </div>
       </div>
     </Link>
   );

@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import type { BranchSummary, Story } from '@/lib/api';
+import RatingBadge from '@/app/Rating';
+import { branchRating } from '@/lib/ratings';
 
 /**
  * Branches as readers meet them: at the chapter where they split off.
@@ -87,9 +89,12 @@ export function BranchLink({
             </span>
           )}
         </span>
-        <span className="text-[11.5px] text-[var(--color-faint)]">
-          rẽ sau chương {(b.forkedAtDepth ?? 0) + 1}
-          {own > 0 && ` · ${own} chương riêng`}
+        <span className="flex flex-wrap items-center gap-x-2 text-[11.5px] text-[var(--color-faint)]">
+          <RatingBadge rating={branchRating(b.id)} className="text-[11.5px]" />
+          <span>
+            · rẽ sau chương {(b.forkedAtDepth ?? 0) + 1}
+            {own > 0 && ` · ${own} chương riêng`}
+          </span>
         </span>
       </span>
       <span

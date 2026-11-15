@@ -6,6 +6,8 @@ import { api, type Story } from '@/lib/api';
 import SignInWall from './SignInWall';
 import Reveal from './Reveal';
 import SpiritText from './SpiritText';
+import RatingBadge from './Rating';
+import { storyRating } from '@/lib/ratings';
 
 /**
  * The writer's shelf.
@@ -156,6 +158,9 @@ function MyStories() {
                 <h2 className="display line-clamp-2 min-h-[2.4em] text-[17px] leading-[1.2] transition-colors group-hover:text-[var(--color-accent)]">
                   {s.title}
                 </h2>
+                {s.contributionCount > 0 && (
+                  <RatingBadge rating={storyRating(s.id)} className="text-[12px]" />
+                )}
                 <p className="text-[11.5px] text-[var(--color-faint)]">
                   {s.contributionCount} chương · {s.wordCount.toLocaleString('vi-VN')} từ
                   {s.branchCount > 1 && ` · ⑂ ${s.branchCount - 1} nhánh rẽ`}

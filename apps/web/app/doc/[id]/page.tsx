@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Reveal from '@/app/Reveal';
 import SpiritText from '@/app/SpiritText';
+import RatingBadge from '@/app/Rating';
+import { chapterRating, storyRating } from '@/lib/ratings';
 import { BranchBanner, BranchLink, forksAt, readableForks } from '../Branches';
 import {
   mainBranch,
@@ -152,6 +154,8 @@ export default function Contents({
               className="display text-[2.1rem] leading-[1.06] sm:text-[2.5rem]"
             />
 
+            <RatingBadge rating={storyRating(story.id)} variant="full" />
+
             <p className="max-w-[52ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
               {story.synopsis}
             </p>
@@ -217,16 +221,25 @@ export default function Contents({
                       {c.title ?? c.textPlain.split('\n')[0].slice(0, 60)}
                     </span>
 
+                    <RatingBadge
+                      rating={chapterRating(story.id, c.id, c.depth)}
+                      className="flex-none text-[11.5px]"
+                    />
+
                     {/* A narrated chapter says so with its running time - the
                         one fact that tells a listener whether they have time
                         for it before bed. */}
-                    {clip && (
-                      <span className="flex flex-none items-center gap-1.5 text-[11.5px] tabular-nums text-[var(--color-muted)]">
+                    {/* The slot is kept when a chapter has no audio yet, so the
+                        ratings to its left stay in one column. */}
+                    {clip ? (
+                      <span className="flex w-[46px] flex-none items-center justify-end gap-1.5 text-[11.5px] tabular-nums text-[var(--color-muted)]">
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                           <path d="M8 5.5v13l11-6.5-11-6.5Z" />
                         </svg>
                         {mmss(clip.durationMs)}
                       </span>
+                    ) : (
+                      <span className="w-[46px] flex-none" aria-hidden />
                     )}
                     <span className="hidden w-16 flex-none text-right text-[11.5px] tabular-nums text-[var(--color-faint)] sm:block">
                       {c.wordCount} từ
