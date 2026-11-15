@@ -442,8 +442,14 @@ export const api = {
       method: 'DELETE',
     }),
 
+  /**
+   * Publish the room. `branchId` in the answer is where the chapter actually
+   * went: the room's own branch for its owner, or - for an invited writer -
+   * a branch of their own split from it, with `forked` set.
+   */
   commitDraft: (branchId: string, title?: string) =>
-    call<Contribution>(`/branches/${branchId}/draft/commit`, {
+    call<Contribution & { forked: boolean }>(
+      `/branches/${branchId}/draft/commit`, {
       method: 'POST',
       body: JSON.stringify({ title }),
     }),

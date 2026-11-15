@@ -4,7 +4,7 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { AuthorType } from '@prisma/client';
+import { AuthorType, type Contribution } from '@prisma/client';
 import * as Y from 'yjs';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoriesService } from '../stories/stories.service';
@@ -101,7 +101,10 @@ export class DraftService {
    * text now lives in a contribution, and leaving a copy behind would let two
    * people keep editing something already published.
    */
-  async commit(branchId: string, title?: string) {
+  async commit(
+    branchId: string,
+    title?: string,
+  ): Promise<Contribution & { forked: boolean }> {
     const { user } = await this.access.require(branchId, 'write');
     const draft = await this.read(branchId);
 
@@ -109,18 +112,55 @@ export class DraftService {
       throw new BadRequestException('Bản nháp đang trống.');
     }
 
-    const contribution = await this.stories.commit(branchId, {
+    // The chapter goes where its writer is entitled to put it.
+    //
+    // The owner's commit lands on the room's branch. Anyone else here was
+    // invited to write *with* the owner, not to publish *as* them, so theirs
+    // becomes the first chapter of a branch of their own, split at this point
+    // and named after them - and the owner's story does not move.
+    //
+    // Previously every commit went straight onto the room's branch, so on a
+    // published story an invited guest could append a chapter to it under the
+    // author's title, which the author cannot do to their own published story
+    // without a revision.
+    const branch = await this.prisma.branch.findUniqueOrThrow({
+      where: { id: branchId },
+      select: { ownerId: true },
+    });
+
+    const dto = {
       content: toProseMirror(draft.text.split(/\n\n+/).filter(Boolean)),
       textPlain: draft.text.trim(),
       title: title?.trim() || undefined,
       authorType: AuthorType.HUMAN,
-    });
+    };
+
+    // The chapter itself is returned, as it always was - its own `branchId`
+    // already says where it landed - with `forked` added so the client knows
+    // whether that is the room's branch or the writer's own.
+    let landed: Contribution & { forked: boolean };
+    if (this.stories.canCommitTo(branch, user)) {
+      const c = await this.stories.commit(branchId, dto);
+      landed = { ...c, forked: false };
+    } else {
+      const { contributionId } = await this.stories.commitForCollaborator(
+        branchId,
+        dto,
+      );
+      const c = await this.prisma.contribution.findUniqueOrThrow({
+        where: { id: contributionId },
+      });
+      landed = { ...c, forked: true };
+    }
 
     await this.clear(branchId);
     this.logger.log(
-      `branch ${branchId.slice(0, 8)} committed ${draft.wordCount} words by ${user.handle}`,
+      `branch ${branchId.slice(0, 8)} committed ${draft.wordCount} words by ${user.handle}` +
+        (landed.forked
+          ? ` onto their own branch ${landed.branchId.slice(0, 8)}`
+          : ''),
     );
-    return contribution;
+    return landed;
   }
 
   /** Empty the room and forget the snapshot. */

@@ -218,9 +218,14 @@ export default function DraftRoom({
     setBusy('commit');
     setError(null);
     try {
-      await api.commitDraft(branchId, title.trim() || undefined);
+      const landed = await api.commitDraft(branchId, title.trim() || undefined);
       setTitle('');
-      window.location.href = `/stories/${storyId}`;
+      // An invited writer's chapter lives on their own branch now, so that is
+      // where they are taken - back to the owner's story would show them a
+      // page their chapter is (correctly) not on.
+      window.location.href = landed.forked
+        ? `/stories/${storyId}?branch=${landed.branchId}`
+        : `/stories/${storyId}`;
     } catch (e) {
       setError((e as Error).message);
       setBusy(null);
@@ -261,6 +266,9 @@ export default function DraftRoom({
   }
 
   const live = status === WebSocketStatus.Connected;
+  // In the room as an invited writer rather than as its owner - decides both
+  // the publish button's wording and where the server will put the chapter.
+  const guest = room !== null && room.owner.handle !== me.handle;
 
   return (
     <div className="flex flex-col gap-4">
@@ -326,29 +334,45 @@ export default function DraftRoom({
       )}
 
       {canEdit && (
-        <div className="flex flex-wrap items-center gap-3 border-t border-[var(--color-line)] pt-3">
-          <button
-            onClick={runAi}
-            disabled={busy !== null}
-            className="font-mono text-[12px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
-          >
-            {busy === 'ai' ? '✍ AI đang viết…' : '✍ để AI viết tiếp'}
-          </button>
+        <div className="flex flex-col gap-2.5 border-t border-[var(--color-line)] pt-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={runAi}
+              disabled={busy !== null}
+              className="btn btn-ghost btn-sm"
+            >
+              <span aria-hidden>✍</span>
+              {busy === 'ai' ? 'AI đang viết…' : 'Để AI viết tiếp'}
+            </button>
 
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Tên chương (tuỳ chọn)"
-            className="min-w-0 flex-1 rounded border border-[var(--color-line)] bg-transparent px-2.5 py-1.5 text-[13px]"
-          />
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Tên chương (tuỳ chọn)"
+              className="field min-w-0 flex-1 py-1.5 text-[13.5px]"
+            />
 
-          <button
-            onClick={commit}
-            disabled={busy !== null || !words}
-            className="rounded border border-[var(--color-accent)] px-3 py-1.5 font-mono text-[12px] text-[var(--color-accent)] disabled:opacity-40"
-          >
-            {busy === 'commit' ? 'đang lưu…' : 'đăng chương này'}
-          </button>
+            <button
+              onClick={commit}
+              disabled={busy !== null || !words}
+              className="btn btn-primary btn-sm"
+            >
+              {busy === 'commit'
+                ? 'Đang đăng…'
+                : guest
+                  ? 'Đăng vào nhánh của tôi'
+                  : 'Đăng chương này'}
+            </button>
+          </div>
+
+          {/* Said before the button is pressed, not after: where a chapter is
+              going to end up is part of deciding whether to publish it. */}
+          {guest && room && (
+            <p className="text-[12px] leading-relaxed text-[var(--color-muted)]">
+              Chương bạn đăng sẽ thành <span className="text-[var(--color-ink)]">một nhánh riêng mang tên @{me.handle}</span>,
+              tách ra từ đây. Truyện của @{room.owner.handle} không thay đổi.
+            </p>
+          )}
         </div>
       )}
 

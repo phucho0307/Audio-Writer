@@ -492,34 +492,64 @@ export default function StoryPage({
         {/* ---- branch switcher ---- */}
         {story.branches.length > 1 && (
           <div className="flex flex-col gap-2">
-            <span className="font-mono text-[12px] uppercase tracking-widest text-[var(--color-muted)]">
-              Nhánh · {story.branches.length}
-            </span>
-            <div className="flex flex-wrap gap-1.5">
+            <span className="label">Nhánh · {story.branches.length}</span>
+            <div className="flex flex-wrap gap-2">
               {story.branches.map((b) => {
                 const live = b.id === liveBranchId;
                 const mine = read.access.isOwner;
+                // Someone else's branch says whose it is. A collaborator's
+                // branch is already named "@handle", so the name is not
+                // repeated next to itself.
+                const author =
+                  b.owner && b.owner.handle !== story.owner?.handle
+                    ? `@${b.owner.handle}`
+                    : null;
+                const label = b.isRoot
+                  ? "Bản chính"
+                  : author && b.name === author
+                    ? author
+                    : b.name;
+                const own = b._count?.contributions ?? 0;
                 return (
                   <span
                     key={b.id}
-                    className={`group/br flex items-center gap-1 rounded-md border px-2.5 py-1 text-[13px] ${
+                    className={`group/br flex items-center gap-1.5 rounded-[5px] border px-3 py-1.5 text-[13px] transition-colors ${
                       b.id === branchId
-                        ? "border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
-                        : "border-[var(--color-line)] text-[var(--color-muted)] hover:border-[var(--color-accent)]"
+                        ? "border-[var(--color-accent-line)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]"
+                        : "border-[var(--color-line)] text-[var(--color-muted)] hover:border-[var(--color-line-strong)] hover:text-[var(--color-ink)]"
                     }`}
                   >
-                    <button onClick={() => setBranchId(b.id)}>
-                      {live
-                        ? `${b.isRoot ? "main" : b.name} · đang đăng`
-                        : b.name}
-                      {b.isDraft && (
-                        <span className="ml-1.5 font-mono text-[12px] opacity-70">
-                          riêng tư
-                        </span>
-                      )}
+                    <button
+                      onClick={() => setBranchId(b.id)}
+                      className="flex flex-col items-start gap-0.5 text-left"
+                    >
+                      <span className="flex items-center gap-1.5 font-medium">
+                        {!b.isRoot && <span aria-hidden>⑂</span>}
+                        {label}
+                        {author && b.name !== author && (
+                          <span className="font-normal opacity-70">
+                            · {author}
+                          </span>
+                        )}
+                        {live && (
+                          <span className="flex items-center gap-1 text-[11.5px] font-normal">
+                            <span className="dot dot-on" aria-hidden />
+                            đang đăng
+                          </span>
+                        )}
+                        {b.isDraft && (
+                          <span className="text-[11.5px] font-normal opacity-70">
+                            riêng tư
+                          </span>
+                        )}
+                      </span>
+                      {/* Where it splits from the story, and how much of it is
+                          its own - the two facts that tell an author whether a
+                          branch is worth opening. */}
                       {b.forkedAtDepth !== null && (
-                        <span className="ml-1.5 font-mono text-[12px] opacity-60">
-                          ⑂{b.forkedAtDepth}
+                        <span className="text-[11.5px] font-normal opacity-65">
+                          rẽ sau chương {b.forkedAtDepth + 1}
+                          {own > 0 && ` · +${own} chương`}
                         </span>
                       )}
                     </button>

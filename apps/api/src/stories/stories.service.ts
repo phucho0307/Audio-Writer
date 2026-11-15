@@ -87,14 +87,31 @@ export class StoriesService {
     return { visibility: Visibility.PUBLIC };
   }
 
-  /** Throws 404 - not 403 - when a private story is fetched by a stranger. */
-  private assertReadable(
-    story: { visibility: Visibility; ownerId: string },
+  /**
+   * Throws 404 - not 403 - when a private story is fetched by a stranger.
+   *
+   * Someone the author invited into one of its draft rooms is not a stranger.
+   * The room already shows them the unpublished text, so refusing them the
+   * published chapters was incoherent - and it broke the one thing an invited
+   * writer produces: their own branch, which they then could not open, on a
+   * story they could not fork, after a redirect to a page that 404'd.
+   */
+  private async assertReadable(
+    story: { id: string; visibility: Visibility; ownerId: string },
     user: User | null,
-  ): void {
+  ): Promise<void> {
     if (story.visibility !== Visibility.PRIVATE) return;
     if (story.ownerId === user?.id) return;
     if (user?.role === Role.ADMIN) return;
+
+    if (user) {
+      const invited = await this.prisma.branchCollaborator.findFirst({
+        where: { userId: user.id, branch: { storyId: story.id } },
+        select: { id: true },
+      });
+      if (invited) return;
+    }
+
     // Confirming it exists would leak the id of every private draft to anyone
     // willing to guess. Say nothing.
     throw new NotFoundException('Story not found');
@@ -174,7 +191,7 @@ export class StoriesService {
     if (!story) throw new NotFoundException(`Story ${id} not found`);
 
     const viewer = await this.currentUser.optional();
-    this.assertReadable(story, viewer);
+    await this.assertReadable(story, viewer);
 
     // Drafts are working copies. Listing them would announce that a revision
     // is under way and hand out the id needed to read it.
@@ -814,7 +831,7 @@ export class StoriesService {
     // Reading is the public surface: no token required. Signed out you get
     // the free chapters, same as a signed-in stranger who has not unlocked it.
     const user = await this.currentUser.optional();
-    this.assertReadable(branch.story, user);
+    await this.assertReadable(branch.story, user);
 
     // A draft is the author's working copy. 404 rather than 403: confirming
     // it exists would tell anyone listing branches that a revision is under
@@ -892,6 +909,25 @@ export class StoriesService {
       const branch = await tx.branch.findUnique({ where: { id: branchId } });
       if (!branch) throw new NotFoundException(`Branch ${branchId} not found`);
 
+      // A chapter goes onto a branch only from the person who owns it.
+      //
+      // This check did not exist. Any signed-in account could POST a chapter
+      // onto anyone's branch - including a published story's main line, which
+      // its own author is not allowed to edit directly - and the draft room
+      // reached the same hole by passing a collaborator straight through. It
+      // surfaced when an invited writer's test chapter appeared in someone
+      // else's published story as if the author had written it.
+      //
+      // Other people's writing has a route: a fork, which is theirs, under
+      // their name. That is what `commitForCollaborator` below does.
+      if (!this.canCommitTo(branch, user)) {
+        throw new ForbiddenException({
+          code: 'NOT_BRANCH_OWNER',
+          message:
+            'Chỉ chủ nhánh mới đăng chương vào nhánh này. Hãy rẽ nhánh để viết theo hướng của bạn.',
+        });
+      }
+
       // First write on a forked branch continues from the fork point, not from
       // zero; on a root branch with no head it starts at 0.
       const nextDepth =
@@ -961,7 +997,19 @@ export class StoriesService {
     return contribution;
   }
 
-  async fork(branchId: string, dto: ForkBranchDto): Promise<Branch> {
+  async fork(
+    branchId: string,
+    dto: ForkBranchDto,
+    opts: {
+      /**
+       * The author invited this person into the branch's draft room. That is
+       * a more specific grant than the public "allow forks" switch and the
+       * paywall, both of which are about strangers - so neither stops someone
+       * the author asked to write with them.
+       */
+      invited?: boolean;
+    } = {},
+  ): Promise<Branch> {
     const user = await this.currentUser.current();
 
     return this.prisma.$transaction(async (tx) => {
@@ -986,16 +1034,22 @@ export class StoriesService {
       // `null` is undeclared, not permitted. A story in that state should be
       // private anyway, but the fork path must not be the one place that
       // treats "never answered" as yes.
-      if (story.allowForks !== true && story.ownerId !== user.id) {
+      if (
+        !opts.invited &&
+        story.allowForks !== true &&
+        story.ownerId !== user.id
+      ) {
         throw new ForbiddenException({
           code: 'FORKS_DISABLED',
           message: 'Tác giả đã tắt tính năng rẽ nhánh cho truyện này.',
         });
       }
 
-      this.assertReadable(story, user);
+      await this.assertReadable(story, user);
 
-      const maxDepth = await this.paywall.readableDepth(story, user.id);
+      const maxDepth = opts.invited
+        ? Number.POSITIVE_INFINITY
+        : await this.paywall.readableDepth(story, user.id);
       if (dto.atDepth > maxDepth) {
         throw new ForbiddenException({
           code: 'LOCKED_CHAPTERS',
@@ -1049,7 +1103,107 @@ export class StoriesService {
       return { ...branch, headContributionId: first.id, depth: first.depth };
     });
   }
+
+  /**
+   * Who may add a chapter straight onto a branch: its owner, or an admin.
+   *
+   * Kept as one predicate because the draft room has to make the same call
+   * before it decides where a chapter goes, and two copies of a permission
+   * rule drift until they disagree.
+   */
+  canCommitTo(
+    branch: { ownerId: string },
+    user: { id: string; role: Role },
+  ): boolean {
+    return branch.ownerId === user.id || user.role === Role.ADMIN;
+  }
+
+  /**
+   * A chapter written in someone else's room, by someone they invited.
+   *
+   * It does not go onto their branch: it goes onto a branch of the writer's
+   * own, split from the room's branch at its current last chapter and named
+   * after them - so the author's story is untouched, and the new chapter
+   * shows up as "@handle's version" rather than as the author's next chapter.
+   *
+   * Repeat commits from the same person while the author has not moved on
+   * continue that same branch instead of sprouting a sibling each time.
+   */
+  async commitForCollaborator(
+    parentBranchId: string,
+    dto: CommitContributionDto,
+  ): Promise<CollaboratorCommit> {
+    const user = await this.currentUser.current();
+    const parent = await this.prisma.branch.findUnique({
+      where: { id: parentBranchId },
+    });
+    if (!parent) {
+      throw new NotFoundException(`Branch ${parentBranchId} not found`);
+    }
+
+    // A split needs something to split from. On a story with no chapters yet
+    // there is no shared history to keep, and inventing an empty fork point
+    // would leave a branch that inherits nothing from a story that has
+    // nothing - so the author goes first.
+    if (!parent.headContributionId) {
+      throw new BadRequestException({
+        code: 'NOTHING_TO_BRANCH_FROM',
+        message:
+          'Truyện chưa có chương nào. Chủ truyện cần đăng chương đầu tiên trước.',
+      });
+    }
+
+    const existing = await this.prisma.branch.findFirst({
+      where: {
+        ownerId: user.id,
+        forkedFromBranchId: parent.id,
+        forkedAtDepth: parent.depth,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    if (existing) {
+      const c = await this.commit(existing.id, dto);
+      return { contributionId: c.id, branchId: existing.id, created: false };
+    }
+
+    const branch = await this.fork(
+      parent.id,
+      {
+        atDepth: parent.depth,
+        name: `@${user.handle}`,
+        title: dto.title,
+        content: dto.content,
+        textPlain: dto.textPlain,
+        authorType: dto.authorType,
+        modelProvider: dto.modelProvider,
+        modelName: dto.modelName,
+      } as ForkBranchDto,
+      { invited: true },
+    );
+
+    // The fork writes its first chapter itself, so announce it the way an
+    // ordinary commit would - it is indexed for retrieval like any other.
+    this.events.emit('chapter.committed', {
+      contributionId: branch.headContributionId!,
+      branchId: branch.id,
+    });
+
+    return {
+      contributionId: branch.headContributionId!,
+      branchId: branch.id,
+      created: true,
+    };
+  }
 }
+
+export type CollaboratorCommit = {
+  contributionId: string;
+  /** Where the chapter actually landed - the collaborator's own branch. */
+  branchId: string;
+  /** True when this commit created that branch. */
+  created: boolean;
+};
 
 function countWords(text: string): number {
   const trimmed = text.trim();
