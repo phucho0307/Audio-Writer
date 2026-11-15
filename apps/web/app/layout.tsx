@@ -1,6 +1,9 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Nav from './Nav';
+import ThemeToggle from './ThemeToggle';
+import Atmosphere from './Atmosphere';
+import MotionToggle from './MotionToggle';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -12,38 +15,97 @@ export const metadata: Metadata = {
     'Viết truyện cùng AI. Rẽ nhánh câu chuyện. Nghe bản audio miễn phí.',
 };
 
+/**
+ * Applied before the first paint.
+ *
+ * A theme read from localStorage in an effect arrives one frame too late, and
+ * that frame is a white flash in the face of someone reading horror at 1am.
+ * Inline and synchronous is the only version that does not flash.
+ */
+const THEME_BOOT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('aw-theme');if(t==='light'||t==='dark')d.setAttribute('data-theme',t);var m=localStorage.getItem('aw-motion');if(m==='full'||m==='calm')d.setAttribute('data-motion',m)}catch(e){}})()`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="vi">
+    <html lang="vi" suppressHydrationWarning>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
           rel="preconnect"
           href="https://fonts.gstatic.com"
           crossOrigin=""
         />
+        {/* Fraunces for display (the SOFT and WONK axes are what give the
+            headings their character), Be Vietnam Pro for the interface - it is
+            drawn for Vietnamese diacritics, which most grotesques are not -
+            and Newsreader for prose. All three ship a Vietnamese subset;
+            a display face without one drops every dấu on the page. */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..700,0..100,0..1;1,9..144,300..700,0..100,0..1&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&display=swap"
         />
       </head>
-      <body className="min-h-screen">
-        <header className="border-b border-[var(--color-line)]">
-          <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3.5">
+      {/* Extensions - Grammarly is the common one - stamp attributes onto
+          <body> before React hydrates, which React then reports as a mismatch
+          against markup that is in fact identical. Suppressed at this one
+          element rather than wholesale, so a real mismatch inside the app
+          still gets reported. */}
+      <body className="relative min-h-screen" suppressHydrationWarning>
+        {/* The CSS wash is the floor: it is what a reader with reduced motion,
+            no WebGL or no JavaScript sees, and the shader draws over the top
+            of it for everyone else. */}
+        <div className="vignette" aria-hidden />
+        <Atmosphere />
+        <div className="grain" aria-hidden />
+
+        {/* Sticky, because the player and the nav are both things you reach
+            for mid-chapter. Translucent rather than solid so the cover art
+            scrolling underneath stays visible through it. */}
+        <header className="sticky top-0 z-50 border-b border-[var(--color-line)] bg-[color-mix(in_oklab,var(--color-ground)_82%,transparent)] backdrop-blur-xl">
+          <div className="mx-auto flex max-w-[1180px] items-center justify-between gap-6 px-5 py-3 sm:px-8">
             <Link
               href="/"
-              className="font-serif text-xl tracking-tight hover:text-[var(--color-accent)]"
+              className="group flex items-baseline gap-2.5"
+              aria-label="Audio Writer, trang chủ"
             >
-              Audio Writer
+              <span className="display text-[21px] leading-none">
+                Audio&nbsp;Writer
+              </span>
+              <span
+                className="label hidden text-[9.5px] text-[var(--color-faint)] sm:block"
+                aria-hidden
+              >
+                truyện · audio
+              </span>
             </Link>
-<Nav />
+
+            <div className="flex items-center gap-1 sm:gap-4">
+              <Nav />
+              <div className="flex items-center">
+                <MotionToggle />
+                <ThemeToggle />
+              </div>
+            </div>
           </div>
         </header>
-        {children}
+
+        <div className="relative z-10">{children}</div>
+
+        <footer className="relative z-10 mt-24 border-t border-[var(--color-line)]">
+          <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-5 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:px-8">
+            <p className="display text-[15px] text-[var(--color-muted)]">
+              Audio Writer
+            </p>
+            <p className="max-w-[46ch] text-[12.5px] leading-relaxed text-[var(--color-faint)]">
+              Truyện trên nền tảng do người dùng viết. Các trang nghe truyện
+              được dẫn nguồn để tham khảo, không sao chép nội dung.
+            </p>
+          </div>
+        </footer>
       </body>
     </html>
   );

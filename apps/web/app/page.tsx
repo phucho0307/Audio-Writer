@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, type Story } from '@/lib/api';
 import SignInWall from './SignInWall';
+import Reveal from './Reveal';
+import SpiritText from './SpiritText';
 
 /**
  * The writer's shelf.
@@ -40,103 +42,155 @@ function MyStories() {
     }
   }
 
-  return (
-    <main className="mx-auto flex max-w-5xl flex-col gap-10 px-6 py-14">
-      <header className="flex max-w-[52ch] flex-col gap-3">
-        <h1 className="font-serif text-[2.5rem] leading-[1.08] tracking-tight">
-          Truyện của tôi
-        </h1>
-        <p className="text-[15px] leading-relaxed text-[var(--color-muted)]">
-          Bắt đầu từ một cái tên. Thể loại, giọng đọc và AI đều để sau — cứ viết
-          trước đã.
-        </p>
-      </header>
+  const words = (stories ?? []).reduce((n, s) => n + s.wordCount, 0);
+  const chapters = (stories ?? []).reduce((n, s) => n + s.contributionCount, 0);
 
+  return (
+    <main className="mx-auto flex max-w-[1180px] flex-col gap-10 px-5 py-10 sm:px-8 sm:py-14">
+      <Reveal as="header" className="flex flex-wrap items-end justify-between gap-6">
+        <div className="flex max-w-[48ch] flex-col gap-3">
+          <SpiritText
+            text="Truyện của tôi"
+            className="display text-[2.4rem] leading-[1.05] sm:text-[2.9rem]"
+          />
+          <p className="text-[15px] leading-relaxed text-[var(--color-muted)]">
+            Bắt đầu từ một cái tên. Thể loại, giọng đọc và AI đều để sau — cứ
+            viết trước đã.
+          </p>
+        </div>
+
+        {/* Shown only once there is something to count. On an empty shelf a row
+            of zeroes is a worse first impression than no row at all. */}
+        {stories && stories.length > 0 && (
+          <dl className="flex gap-7">
+            <Stat n={stories.length} unit="truyện" />
+            <Stat n={chapters} unit="chương" />
+            <Stat n={words} unit="từ" />
+          </dl>
+        )}
+      </Reveal>
+
+      {/* The composer. One field, and the button only becomes the gold one
+          when there is something to press it with. */}
       <form
         onSubmit={create}
-        className="flex flex-wrap items-center gap-3 border-y border-[var(--color-line)] py-4"
+        className="reveal flex flex-wrap items-center gap-3 rounded-[5px] border border-[var(--color-line)] bg-[var(--color-surface)] p-2.5 pl-4 transition-colors focus-within:border-[var(--color-accent-line)]"
+        style={{ ['--d' as string]: '60ms' }}
       >
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Tên truyện mới…"
           aria-label="Tên truyện mới"
-          className="min-w-0 flex-1 bg-transparent text-[16px] outline-none placeholder:text-[var(--color-muted)]"
+          className="min-w-0 flex-1 bg-transparent display text-[17px] outline-none placeholder:text-[var(--color-faint)]"
         />
         <button
           type="submit"
           disabled={!title.trim() || creating}
-          className="rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white disabled:opacity-30"
+          className={`btn ${title.trim() ? 'btn-primary' : 'btn-ghost'}`}
         >
           {creating ? 'Đang tạo…' : 'Tạo truyện'}
         </button>
       </form>
 
       {error && (
-        <p className="font-mono text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
+        <p className="panel text-sm text-[var(--color-son)]">{error}</p>
       )}
 
-      {!stories && <p className="text-sm text-[var(--color-muted)]">Đang tải…</p>}
+      {!stories && <ShelfSkeleton />}
 
       {stories?.length === 0 && (
-        <div className="flex flex-col items-start gap-3 py-6">
+        <div
+          className="reveal flex flex-col items-start gap-4 rounded-[5px] border border-dashed border-[var(--color-line-strong)] px-6 py-12"
+          style={{ ['--d' as string]: '120ms' }}
+        >
+          <span className="label">Kệ sách trống</span>
           <p className="max-w-[46ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
             Bạn chưa viết truyện nào. Bắt đầu từ đầu ở trên — hoặc đọc một
             truyện có sẵn rồi rẽ nhánh từ chương bạn muốn đổi hướng.
           </p>
-          <Link
-            href="/kham-pha"
-            className="text-[14px] font-medium text-[var(--color-accent)] hover:underline"
-          >
-            Xem truyện có thể rẽ nhánh →
+          <Link href="/kham-pha" className="btn btn-ghost">
+            Xem truyện có thể rẽ nhánh
+            <span aria-hidden>→</span>
           </Link>
         </div>
       )}
 
       {stories !== null && stories.length > 0 && (
-        <div className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">
+        <Reveal
+          childrenStagger
+          stagger={0.05}
+          deps={[stories.length]}
+          className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4"
+        >
           {stories.map((s) => (
             <Link
               key={s.id}
               href={`/stories/${s.id}`}
               className="group flex flex-col gap-3"
             >
-              <div className="relative aspect-[3/4] overflow-hidden rounded-md border border-[var(--color-line)] bg-[var(--color-surface)]">
+              <div className="cover aspect-[3/4]">
                 {s.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={s.coverUrl}
-                    alt=""
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
-                  />
+                  <img src={s.coverUrl} alt="" />
                 ) : (
-                  <span className="flex h-full w-full items-center justify-center font-serif text-5xl text-[var(--color-muted)] opacity-20">
+                  <span className="display flex h-full w-full items-center justify-center text-6xl text-[var(--color-line-strong)]">
                     {s.title.slice(0, 1)}
                   </span>
                 )}
+
+                {s.visibility !== 'PUBLIC' && (
+                  <span className="label absolute right-2 top-2 rounded-[3px] bg-black/55 px-1.5 py-1 text-[9px] text-white/85 backdrop-blur-sm">
+                    riêng tư
+                  </span>
+                )}
+
                 {s.contributionCount === 0 && (
-                  <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-3 pb-2.5 pt-10 font-mono text-[10px] text-white/80">
+                  <span className="scrim label text-white/80">
                     chưa có chương nào
                   </span>
                 )}
               </div>
 
               <div className="flex flex-col gap-1">
-                <h2 className="font-serif text-[17px] leading-snug transition-colors group-hover:text-[var(--color-accent)]">
+                <h2 className="display line-clamp-2 min-h-[2.4em] text-[17px] leading-[1.2] transition-colors group-hover:text-[var(--color-accent)]">
                   {s.title}
                 </h2>
-                <p className="font-mono text-[10.5px] text-[var(--color-muted)]">
-                  {s.contributionCount} chương · {s.wordCount} từ
+                <p className="text-[11.5px] text-[var(--color-faint)]">
+                  {s.contributionCount} chương · {s.wordCount.toLocaleString('vi-VN')} từ
                   {s.branchCount > 1 && ` · ${s.branchCount} nhánh`}
                 </p>
               </div>
             </Link>
           ))}
-        </div>
+        </Reveal>
       )}
     </main>
+  );
+}
+
+function Stat({ n, unit }: { n: number; unit: string }) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      <dt className="label order-2">{unit}</dt>
+      <dd className="display order-1 text-[26px] leading-none tabular-nums">
+        {n.toLocaleString('vi-VN')}
+      </dd>
+    </div>
+  );
+}
+
+function ShelfSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">
+      {Array.from({ length: 4 }, (_, i) => (
+        <div key={i} className="flex flex-col gap-3">
+          <div className="skeleton aspect-[3/4]" />
+          <div className="skeleton h-4 w-3/4" />
+          <div className="skeleton h-3 w-1/2" />
+        </div>
+      ))}
+    </div>
   );
 }
 

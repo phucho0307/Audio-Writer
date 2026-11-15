@@ -1,0 +1,41 @@
+{
+  "source": "Pexels (https://www.pexels.com) - free for commercial use, no attribution required",
+  "stories": {
+    "trong-sinh-ngay-bi-hai": {
+      "query": "woman silhouette rainy window night moody",
+      "candidates": [
+        "9390692",
+        "9807244",
+        "4582450",
+        "19365790"
+      ]
+    },
+    "he-thong-san-quy": {
+      "query": "foggy dark alley night neon",
+      "candidates": [
+        "11163981",
+        "26732100",
+        "9854856",
+        "22880023"
+      ]
+    },
+    "mat-the-ngay-thu-bay": {
+      "query": "abandoned building ruins empty city",
+      "candidates": [
+        "4888471",
+        "30383704",
+        "12514995",
+        "20761920"
+      ]
+    },
+    "co-dai-y-nu": {
+      "query": "dried herbs apothecary dark wooden table",
+      "candidates": [
+        "28370734",
+        "235494",
+        "4113927",
+        "15575099"
+      ]
+    }
+  }
+}

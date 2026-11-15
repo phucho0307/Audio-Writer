@@ -3,6 +3,8 @@
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
+import Reveal from '@/app/Reveal';
+import SpiritText from '@/app/SpiritText';
 import {
   mainBranch,
   api,
@@ -62,12 +64,10 @@ export default function Contents({
 
   if (error && !story) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-14">
-        <p className="font-mono text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
-        <Link href="/kham-pha" className="mt-4 inline-block text-sm underline">
-          ← Khám phá
+      <main className="mx-auto max-w-3xl px-5 py-14 sm:px-8">
+        <p className="panel text-sm text-[var(--color-son)]">{error}</p>
+        <Link href="/kham-pha" className="btn btn-ghost mt-5">
+          <span aria-hidden>←</span> Khám phá
         </Link>
       </main>
     );
@@ -75,8 +75,21 @@ export default function Contents({
 
   if (!story || !read) {
     return (
-      <main className="mx-auto max-w-3xl px-6 py-14">
-        <p className="text-sm text-[var(--color-muted)]">Đang tải…</p>
+      <main className="mx-auto flex max-w-3xl flex-col gap-8 px-5 py-14 sm:px-8">
+        <div className="flex gap-6">
+          <div className="skeleton h-[228px] w-[164px] flex-none" />
+          <div className="flex flex-1 flex-col gap-3 pt-2">
+            <div className="skeleton h-8 w-3/4" />
+            <div className="skeleton h-4 w-full" />
+            <div className="skeleton h-4 w-5/6" />
+            <div className="skeleton mt-3 h-9 w-32" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-2.5">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="skeleton h-11 w-full" />
+          ))}
+        </div>
       </main>
     );
   }
@@ -84,91 +97,163 @@ export default function Contents({
   const q = wantedBranch ? `?branch=${wantedBranch}` : '';
   const narrated = new Map(audio.filter((a) => a.url).map((a) => [a.depth, a]));
   const locked = read.access.lockedCount;
+  const minutes = Math.round(
+    audio.reduce((n, a) => n + (a.durationMs ?? 0), 0) / 1000 / 1.5 / 60,
+  );
 
   return (
-    <main className="mx-auto flex max-w-3xl flex-col gap-9 px-6 py-10">
-      <Link
-        href="/kham-pha"
-        className="font-mono text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
-      >
-        ← khám phá
-      </Link>
-
-      <header className="flex flex-col gap-5 sm:flex-row sm:gap-6">
-        {story.coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={story.coverUrl}
-            alt=""
-            className="h-[228px] w-[164px] flex-none self-start rounded-md object-cover"
+    <>
+      {/* The cover, enlarged past legibility and pinned behind the header, so
+          the top of the page is lit by the story's own artwork. It stops at
+          the contents list, which is a tool and wants a plain ground. */}
+      {story.coverUrl && (
+        <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[460px] overflow-hidden">
+          <div
+            className="h-full w-full scale-125 bg-cover bg-center opacity-30 blur-3xl"
+            style={{ backgroundImage: `url(${story.coverUrl})` }}
           />
-        )}
-        <div className="flex flex-col gap-3">
-          <h1 className="font-serif text-[2rem] leading-[1.12] tracking-tight">
-            {story.title}
-          </h1>
-          <p className="max-w-[52ch] text-[14.5px] leading-relaxed text-[var(--color-muted)]">
-            {story.synopsis}
-          </p>
-          <p className="font-mono text-[11px] text-[var(--color-muted)]">
-            {story.genres.join(' · ')}
-          </p>
-          <p className="font-mono text-[11px] text-[var(--color-muted)] opacity-70">
-            {story.contributionCount} chương · {story.wordCount} từ ·{' '}
-            {story.viewCount} lượt xem
-            {story.owner && ` · @${story.owner.handle}`}
-          </p>
-
-          <Link
-            href={`/doc/${id}/1${q}`}
-            className="mt-1 self-start rounded-md bg-[var(--color-accent)] px-4 py-2 text-sm font-medium text-white"
-          >
-            Đọc từ đầu
-          </Link>
+          <div className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_oklab,var(--color-ground)_55%,transparent)] to-[var(--color-ground)]" />
         </div>
-      </header>
+      )}
 
-      <section className="flex flex-col">
-        <h2 className="border-b border-[var(--color-line)] pb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)]">
-          Mục lục
-        </h2>
+      <main className="relative mx-auto flex max-w-3xl flex-col gap-10 px-5 py-8 sm:px-8 sm:py-10">
+        <Link
+          href="/kham-pha"
+          className="text-[12.5px] text-[var(--color-muted)] transition-colors hover:text-[var(--color-accent)]"
+        >
+          <span aria-hidden>←</span> Khám phá
+        </Link>
 
-        <ol className="flex flex-col">
-          {read.contributions.map((c) => {
-            const clip = narrated.get(c.depth);
-            return (
-              <li key={c.id}>
-                <Link
-                  href={`/doc/${id}/${c.depth + 1}${q}`}
-                  className="group flex items-baseline gap-4 border-b border-[var(--color-line)] py-3 transition-colors"
+        <Reveal as="header" className="flex flex-col gap-6 sm:flex-row sm:gap-7">
+          <div className="cover aspect-[3/4] w-[150px] flex-none self-start sm:w-[176px]">
+            {story.coverUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={story.coverUrl} alt="" />
+            )}
+          </div>
+
+          <div className="flex flex-col items-start gap-3.5">
+            {story.genres.length > 0 && (
+              <span className="label label-accent">
+                {story.genres.join(' · ')}
+              </span>
+            )}
+
+            <SpiritText
+              text={story.title}
+              delay={0.1}
+              className="display text-[2.1rem] leading-[1.06] sm:text-[2.5rem]"
+            />
+
+            <p className="max-w-[52ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
+              {story.synopsis}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12.5px] text-[var(--color-faint)]">
+              <span>{story.contributionCount} chương</span>
+              <Sep />
+              <span>{story.wordCount.toLocaleString('vi-VN')} từ</span>
+              {minutes > 0 && (
+                <>
+                  <Sep />
+                  <span>~{minutes} phút nghe</span>
+                </>
+              )}
+              <Sep />
+              <span>{story.viewCount.toLocaleString('vi-VN')} lượt xem</span>
+              {story.owner && (
+                <>
+                  <Sep />
+                  <span className="text-[var(--color-muted)]">
+                    @{story.owner.handle}
+                  </span>
+                </>
+              )}
+            </div>
+
+            <Link
+              href={`/doc/${id}/1${q}`}
+              className="btn btn-primary btn-lg mt-1"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+              </svg>
+              Đọc từ đầu
+            </Link>
+          </div>
+        </Reveal>
+
+        <section className="flex flex-col gap-1">
+          <div className="flex items-baseline justify-between border-b border-[var(--color-line)] pb-2.5">
+            <h2 className="label">Mục lục</h2>
+            <span className="text-[11.5px] text-[var(--color-faint)]">
+              {read.contributions.length} chương
+              {locked > 0 && ` · ${locked} khoá`}
+            </span>
+          </div>
+
+          <ol className="flex flex-col">
+            {read.contributions.map((c) => {
+              const clip = narrated.get(c.depth);
+              return (
+                <li key={c.id}>
+                  <Link
+                    href={`/doc/${id}/${c.depth + 1}${q}`}
+                    className="group flex items-baseline gap-4 border-b border-[var(--color-line)] px-2 py-3 transition-colors hover:bg-[var(--color-surface)]"
+                  >
+                    <span className="w-6 flex-none text-right text-[12.5px] tabular-nums text-[var(--color-faint)] transition-colors group-hover:text-[var(--color-accent)]">
+                      {c.depth + 1}
+                    </span>
+                    <span className="min-w-0 flex-1 text-[15px] leading-snug transition-colors group-hover:text-[var(--color-accent)]">
+                      {c.title ?? c.textPlain.split('\n')[0].slice(0, 60)}
+                    </span>
+
+                    {/* A narrated chapter says so with its running time - the
+                        one fact that tells a listener whether they have time
+                        for it before bed. */}
+                    {clip && (
+                      <span className="flex flex-none items-center gap-1.5 text-[11.5px] tabular-nums text-[var(--color-muted)]">
+                        <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                          <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+                        </svg>
+                        {mmss(clip.durationMs)}
+                      </span>
+                    )}
+                    <span className="hidden w-16 flex-none text-right text-[11.5px] tabular-nums text-[var(--color-faint)] sm:block">
+                      {c.wordCount} từ
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+
+            {locked > 0 && (
+              <li className="flex items-center gap-4 border-b border-[var(--color-line)] px-2 py-4">
+                <span
+                  className="w-6 flex-none text-center text-[var(--color-faint)]"
+                  aria-hidden
                 >
-                  <span className="w-7 flex-none font-mono text-[12px] tabular-nums text-[var(--color-muted)]">
-                    {c.depth + 1}
-                  </span>
-                  <span className="min-w-0 flex-1 text-[15px] transition-colors group-hover:text-[var(--color-accent)]">
-                    {c.title ?? c.textPlain.split('\n')[0].slice(0, 60)}
-                  </span>
-                  <span className="flex flex-none items-baseline gap-3 font-mono text-[10.5px] text-[var(--color-muted)]">
-                    {clip && <span>♪ {mmss(clip.durationMs)}</span>}
-                    <span className="opacity-60">{c.wordCount} từ</span>
-                  </span>
-                </Link>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="mx-auto">
+                    <rect x="4.5" y="10.5" width="15" height="10" rx="2" />
+                    <path d="M8 10.5V7a4 4 0 0 1 8 0v3.5" />
+                  </svg>
+                </span>
+                <span className="flex-1 text-[14px] text-[var(--color-muted)]">
+                  Còn {locked} chương — mở khoá {read.access.unlockPrice} credit
+                </span>
               </li>
-            );
-          })}
+            )}
+          </ol>
+        </section>
+      </main>
+    </>
+  );
+}
 
-          {locked > 0 && (
-            <li className="flex items-baseline gap-4 border-b border-[var(--color-line)] py-3 opacity-50">
-              <span className="w-7 flex-none font-mono text-[12px] text-[var(--color-muted)]">
-                🔒
-              </span>
-              <span className="flex-1 text-[15px] text-[var(--color-muted)]">
-                Còn {locked} chương — mở khoá {read.access.unlockPrice} credit
-              </span>
-            </li>
-          )}
-        </ol>
-      </section>
-    </main>
+function Sep() {
+  return (
+    <span aria-hidden className="text-[var(--color-line-strong)]">
+      ·
+    </span>
   );
 }

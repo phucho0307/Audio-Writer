@@ -1,17 +1,60 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import {
-  mainBranch,
-  api,
-  type BranchRead,
-  type Story,
-} from '@/lib/api';
+import { mainBranch, api, type BranchRead, type Story } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { signIn } from '@/lib/auth';
 import ChapterNarration from './ChapterNarration';
+
+/**
+ * How far through the chapter the reader is.
+ *
+ * A chapter is one long column with no landmarks, so there is nothing to tell
+ * you whether the next scroll ends it or whether there are five more screens.
+ * One hairline across the top answers that without taking any room.
+ */
+function ReadingProgress({ target }: { target: React.RefObject<HTMLElement | null> }) {
+  const [pct, setPct] = useState(0);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const el = target.current;
+      if (!el) return;
+      const start = el.offsetTop;
+      // The last screenful is not scrollable, so it is taken off the distance;
+      // otherwise the bar stops short of full at the end of every chapter.
+      const span = el.offsetHeight - window.innerHeight * 0.65;
+      if (span <= 0) return setPct(100);
+      const done = ((window.scrollY - start) / span) * 100;
+      setPct(Math.max(0, Math.min(100, done)));
+    };
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll);
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onScroll);
+    };
+  }, [target]);
+
+  return (
+    <div
+      className="fixed inset-x-0 top-[56px] z-40 h-[2px]"
+      role="progressbar"
+      aria-label="Tiến độ đọc"
+      aria-valuenow={Math.round(pct)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+    >
+      <div
+        className="h-full bg-[var(--color-accent)] transition-[width] duration-150 ease-out motion-reduce:transition-none"
+        style={{ width: `${pct}%` }}
+      />
+    </div>
+  );
+}
 
 /**
  * The reading view.
@@ -40,6 +83,7 @@ export default function Reader({
   const [read, setRead] = useState<BranchRead | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [forking, setForking] = useState(false);
+  const article = useRef<HTMLElement>(null);
 
   useEffect(() => {
     (async () => {
@@ -81,12 +125,10 @@ export default function Reader({
 
   if (error && !story) {
     return (
-      <main className="mx-auto max-w-[42rem] px-6 py-14">
-        <p className="font-mono text-sm text-red-600 dark:text-red-400">
-          {error}
-        </p>
-        <Link href="/kham-pha" className="mt-4 inline-block text-sm underline">
-          ← Khám phá
+      <main className="mx-auto max-w-[42rem] px-5 py-14 sm:px-8">
+        <p className="panel text-sm text-[var(--color-son)]">{error}</p>
+        <Link href="/kham-pha" className="btn btn-ghost mt-5">
+          <span aria-hidden>←</span> Khám phá
         </Link>
       </main>
     );
@@ -94,8 +136,17 @@ export default function Reader({
 
   if (!story || !read) {
     return (
-      <main className="mx-auto max-w-[42rem] px-6 py-14">
-        <p className="text-sm text-[var(--color-muted)]">Đang tải…</p>
+      <main className="mx-auto flex max-w-[42rem] flex-col gap-4 px-5 py-14 sm:px-8">
+        <div className="skeleton h-4 w-24" />
+        <div className="skeleton h-9 w-2/3" />
+        <div className="skeleton mb-4 h-12 w-full" />
+        {Array.from({ length: 9 }, (_, i) => (
+          <div
+            key={i}
+            className="skeleton h-4"
+            style={{ width: `${86 + ((i * 7) % 14)}%` }}
+          />
+        ))}
       </main>
     );
   }
@@ -109,27 +160,24 @@ export default function Reader({
   if (!chapter) {
     const locked = depth < story.contributionCount;
     return (
-      <main className="mx-auto flex max-w-[42rem] flex-col gap-5 px-6 py-14">
+      <main className="mx-auto flex max-w-[42rem] flex-col items-start gap-5 px-5 py-14 sm:px-8">
         <Link
           href={`/doc/${id}/1${q}`}
-          className="font-mono text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+          className="text-[12.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
         >
-          ← về đầu truyện
+          <span aria-hidden>←</span> Về đầu truyện
         </Link>
-        <h1 className="font-serif text-2xl">
+        <h1 className="display text-[1.8rem]">
           {locked ? 'Chương này đang bị khoá' : 'Không có chương này'}
         </h1>
         {locked && (
-          <p className="text-[15px] leading-relaxed text-[var(--color-muted)]">
+          <p className="max-w-[46ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
             {read.access.freeChapters} chương đầu miễn phí. Mở khoá để đọc tiếp
             — {read.access.unlockPrice} credit.
           </p>
         )}
-        <Link
-          href={`/stories/${id}`}
-          className="self-start text-[14px] text-[var(--color-accent)] hover:underline"
-        >
-          Mở trang truyện →
+        <Link href={`/stories/${id}`} className="btn btn-primary">
+          Mở trang truyện <span aria-hidden>→</span>
         </Link>
       </main>
     );
@@ -141,102 +189,135 @@ export default function Reader({
     ? story.contributionCount
     : chapters.length;
 
+  // Real paragraphs rather than one pre-wrapped block: it is what the text
+  // actually is, it lets the opening take a drop cap, and it gives the browser
+  // something to break pages on.
+  const paragraphs = chapter.textPlain
+    .split(/\n\s*\n|\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
   return (
-    <main className="mx-auto flex max-w-[42rem] flex-col gap-8 px-6 py-10">
-      <header className="flex flex-col gap-2.5">
-        <Link
-          href={`/doc/${id}${q}`}
-          className="font-mono text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
-        >
-          ← mục lục
-        </Link>
-        <Link
-          href={`/doc/${id}${q}`}
-          className="font-serif text-[15px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
-        >
-          {story.title}
-        </Link>
-        <h1 className="font-serif text-[1.75rem] leading-tight tracking-tight">
-          {chapter.title ?? `Chương ${depth + 1}`}
-        </h1>
-        <p className="font-mono text-[11px] text-[var(--color-muted)]">
-          Chương {depth + 1} / {total}
-          {story.owner && ` · @${story.owner.handle}`}
-          {chapter.authorType === 'AI' && ' · AI viết'}
-        </p>
-      </header>
+    <>
+      <ReadingProgress target={article} />
 
-      <ChapterNarration branchId={read.branch.id} depth={depth} />
-
-      <article className="whitespace-pre-wrap font-serif text-[18.5px] leading-[1.9]">
-        {chapter.textPlain}
-      </article>
-
-      {/* The offer, kept quiet. A filled panel here reads as an advert
-          interrupting the story; a rule and a question reads as an aside. */}
-      <section className="flex flex-col gap-2.5 border-l-2 border-[var(--color-accent)] py-1 pl-5">
-        <h2 className="font-serif text-[19px] leading-snug">
-          Bạn muốn chương này kết thúc khác đi?
-        </h2>
-        <p className="max-w-[46ch] text-[13.5px] leading-relaxed text-[var(--color-muted)]">
-          Giữ lại {depth + 1} chương đầu, rồi viết tiếp ngay. Bản gốc không
-          thay đổi.
-        </p>
-        <button
-          onClick={ready && !user ? signIn : forkHere}
-          disabled={forking}
-          className="self-start text-[14px] font-medium text-[var(--color-accent)] hover:underline disabled:opacity-50"
-        >
-          {forking
-            ? 'Đang tạo nhánh…'
-            : ready && !user
-              // Inline rather than a card: this sits at the end of a chapter,
-              // and a sign-in box between the last line and the next-chapter
-              // arrows would read as the end of the story.
-              ? '⑂ Đăng nhập để viết một kết cục khác →'
-              : '⑂ Viết một kết cục khác →'}
-        </button>
-      </section>
-
-      <nav className="flex items-center justify-between gap-4 border-t border-[var(--color-line)] pt-5">
-        {prev !== null ? (
-          <Link
-            href={`/doc/${id}/${prev}${q}`}
-            className="group flex flex-col gap-0.5"
-          >
-            <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-muted)]">
-              trước
+      <main className="mx-auto flex max-w-[42rem] flex-col gap-9 px-5 py-10 sm:px-8">
+        <header className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1 text-[12.5px]">
+            <Link
+              href={`/doc/${id}${q}`}
+              className="text-[var(--color-muted)] transition-colors hover:text-[var(--color-accent)]"
+            >
+              <span aria-hidden>←</span> Mục lục
+            </Link>
+            <span aria-hidden className="text-[var(--color-line-strong)]">
+              ·
             </span>
-            <span className="max-w-[15ch] truncate text-[14px] transition-colors group-hover:text-[var(--color-accent)]">
-              ←{' '}
-              {chapters.find((c) => c.depth === depth - 1)?.title ??
-                `Chương ${prev}`}
-            </span>
-          </Link>
-        ) : (
-          <span />
-        )}
+            <Link
+              href={`/doc/${id}${q}`}
+              className="font-serif text-[14px] text-[var(--color-muted)] transition-colors hover:text-[var(--color-accent)]"
+            >
+              {story.title}
+            </Link>
+          </div>
 
-        {next !== null ? (
-          <Link
-            href={`/doc/${id}/${next}${q}`}
-            className="group flex flex-col items-end gap-0.5"
-          >
-            <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-muted)]">
-              tiếp
-            </span>
-            <span className="max-w-[15ch] truncate text-[14px] transition-colors group-hover:text-[var(--color-accent)]">
-              {chapters.find((c) => c.depth === depth + 1)?.title ??
-                `Chương ${next}`}{' '}
-              →
-            </span>
-          </Link>
-        ) : (
-          <span className="font-mono text-[11px] text-[var(--color-muted)]">
-            {read.access.lockedCount > 0 ? '🔒 còn chương bị khoá' : 'hết truyện'}
+          <span className="label label-accent">
+            Chương {depth + 1} / {total}
           </span>
-        )}
-      </nav>
-    </main>
+
+          <h1 className="display text-[1.9rem] leading-[1.12] sm:text-[2.2rem]">
+            {chapter.title ?? `Chương ${depth + 1}`}
+          </h1>
+
+          <p className="flex flex-wrap items-center gap-x-2.5 text-[12px] text-[var(--color-faint)]">
+            <span>{chapter.wordCount} từ</span>
+            {story.owner && (
+              <>
+                <span aria-hidden>·</span>
+                <span>@{story.owner.handle}</span>
+              </>
+            )}
+            {chapter.authorType === 'AI' && (
+              <>
+                <span aria-hidden>·</span>
+                <span className="text-[var(--color-accent)]">AI viết</span>
+              </>
+            )}
+          </p>
+        </header>
+
+        <ChapterNarration branchId={read.branch.id} depth={depth} />
+
+        <article ref={article} className="prose-read">
+          {paragraphs.map((p, i) => (
+            <p key={i}>{p}</p>
+          ))}
+        </article>
+
+        {/* The offer, kept quiet. A filled panel here reads as an advert
+            interrupting the story; a rule and a question reads as an aside. */}
+        <section className="flex flex-col items-start gap-3 border-l-2 border-[var(--color-accent)] py-1 pl-5">
+          <h2 className="display text-[19px] leading-snug">
+            Bạn muốn chương này kết thúc khác đi?
+          </h2>
+          <p className="max-w-[46ch] text-[13.5px] leading-relaxed text-[var(--color-muted)]">
+            Giữ lại {depth + 1} chương đầu, rồi viết tiếp ngay. Bản gốc không
+            thay đổi.
+          </p>
+          <button
+            onClick={ready && !user ? signIn : forkHere}
+            disabled={forking}
+            className="btn btn-ghost"
+          >
+            <span aria-hidden>⑂</span>
+            {forking
+              ? 'Đang tạo nhánh…'
+              : ready && !user
+                ? // Inline rather than a card: this sits at the end of a
+                  // chapter, and a sign-in box between the last line and the
+                  // next-chapter arrows would read as the end of the story.
+                  'Đăng nhập để viết một kết cục khác'
+                : 'Viết một kết cục khác'}
+            <span aria-hidden>→</span>
+          </button>
+        </section>
+
+        <nav className="flex items-stretch justify-between gap-3 border-t border-[var(--color-line)] pt-5">
+          {prev !== null ? (
+            <Link
+              href={`/doc/${id}/${prev}${q}`}
+              className="group flex min-w-0 flex-1 flex-col gap-1 rounded-[5px] border border-transparent px-3 py-2.5 transition-colors hover:border-[var(--color-line)] hover:bg-[var(--color-surface)]"
+            >
+              <span className="label">← Chương trước</span>
+              <span className="truncate text-[14px] transition-colors group-hover:text-[var(--color-accent)]">
+                {chapters.find((c) => c.depth === depth - 1)?.title ??
+                  `Chương ${prev}`}
+              </span>
+            </Link>
+          ) : (
+            <span className="flex-1" />
+          )}
+
+          {next !== null ? (
+            <Link
+              href={`/doc/${id}/${next}${q}`}
+              className="group flex min-w-0 flex-1 flex-col items-end gap-1 rounded-[5px] border border-transparent px-3 py-2.5 text-right transition-colors hover:border-[var(--color-line)] hover:bg-[var(--color-surface)]"
+            >
+              <span className="label">Chương tiếp →</span>
+              <span className="w-full truncate text-[14px] transition-colors group-hover:text-[var(--color-accent)]">
+                {chapters.find((c) => c.depth === depth + 1)?.title ??
+                  `Chương ${next}`}
+              </span>
+            </Link>
+          ) : (
+            <span className="flex flex-1 items-center justify-end px-3 text-[12.5px] text-[var(--color-faint)]">
+              {read.access.lockedCount > 0
+                ? `Còn ${read.access.lockedCount} chương bị khoá`
+                : 'Hết truyện'}
+            </span>
+          )}
+        </nav>
+      </main>
+    </>
   );
 }

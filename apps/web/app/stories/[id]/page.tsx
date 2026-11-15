@@ -337,7 +337,7 @@ export default function StoryPage({
   if (error && !story) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-12">
-        <p className="font-mono text-sm text-red-600 dark:text-red-400">
+        <p className="font-mono text-sm text-[var(--color-son)]">
           {error}
         </p>
         <Link href="/" className="mt-4 inline-block text-sm underline">
@@ -425,7 +425,7 @@ export default function StoryPage({
                 if (e.key === "Escape") setTitleDraft(null);
               }}
               aria-label="Tên truyện"
-              className="w-full rounded-md border border-[var(--color-accent)] bg-[var(--color-surface)] px-2 py-1 font-serif text-3xl tracking-tight outline-none"
+              className="w-full rounded-md border border-[var(--color-accent)] bg-[var(--color-surface)] px-2 py-1 display text-[2.1rem] leading-[1.1] outline-none"
             />
           ) : (
             <button
@@ -433,7 +433,7 @@ export default function StoryPage({
               title="Bấm để sửa tên"
               className="group -mx-2 flex items-center gap-2 rounded-md px-2 py-1 text-left hover:bg-[var(--color-accent-soft)]"
             >
-              <h1 className="font-serif text-3xl tracking-tight">
+              <h1 className="display text-[2.1rem] leading-[1.1]">
                 {story.title}
               </h1>
               <span className="font-mono text-[11px] text-[var(--color-muted)] opacity-0 transition-opacity group-hover:opacity-100">
@@ -462,7 +462,7 @@ export default function StoryPage({
           </div>
 
           {editGenres && (
-            <div className="flex flex-wrap gap-1.5 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+            <div className="flex flex-wrap gap-1.5 card p-3">
               {GENRES.map((g) => {
                 const on = story.genres.includes(g);
                 return (
@@ -542,7 +542,7 @@ export default function StoryPage({
                           <button
                             onClick={() => void removeBranch(b.id)}
                             disabled={busy !== null}
-                            className="text-red-500 underline disabled:opacity-40"
+                            className="text-[var(--color-son)] underline disabled:opacity-40"
                           >
                             {busy === "branch" ? "…" : "xoá"}
                           </button>
@@ -560,7 +560,7 @@ export default function StoryPage({
                             setConfirmBranch(b.id);
                           }}
                           aria-label={`Xoá nhánh ${b.name}`}
-                          className="font-mono text-[13px] leading-none opacity-0 transition-opacity hover:text-red-500 focus:opacity-100 group-hover/br:opacity-100"
+                          className="font-mono text-[13px] leading-none opacity-0 transition-opacity hover:text-[var(--color-son)] focus:opacity-100 group-hover/br:opacity-100"
                         >
                           ×
                         </button>
@@ -571,7 +571,7 @@ export default function StoryPage({
             </div>
 
             {branchError && (
-              <p className="max-w-[60ch] text-[12px] text-amber-600">
+              <p className="max-w-[60ch] text-[12px] text-[var(--color-accent)]">
                 {branchError}
               </p>
             )}
@@ -648,7 +648,7 @@ export default function StoryPage({
             </div>
 
             {showPricing && (
-              <div className="flex flex-col gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+              <div className="flex flex-col gap-3 card p-4">
                 <p className="text-[13px] text-[var(--color-muted)]">
                   Truyện vẫn luôn lan truyền được: các chương đầu không bao giờ
                   bị khoá, ai cũng đọc và rẽ nhánh được. Chỉ phần sau mới tính
@@ -710,7 +710,7 @@ export default function StoryPage({
         {/* Its own block rather than a link among the pricing controls, where it
           was both hard to find and one slip away from an accidental click. */}
         {read.access.isOwner && !forking && (
-          <section className="flex flex-col gap-3 rounded-lg border border-red-500/40 bg-[var(--color-surface)] p-4">
+          <section className="flex flex-col gap-3 rounded-lg border border-[color-mix(in_oklab,var(--color-son)_38%,transparent)] bg-[var(--color-surface)] p-4">
             <div>
               <div className="text-[13px] font-medium">Xoá truyện</div>
               <p className="text-[12px] text-[var(--color-muted)]">
@@ -721,13 +721,13 @@ export default function StoryPage({
 
             {confirmDelete ? (
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-[13px] text-red-600 dark:text-red-400">
+                <span className="text-[13px] text-[var(--color-son)]">
                   Chắc chắn xoá “{story.title}”?
                 </span>
                 <button
                   onClick={remove}
                   disabled={busy !== null}
-                  className="rounded-md bg-red-600 px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+                  className="rounded-md bg-[var(--color-son)] px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
                 >
                   {busy === "delete" ? "đang xoá…" : "xoá vĩnh viễn"}
                 </button>
@@ -741,7 +741,7 @@ export default function StoryPage({
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="self-start rounded-md border border-red-500/60 px-3 py-1.5 font-mono text-[12px] text-red-600 transition-colors hover:bg-red-600 hover:text-white dark:text-red-400"
+                className="self-start rounded-md border border-[color-mix(in_oklab,var(--color-son)_55%,transparent)] px-3 py-1.5 font-mono text-[12px] text-[var(--color-son)] transition-colors hover:bg-[var(--color-son)] hover:text-white dark:text-[var(--color-son)]"
               >
                 xoá truyện
               </button>
@@ -789,7 +789,7 @@ export default function StoryPage({
 
         {/* ---- locked chapters ---- */}
         {read.access.lockedCount > 0 && (
-          <section className="flex flex-col gap-3 rounded-lg border border-amber-500 bg-[var(--color-surface)] p-4">
+          <section className="flex flex-col gap-3 rounded-lg border border-[var(--color-accent-line)] bg-[var(--color-surface)] p-4">
             <div className="flex flex-col gap-1">
               <span className="font-medium">
                 Còn {read.access.lockedCount} chương nữa
@@ -803,7 +803,7 @@ export default function StoryPage({
               <button
                 onClick={unlock}
                 disabled={busy !== null}
-                className="rounded-md bg-amber-600 px-3.5 py-2 text-sm font-medium text-white disabled:opacity-40"
+                className="rounded-md bg-[var(--color-accent)] px-3.5 py-2 text-sm font-medium text-white disabled:opacity-40"
               >
                 {busy === "unlock"
                   ? "Đang mở khoá…"
@@ -864,7 +864,7 @@ export default function StoryPage({
 
         {/* ---- paywall ---- */}
         {paywall && (
-          <section className="flex flex-col gap-3 rounded-lg border border-amber-500 bg-[var(--color-surface)] p-4">
+          <section className="flex flex-col gap-3 rounded-lg border border-[var(--color-accent-line)] bg-[var(--color-surface)] p-4">
             <div className="flex flex-col gap-1">
               <span className="font-medium">{paywall}</span>
               <span className="text-[13px] text-[var(--color-muted)]">
@@ -878,7 +878,7 @@ export default function StoryPage({
                   setPaywall(null);
                   draftRef.current?.focus();
                 }}
-                className="rounded-md bg-[var(--color-accent)] px-3.5 py-2 text-sm font-medium text-white"
+                className="btn btn-primary"
               >
                 Tự viết tiếp
               </button>
@@ -887,7 +887,7 @@ export default function StoryPage({
                   setQuota(await api.grantCredits(10));
                   setPaywall(null);
                 }}
-                className="rounded-md border border-amber-500 px-3.5 py-2 text-sm text-amber-700 dark:text-amber-400"
+                className="rounded-md border border-[var(--color-accent-line)] px-3.5 py-2 text-sm text-[var(--color-accent)]"
               >
                 Mua 10 lượt · dev
               </button>
@@ -897,7 +897,7 @@ export default function StoryPage({
 
         {/* ---- genre gate ---- */}
         {needGenres && (
-          <section className="flex flex-col gap-2.5 rounded-lg border border-amber-500 bg-[var(--color-surface)] p-4">
+          <section className="flex flex-col gap-2.5 rounded-lg border border-[var(--color-accent-line)] bg-[var(--color-surface)] p-4">
             <span className="text-sm">
               Chọn ít nhất một thể loại để AI biết viết theo hướng nào.
             </span>
@@ -923,14 +923,14 @@ export default function StoryPage({
             onChange={(e) => setDraft(e.target.value)}
             rows={8}
             placeholder="Viết tiếp câu chuyện…"
-            className="w-full resize-y rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-3.5 font-serif text-[16px] leading-[1.75] outline-none placeholder:font-sans placeholder:text-[14px] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]"
+            className="w-full resize-y rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-3.5 display text-[16px] leading-[1.75] outline-none placeholder:font-sans placeholder:text-[14px] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]"
           />
 
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={() => commit("HUMAN")}
               disabled={!draft.trim() || busy !== null}
-              className="rounded-md bg-[var(--color-accent)] px-3.5 py-2 text-sm font-medium text-white disabled:opacity-40"
+              className="btn btn-primary"
             >
               {busy === "commit" ? "Đang lưu…" : "Lưu thay đổi"}
             </button>
@@ -960,7 +960,7 @@ export default function StoryPage({
                     aria-pressed={paragraphs === n}
                     className={`px-2.5 py-1.5 font-mono text-[12px] transition-colors ${
                       paragraphs === n
-                        ? "bg-[var(--color-accent)] text-white"
+                        ? "bg-[var(--color-accent)] text-[var(--color-on-accent)]"
                         : "text-[var(--color-muted)] hover:bg-[var(--color-accent-soft)]"
                     }`}
                   >
@@ -1001,7 +1001,7 @@ export default function StoryPage({
           </div>
 
           {error && (
-            <p className="font-mono text-[13px] text-red-600 dark:text-red-400">
+            <p className="font-mono text-[13px] text-[var(--color-son)]">
               {error}
             </p>
           )}
@@ -1015,7 +1015,7 @@ export default function StoryPage({
                   <span
                     className={
                       quota.totalRemaining === 0
-                        ? "text-amber-600 dark:text-amber-400"
+                        ? "text-[var(--color-accent)]"
                         : "text-[var(--color-accent)]"
                     }
                   >

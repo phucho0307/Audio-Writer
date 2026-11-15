@@ -53,7 +53,7 @@ export default function WritePage({
   if (error) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-14">
-        <p className="font-mono text-sm text-red-600 dark:text-red-400">{error}</p>
+        <p className="font-mono text-sm text-[var(--color-son)]">{error}</p>
         <Link href="/" className="mt-4 inline-block text-sm underline">
           Về trang chủ
         </Link>
@@ -92,7 +92,7 @@ export default function WritePage({
         </span>
       </div>
 
-      <h1 className="mb-1 font-serif text-2xl tracking-tight">Viết chương mới</h1>
+      <h1 className="mb-1 display text-2xl tracking-tight">Viết chương mới</h1>
       <p className="mb-6 text-[13.5px] text-[var(--color-muted)]">
         Mọi người trong phòng gõ cùng lúc, chữ hiện ngay cho nhau. Xong thì đăng
         thành chương - lúc đó chương mới cố định và có thể nghe được.

@@ -4,14 +4,13 @@
  * This is the cold-start fix: forking needs stories to fork, and an empty shelf
  * tells a new visitor nothing about what the product is for.
  *
- * Covers are drawn as SVG rather than generated, because the free image tier
- * allows ~20 requests per day and a seed run must not depend on quota.
- * `coverUrl` is only a path, so swapping in generated art later changes nothing
- * else.
+ * A story keeps whatever real cover art is already sitting in `public/covers`
+ * under its slug; the drawn SVG is only the fallback for one that has none, so
+ * a reseed never paints over photography that was chosen deliberately.
  *
  *   npm run db:seed
  */
-import { writeFile, mkdir } from 'node:fs/promises';
+import { writeFile, mkdir, access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { AuthorType, PrismaClient, Role, Visibility } from '@prisma/client';
 import { SAMPLE_STORIES, type SampleStory } from './sample-stories';
@@ -69,10 +68,32 @@ ${art.body(art.palette)}
 </svg>`;
 }
 
+/**
+ * The cover to point this story at.
+ *
+ * Real photography wins. The drawn SVG is a placeholder for a story that has
+ * none, and re-running the seed must not paint over artwork that someone put
+ * there on purpose - which is exactly what an unconditional write does.
+ */
+async function coverFor(story: SampleStory): Promise<string> {
+  for (const ext of ['jpg', 'jpeg', 'webp', 'png']) {
+    const name = `${story.slug}.${ext}`;
+    try {
+      await access(join(COVERS, name));
+      return name;
+    } catch {
+      // Not this one. Try the next extension.
+    }
+  }
+
+  const name = `${story.slug}.svg`;
+  await writeFile(join(COVERS, name), drawCover(story), 'utf8');
+  return name;
+}
+
 async function seedOne(story: SampleStory, authorId: string) {
   await mkdir(COVERS, { recursive: true });
-  const file = `${story.slug}.svg`;
-  await writeFile(join(COVERS, file), drawCover(story), 'utf8');
+  const file = await coverFor(story);
 
   const words = story.chapters.reduce(
     (n, c) => n + c.text.split(/\s+/).length,

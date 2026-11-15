@@ -1,33 +1,120 @@
 @import 'tailwindcss';
 
-@theme {
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'Newsreader', Georgia, serif;
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+/* ===========================================================================
+   Sơn mài
+   ---------------------------------------------------------------------------
+   The visual language is Vietnamese lacquerware: a warm black ground, gold
+   leaf, eggshell white, and cinnabar red used sparingly. It was chosen over a
+   neutral product grey for two reasons. The platform is read at night - horror
+   and thriller are the two largest genres here - so a dark ground is the
+   working state rather than a preference. And gold on black lacquer is a
+   material this audience recognises, which teal-on-grey is not.
 
-  --color-ground: #f5f7f8;
-  --color-surface: #ffffff;
-  --color-line: #dde3e7;
-  --color-ink: #171a20;
-  --color-muted: #5d6570;
-  --color-accent: #12606e;
-  --color-accent-soft: #e2eff1;
+   Cinnabar (`--color-son`) is reserved: live narration, recording, deleting.
+   It is never decoration, so that when it appears it means something.
+   =========================================================================== */
+
+@theme {
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Fraunces', 'Newsreader', Georgia, serif;
+  --font-serif: 'Newsreader', Georgia, 'Times New Roman', serif;
+
+  /* `font-mono` is used in ~140 places for microcopy - chapter counts, genre
+     tags, timestamps. None of it is code, and a typewriter face on all of it
+     was most of why the app read as a developer tool. It now points at the UI
+     face with tabular figures, so columns of digits still line up. */
+  --font-mono: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+  --font-mono--font-feature-settings: 'tnum' 1;
+
+  /* ---------------------------------------------------- night (the default)
+     The ground is cold and nearly black - the colour of a room with the light
+     off - and every warm value in the palette is a light source inside it.
+     One warm point in a cold dark is what makes a room feel haunted; a warm
+     room with a warm lamp just feels cosy. */
+  --color-ground: #07080a;
+  --color-surface: #0d0f13;
+  --color-raised: #141821;
+  --color-line: #1d212a;
+  --color-line-strong: #2c313c;
+  --color-ink: #e9e5dc;
+  --color-muted: #8d8b94;
+  --color-faint: #5d5b67;
+  --color-accent: #c8a24e;
+  --color-accent-soft: #1a1710;
+  --color-accent-line: #41351f;
+  --color-on-accent: #0b0905;
+  --color-son: #c6392c;
+  --color-son-soft: #26100d;
+  /* Incense smoke and moonlight. Atmosphere only - never text, never a
+     control, so it cannot be mistaken for something to press. */
+  --color-mist: #6f8a86;
+
+  /* Crisp corners. The 8px-everywhere default reads as a template; lacquer
+     edges are cut, not moulded. */
+  --radius-sm: 2px;
+  --radius-md: 3px;
+  --radius-lg: 5px;
+  --radius-xl: 8px;
+  --radius-2xl: 12px;
 }
 
-@media (prefers-color-scheme: dark) {
-  @theme {
-    --color-ground: #0e1116;
-    --color-surface: #161a21;
-    --color-line: #262d37;
-    --color-ink: #e3e8ef;
-    --color-muted: #8f98a6;
-    --color-accent: #58bacb;
-    --color-accent-soft: #14313a;
+/* ---------------------------------------------------------------------------
+   The day read.
+
+   Three states, not two: an explicit choice stamps `data-theme` on <html>, and
+   the default "system" setting stamps nothing - so the un-stamped document is
+   what most people see, and only `prefers-color-scheme` separates it. Written
+   out twice on purpose; one block behind one selector leaves the other state
+   resolving half a palette, which is the classic unreadable-theme bug.
+   --------------------------------------------------------------------------- */
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --color-ground: #f7f2e8;
+    --color-surface: #fffdf7;
+    --color-raised: #f1e9da;
+    --color-line: #e4dac8;
+    --color-line-strong: #cfc1a9;
+    --color-ink: #171210;
+    --color-muted: #6b6158;
+    --color-faint: #938878;
+    --color-accent: #7a5c14;
+    --color-accent-soft: #f4ead2;
+    --color-accent-line: #ddc693;
+    --color-on-accent: #fffdf7;
+    --color-son: #ab2a20;
+    --color-son-soft: #fae3e0;
+    --color-mist: #7d9a95;
+    color-scheme: light;
   }
 }
 
+:root[data-theme='light'] {
+  --color-ground: #f7f2e8;
+  --color-surface: #fffdf7;
+  --color-raised: #f1e9da;
+  --color-line: #e4dac8;
+  --color-line-strong: #cfc1a9;
+  --color-ink: #171210;
+  --color-muted: #6b6158;
+  --color-faint: #938878;
+  --color-accent: #7a5c14;
+  --color-accent-soft: #f4ead2;
+  --color-accent-line: #ddc693;
+  --color-on-accent: #fffdf7;
+  --color-son: #ab2a20;
+  --color-son-soft: #fae3e0;
+    --color-mist: #7d9a95;
+  color-scheme: light;
+}
+
 html {
-  color-scheme: light dark;
+  color-scheme: dark;
+  scrollbar-color: var(--color-line-strong) transparent;
+}
+
+html[data-theme='light'] {
+  color-scheme: light;
 }
 
 body {
@@ -35,6 +122,12 @@ body {
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
 }
 
 /* Focus is never removed, only restyled - keyboard users need to see it. */
@@ -44,21 +137,500 @@ body {
   border-radius: 3px;
 }
 
+/* ------------------------------------------------------------------ surfaces */
+
+/*
+ * Grain.
+ *
+ * A large flat area of near-black looks like a switched-off screen. Four per
+ * cent of noise over the page reads as a surface instead, and it costs one
+ * element and no layout.
+ */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.045;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* One source of light, at the top of the page, the colour of the accent. It
+   gives the ground a direction so panels sitting on it look lit. */
+.vignette {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  height: 70vh;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    80% 60% at 50% -10%,
+    color-mix(in oklab, var(--color-accent) 11%, transparent),
+    transparent 70%
+  );
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+}
+
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.375rem;
+}
+
+/* A hairline that fades at both ends, so a divider does not read as the edge
+   of a box that is not there. */
+.rule {
+  height: 1px;
+  border: 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--color-line) 12%,
+    var(--color-line) 88%,
+    transparent
+  );
+}
+
+/* --------------------------------------------------------------------- type */
+
+.display {
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 36, 'WONK' 1;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/* The microcopy treatment that replaces mono: uppercase, tracked, small. It
+   reads as a caption rather than as output. */
+.label {
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  font-feature-settings: 'tnum' 1;
+}
+
+.label-accent {
+  color: var(--color-accent);
+}
+
+/* ------------------------------------------------------------------ controls */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.875rem;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.38;
+  box-shadow: none;
+}
+
+.btn:not(:disabled):active {
+  transform: translateY(1px);
+}
+
+.btn-primary {
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklab, var(--color-accent) 88%, white),
+    var(--color-accent)
+  );
+  color: var(--color-on-accent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, white 30%, transparent),
+    0 1px 2px rgb(0 0 0 / 0.35);
+}
+
+.btn-primary:not(:disabled):hover {
+  background: color-mix(in oklab, var(--color-accent) 76%, white);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: var(--color-line-strong);
+  color: var(--color-ink);
+}
+
+.btn-ghost:not(:disabled):hover {
+  background: var(--color-raised);
+  border-color: var(--color-accent-line);
+}
+
+.btn-quiet {
+  background: transparent;
+  color: var(--color-muted);
+  padding-inline: 0.5rem;
+}
+
+.btn-quiet:not(:disabled):hover {
+  color: var(--color-ink);
+  background: var(--color-raised);
+}
+
+.btn-danger {
+  background: transparent;
+  border-color: color-mix(in oklab, var(--color-son) 42%, transparent);
+  color: var(--color-son);
+}
+
+.btn-danger:not(:disabled):hover {
+  background: var(--color-son-soft);
+}
+
+.btn-sm {
+  padding: 0.3125rem 0.625rem;
+  font-size: 12.5px;
+}
+
+.btn-lg {
+  padding: 0.6875rem 1.25rem;
+  font-size: 15px;
+}
+
+/* A filter, not a button: it carries state, so the on version is filled. */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0.3125rem 0.75rem;
+  font-size: 12.5px;
+  color: var(--color-muted);
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.chip:hover {
+  color: var(--color-ink);
+  border-color: var(--color-line-strong);
+}
+
+.chip-on {
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent-line);
+  color: var(--color-accent);
+  font-weight: 500;
+}
+
+.field {
+  width: 100%;
+  background: transparent;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 0.5625rem 0.75rem;
+  font-size: 14.5px;
+  color: var(--color-ink);
+  font-family: inherit;
+  transition:
+    border-color 0.16s ease,
+    background-color 0.16s ease;
+}
+
+.field::placeholder {
+  color: var(--color-faint);
+}
+
+.field:focus {
+  outline: none;
+  border-color: var(--color-accent);
+  background: var(--color-surface);
+}
+
+/*
+ * The scrubber.
+ *
+ * A range input, because it is one - it seeks, it takes arrow keys, and
+ * screen readers already know what it is. Only the paint is replaced. The
+ * filled portion is drawn into the track from `--pct` rather than with a
+ * second element, which keeps the thumb and the fill from ever disagreeing.
+ */
+.scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.scrub:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.scrub::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--pct, 0%),
+    var(--color-line-strong) var(--pct, 0%)
+  );
+}
+
+.scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -4px;
+  border-radius: 999px;
+  background: var(--color-accent);
+  transition: transform 0.15s ease;
+}
+
+.scrub:hover::-webkit-slider-thumb,
+.scrub:focus-visible::-webkit-slider-thumb {
+  transform: scale(1.25);
+}
+
+.scrub::-moz-range-track {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-line-strong);
+}
+
+.scrub::-moz-range-progress {
+  height: 3px;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+.scrub::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-accent);
+}
+
+/* ------------------------------------------------------------------- covers */
+
+/*
+ * Cover art is the only real image on most pages, so it gets the frame it
+ * deserves: a hairline that warms to gold on hover, and a lift small enough to
+ * read as paper rather than as a card flying off the screen.
+ */
+.cover {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.3),
+    0 0 0 1px var(--color-line);
+  transition:
+    box-shadow 0.3s ease,
+    transform 0.3s ease;
+}
+
+.group:hover .cover,
+.cover:hover {
+  transform: translateY(-3px);
+  box-shadow:
+    0 10px 28px -8px rgb(0 0 0 / 0.55),
+    0 0 0 1px var(--color-accent-line);
+}
+
+.cover img {
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.group:hover .cover img {
+  transform: scale(1.045);
+}
+
+/* Readable text over arbitrary artwork needs its own ground, and a scrim is
+   the only version of that which does not crop the picture. */
+.scrim {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  padding: 2.5rem 0.875rem 0.75rem;
+  background: linear-gradient(
+    to top,
+    rgb(0 0 0 / 0.82),
+    rgb(0 0 0 / 0.45) 45%,
+    transparent
+  );
+  color: #fff;
+}
+
+/* -------------------------------------------------------------------- state */
+
+.dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--color-faint);
+  flex: none;
+}
+
+.dot-live {
+  background: var(--color-son);
+  animation: breathe 2.4s ease-in-out infinite;
+}
+
+.dot-on {
+  background: var(--color-accent);
+}
+
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-son) 55%, transparent);
+  }
+  50% {
+    opacity: 0.55;
+    box-shadow: 0 0 0 4px transparent;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-surface) 25%,
+    var(--color-raised) 37%,
+    var(--color-surface) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.5s ease-in-out infinite;
+  border-radius: var(--radius-md);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: 0 0;
+  }
+}
+
+/* Sections arrive in order rather than all at once, which makes a page that
+   loads in one frame still read as composed. `--d` staggers a list. */
+.reveal {
+  animation: reveal 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) backwards;
+  animation-delay: var(--d, 0ms);
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Stillness, in the same three states as the theme: the system setting is
+   honoured unless the reader has explicitly asked for one or the other.
+   `[data-motion='full']` is how someone whose machine asks every site for
+   stillness can still choose to have the atmosphere here. */
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :root:not([data-motion='full']) *,
+  :root:not([data-motion='full']) *::before,
+  :root:not([data-motion='full']) *::after {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  :root:not([data-motion='full']) .group:hover .cover,
+  :root:not([data-motion='full']) .cover:hover {
+    transform: none;
+  }
+}
+
+:root[data-motion='calm'] *,
+:root[data-motion='calm'] *::before,
+:root[data-motion='calm'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+:root[data-motion='calm'] .group:hover .cover,
+:root[data-motion='calm'] .cover:hover {
+  transform: none;
+}
+
+/* ------------------------------------------------------------------ reading */
+
+/*
+ * Chapter text. Newsreader carries optical sizing, so it is set at the size it
+ * was drawn for, on a measure of about 34em - long enough not to feel clipped,
+ * short enough that the eye finds the next line.
+ */
+.prose-read {
+  font-family: var(--font-serif);
+  font-size: 19px;
+  line-height: 1.78;
+  letter-spacing: 0.002em;
+  max-width: 34em;
+}
+
+.prose-read p {
+  margin: 0 0 1.15em;
+}
+
+/* One gold initial per chapter. A chapter is a performance with an opening,
+   and this is the cheapest way to say so. */
+.prose-read > p:first-of-type::first-letter {
+  float: left;
+  margin: 0.07em 0.08em 0 0;
+  font-family: var(--font-display);
+  font-variation-settings: 'SOFT' 36, 'WONK' 1;
+  font-size: 3.1em;
+  line-height: 0.82;
+  font-weight: 500;
+  color: var(--color-accent);
 }
 
 /* ----------------------------------------------------------- draft room */
 
 .prose-editor {
   font-family: var(--font-serif);
-  font-size: 17.5px;
-  line-height: 1.7;
+  font-size: 18px;
+  line-height: 1.75;
   min-height: 42vh;
   outline: none;
 }
@@ -72,7 +644,7 @@ body {
   float: left;
   height: 0;
   pointer-events: none;
-  color: var(--color-muted);
+  color: var(--color-faint);
 }
 
 /* Another writer's caret. Theirs is a real element in the document, so it has
@@ -94,9 +666,9 @@ body {
   left: -1px;
   padding: 1px 6px;
   border-radius: 3px 3px 3px 0;
-  font-family: var(--font-mono);
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
+  letter-spacing: 0.04em;
   line-height: 1.4;
   white-space: nowrap;
   color: #fff;

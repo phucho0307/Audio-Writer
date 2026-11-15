@@ -60,7 +60,7 @@ export default function ForkPicker({
   if (error && !story) {
     return (
       <main className="mx-auto max-w-3xl px-6 py-12">
-        <p className="font-mono text-sm text-red-600 dark:text-red-400">
+        <p className="font-mono text-sm text-[var(--color-son)]">
           {error}
         </p>
         <Link href="/kham-pha" className="mt-4 inline-block text-sm underline">
@@ -100,7 +100,7 @@ export default function ForkPicker({
           />
         )}
         <div className="flex flex-col gap-2">
-          <h1 className="font-serif text-3xl leading-tight tracking-tight">
+          <h1 className="display text-[2.1rem] leading-[1.1] leading-tight tracking-tight">
             {story.title}
           </h1>
           <p className="text-[13px] leading-relaxed text-[var(--color-muted)]">
@@ -121,7 +121,7 @@ export default function ForkPicker({
 
       {/* ---- the question ---- */}
       <div className="flex flex-col gap-1.5 border-l-2 border-[var(--color-accent)] pl-4">
-        <h2 className="font-serif text-xl">Chương nào nên rẽ hướng khác?</h2>
+        <h2 className="display text-xl">Chương nào nên rẽ hướng khác?</h2>
         <p className="text-[13px] text-[var(--color-muted)]">
           Chọn chương cuối cùng bạn muốn giữ. Mọi thứ sau đó bạn viết lại.
         </p>
@@ -150,7 +150,7 @@ export default function ForkPicker({
                 <span
                   className={`mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full font-mono text-[12px] ${
                     kept
-                      ? 'bg-[var(--color-accent)] text-white'
+                      ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
                       : 'border border-[var(--color-line)] text-[var(--color-muted)]'
                   }`}
                 >
@@ -205,14 +205,14 @@ export default function ForkPicker({
           <button
             onClick={fork}
             disabled={picked === null || busy}
-            className="rounded-md bg-[var(--color-accent)] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-35"
+            className="btn btn-primary"
           >
             {busy ? 'Đang tạo nhánh…' : '⑂ Rẽ nhánh và viết tiếp'}
           </button>
         )}
 
         {error && (
-          <p className="font-mono text-[12px] text-red-600 dark:text-red-400">
+          <p className="font-mono text-[12px] text-[var(--color-son)]">
             {error}
           </p>
         )}

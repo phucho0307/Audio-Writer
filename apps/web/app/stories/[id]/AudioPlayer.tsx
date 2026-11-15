@@ -56,6 +56,13 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
 
   const audioRef = useRef<HTMLAudioElement>(null);
 
+  // Transport state, read off the element rather than predicted. `playing`
+  // above is which chapter is loaded; these are whether it is moving and
+  // where it is up to.
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [at, setAt] = useState(0);
+  const [length, setLength] = useState<number | null>(null);
+
   useEffect(() => {
     api
       .voices()
@@ -230,29 +237,91 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
     <section className="flex flex-col gap-3 border-y border-[var(--color-line)] py-3.5">
       {/* At the top, the way the reader has it. Below the chapter list it sat
           off-screen the moment a story got long enough to need one. */}
+      {/* Mounted whatever is playing, so a chapter change swaps the source
+          instead of tearing down the element and losing the transport. */}
+      <audio
+        ref={audioRef}
+        onEnded={onEnded}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) =>
+          setLength(
+            Number.isFinite(e.currentTarget.duration)
+              ? e.currentTarget.duration
+              : null,
+          )
+        }
+        onError={() => setError('Không tải được file âm thanh.')}
+        className="hidden"
+        preload="none"
+      />
+
       {playing !== null && (
-        <div className="flex flex-col gap-1.5">
-          <audio
-            ref={audioRef}
-            controls
-            onEnded={onEnded}
-            onError={() => setError('Không tải được file âm thanh.')}
-            className="h-9 w-full"
-            preload="none"
-          />
-          <div className="flex items-center gap-3 font-mono text-[10.5px] text-[var(--color-muted)]">
-            <span>Chương {playing + 1}</span>
-            <span className="opacity-40">·</span>
-            <span className="min-w-0 truncate">
-              {chapters?.find((c) => c.depth === playing)?.preview}
-            </span>
-            <button
-              onClick={() => setPlaying(null)}
-              className="ml-auto flex-none hover:text-[var(--color-accent)]"
-            >
-              đóng
-            </button>
+        <div className="flex items-center gap-3.5 rounded-[5px] bg-[var(--color-raised)] px-3 py-2.5">
+          <button
+            onClick={() => {
+              const el = audioRef.current;
+              if (!el) return;
+              if (el.paused) void el.play().catch(() => {});
+              else el.pause();
+            }}
+            aria-label={isPlaying ? 'Tạm dừng' : 'Phát'}
+            className="grid h-9 w-9 flex-none place-items-center rounded-full bg-[var(--color-accent)] text-[var(--color-on-accent)] transition-transform hover:scale-[1.06] active:scale-95"
+          >
+            {isPlaying ? (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                <rect x="6.5" y="5" width="4" height="14" rx="1" />
+                <rect x="13.5" y="5" width="4" height="14" rx="1" />
+              </svg>
+            ) : (
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden className="ml-0.5">
+                <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+              </svg>
+            )}
+          </button>
+
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <div className="flex items-baseline gap-2 text-[12px]">
+              <span className="flex-none text-[var(--color-accent)]">
+                Chương {playing + 1}
+              </span>
+              <span className="min-w-0 truncate text-[var(--color-muted)]">
+                {chapters?.find((c) => c.depth === playing)?.preview}
+              </span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <input
+                type="range"
+                min={0}
+                max={length ?? 0}
+                step={0.5}
+                value={at}
+                disabled={length === null}
+                aria-label="Vị trí nghe"
+                onChange={(e) => {
+                  const el = audioRef.current;
+                  if (el) el.currentTime = Number(e.target.value);
+                  setAt(Number(e.target.value));
+                }}
+                className="scrub min-w-0 flex-1"
+                style={{
+                  ['--pct' as string]: `${length ? (at / length) * 100 : 0}%`,
+                }}
+              />
+              <span className="flex-none text-[11px] tabular-nums text-[var(--color-muted)]">
+                {mmss(length === null ? null : ((length - at) / rate) * 1000)}
+              </span>
+            </div>
           </div>
+
+          <button
+            onClick={() => setPlaying(null)}
+            aria-label="Đóng trình phát"
+            className="btn btn-quiet flex-none px-1.5 text-[11.5px]"
+          >
+            Đóng
+          </button>
         </div>
       )}
 
@@ -260,19 +329,23 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
         <button
           onClick={playAll}
           disabled={working !== null || total === 0}
-          className="font-mono text-[12px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
+          className="btn btn-primary btn-sm"
         >
-          {working === 'all' ? '♪ đang tạo giọng đọc…' : '♪ nghe cả truyện'}
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+            <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+          </svg>
+          {working === 'all' ? 'Đang tạo giọng đọc…' : 'Nghe cả truyện'}
         </button>
 
-        <span className="font-mono text-[10.5px] text-[var(--color-muted)]">
+        <span className="text-[12px] text-[var(--color-muted)]">
           {ready}/{total} chương
           {totalMs > 0 && ` · ${mmss(totalMs / rate)}`}
         </span>
 
         <button
           onClick={() => setOpen((v) => !v)}
-          className="ml-auto font-mono text-[10.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+          aria-expanded={open}
+          className="btn btn-quiet ml-auto text-[11.5px]"
         >
           {voices.find((v) => v.id === voice)?.label ?? voice} · {rate}×{' '}
           {open ? '▴' : '▾'}
@@ -340,7 +413,7 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
       </ol>
 
       {error && (
-        <p className="font-mono text-[11px] text-amber-600 dark:text-amber-400">
+        <p className="font-mono text-[11px] text-[var(--color-accent)]">
           {error}
         </p>
       )}

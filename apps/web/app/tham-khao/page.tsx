@@ -76,7 +76,7 @@ export default function ReferencesPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-10">
-      <h1 className="font-serif text-3xl tracking-tight">Tham khảo</h1>
+      <h1 className="display text-[2.1rem] leading-[1.1]">Tham khảo</h1>
       <p className="mt-2 max-w-[56ch] text-[14px] text-[var(--color-muted)]">
         Nghe trước khi viết. Dưới đây là nơi truyện audio tiếng Việt đang sống,
         và những ghi chú về cách từng thể loại vận hành — cũng chính là phần AI
@@ -113,13 +113,13 @@ export default function ReferencesPage() {
       </div>
 
       {current && (
-        <p className="mt-4 border-l-2 border-[var(--color-accent)] pl-3 font-serif text-[16px] text-[var(--color-ink)]">
+        <p className="mt-4 border-l-2 border-[var(--color-accent)] pl-3 display text-[16px] text-[var(--color-ink)]">
           {current.blurb}
         </p>
       )}
 
       {error && (
-        <p className="mt-6 font-mono text-[12px] text-amber-600 dark:text-amber-400">
+        <p className="mt-6 font-mono text-[12px] text-[var(--color-accent)]">
           {error}
         </p>
       )}
@@ -141,7 +141,7 @@ export default function ReferencesPage() {
                   href={s.url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="font-serif text-[17px] text-[var(--color-ink)] hover:text-[var(--color-accent)] hover:underline"
+                  className="display text-[17px] text-[var(--color-ink)] hover:text-[var(--color-accent)] hover:underline"
                 >
                   {s.name}
                 </a>
@@ -191,7 +191,7 @@ export default function ReferencesPage() {
                   <span className="w-16 flex-none font-mono text-[10px] uppercase tracking-wider text-[var(--color-muted)]">
                     {KIND_LABEL[n.kind]}
                   </span>
-                  <span className="min-w-0 flex-1 font-serif text-[16px]">
+                  <span className="min-w-0 flex-1 display text-[16px]">
                     {n.title}
                   </span>
                   <span className="flex-none font-mono text-[11px] text-[var(--color-muted)]">

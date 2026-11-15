@@ -54,9 +54,9 @@ export default function Account() {
       return (
         <button
           onClick={signIn}
-          className="font-mono text-[12px] text-[var(--color-accent)] underline underline-offset-4"
+          className="text-[12.5px] text-[var(--color-son)] underline underline-offset-4"
         >
-          đăng nhập thất bại · thử lại
+          Đăng nhập thất bại · thử lại
         </button>
       );
     }
@@ -65,11 +65,8 @@ export default function Account() {
     if (providers && !providers.google) return null;
 
     return (
-      <button
-        onClick={signIn}
-        className="rounded-full border border-[var(--color-line)] px-3.5 py-1.5 font-mono text-[12px] text-[var(--color-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-ink)]"
-      >
-        đăng nhập
+      <button onClick={signIn} className="btn btn-ghost btn-sm rounded-full">
+        Đăng nhập
       </button>
     );
   }
@@ -94,11 +91,11 @@ export default function Account() {
             className="h-[26px] w-[26px] rounded-full object-cover"
           />
         ) : (
-          <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--color-accent-soft)] font-mono text-[10px] text-[var(--color-accent)]">
+          <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full border border-[var(--color-accent-line)] bg-[var(--color-accent-soft)] text-[10px] font-semibold tracking-wide text-[var(--color-accent)]">
             {initials(user.displayName)}
           </span>
         )}
-        <span className="hidden font-mono text-[12px] text-[var(--color-muted)] sm:inline">
+        <span className="hidden text-[12.5px] text-[var(--color-muted)] sm:inline">
           {user.displayName}
         </span>
       </button>
@@ -106,26 +103,24 @@ export default function Account() {
       {open && (
         <div
           role="menu"
-          className="absolute right-0 z-50 mt-2 w-56 overflow-hidden rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] shadow-lg"
+          className="card absolute right-0 z-50 mt-2 w-56 overflow-hidden shadow-[0_18px_40px_-12px_rgb(0_0_0/0.6)]"
         >
           <div className="border-b border-[var(--color-line)] px-3.5 py-2.5">
             <div className="truncate text-[13px] font-medium">
               {user.displayName}
             </div>
             <div className="flex items-center gap-2">
-              <span className="truncate font-mono text-[11px] text-[var(--color-muted)]">
+              <span className="truncate text-[11.5px] text-[var(--color-muted)]">
                 @{user.handle}
               </span>
               {/* Admin is worth calling out because it changes what the buttons
                   on the page will do; plain membership is not news. */}
               {user.role === 'ADMIN' ? (
-                <span className="shrink-0 rounded-full bg-[var(--color-accent)] px-1.5 py-px font-mono text-[9px] uppercase tracking-wide text-white">
+                <span className="label shrink-0 rounded-full bg-[var(--color-accent)] px-1.5 py-px text-[9px] text-[var(--color-on-accent)]">
                   admin
                 </span>
               ) : (
-                <span className="shrink-0 font-mono text-[9px] uppercase tracking-wide text-[var(--color-muted)]">
-                  thành viên
-                </span>
+                <span className="label shrink-0 text-[9px]">thành viên</span>
               )}
             </div>
           </div>
@@ -135,9 +130,9 @@ export default function Account() {
               setOpen(false);
               void signOut();
             }}
-            className="w-full px-3.5 py-2.5 text-left font-mono text-[12px] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-accent-soft)] hover:text-[var(--color-ink)]"
+            className="w-full px-3.5 py-2.5 text-left text-[13px] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-ink)]"
           >
-            đăng xuất
+            Đăng xuất
           </button>
         </div>
       )}

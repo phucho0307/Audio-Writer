@@ -232,7 +232,7 @@ export default function DraftRoom({
   if (denied) {
     return (
       <div className="rounded border border-[var(--color-line)] p-6 text-center">
-        <p className="font-mono text-[13px] text-amber-600 dark:text-amber-400">
+        <p className="font-mono text-[13px] text-[var(--color-accent)]">
           {denied}
         </p>
       </div>
@@ -247,7 +247,7 @@ export default function DraftRoom({
       <div className="flex flex-wrap items-center gap-3 border-y border-[var(--color-line)] py-2.5">
         <span
           className={`h-1.5 w-1.5 flex-none rounded-full ${
-            live ? 'bg-emerald-500' : 'bg-amber-500'
+            live ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-faint)]'
           }`}
           aria-hidden
         />
@@ -273,7 +273,7 @@ export default function DraftRoom({
         </p>
       )}
       {ai?.state === 'failed' && (
-        <p className="font-mono text-[11.5px] text-amber-600 dark:text-amber-400">
+        <p className="font-mono text-[11.5px] text-[var(--color-accent)]">
           AI dừng giữa chừng: {ai.message}
         </p>
       )}
@@ -320,7 +320,7 @@ export default function DraftRoom({
       )}
 
       {error && (
-        <p className="font-mono text-[11.5px] text-amber-600 dark:text-amber-400">
+        <p className="font-mono text-[11.5px] text-[var(--color-accent)]">
           {error}
         </p>
       )}
@@ -349,7 +349,7 @@ export default function DraftRoom({
                 </span>
                 <button
                   onClick={() => revoke(c)}
-                  className="ml-auto font-mono text-[10.5px] text-[var(--color-muted)] hover:text-amber-600"
+                  className="ml-auto font-mono text-[10.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
                 >
                   gỡ
                 </button>

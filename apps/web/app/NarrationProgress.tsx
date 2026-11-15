@@ -126,7 +126,7 @@ export default function NarrationProgress({
 
   return (
     <div className="flex w-full flex-col gap-1.5">
-      <div className="flex items-baseline justify-between gap-3 font-mono text-[11px] text-[var(--color-muted)]">
+      <div className="flex items-baseline justify-between gap-3 text-[12px] text-[var(--color-muted)]">
         <span aria-live="polite">{message(p, status, done)}</span>
         <span className="tabular-nums">{pct}%</span>
       </div>

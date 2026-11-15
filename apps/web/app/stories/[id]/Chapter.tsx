@@ -120,11 +120,11 @@ export default function Chapter({
             {isLast &&
               (confirming ? (
                 <>
-                  <span className="normal-case text-red-500">xoá chương?</span>
+                  <span className="normal-case text-[var(--color-son)]">xoá chương?</span>
                   <button
                     onClick={remove}
                     disabled={busy}
-                    className="normal-case text-red-500 underline disabled:opacity-40"
+                    className="normal-case text-[var(--color-son)] underline disabled:opacity-40"
                   >
                     {busy ? 'đang xoá…' : 'xoá'}
                   </button>
@@ -138,7 +138,7 @@ export default function Chapter({
               ) : (
                 <button
                   onClick={() => setConfirming(true)}
-                  className="normal-case underline hover:text-red-500"
+                  className="normal-case underline hover:text-[var(--color-son)]"
                 >
                   xoá
                 </button>
@@ -160,13 +160,13 @@ export default function Chapter({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={Math.min(26, draft.split('\n').length + 4)}
-            className="rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-3 py-2 font-serif text-[16px] leading-[1.7]"
+            className="rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-3 py-2 display text-[16px] leading-[1.7]"
           />
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={save}
               disabled={busy || !draft.trim() || !dirty}
-              className="rounded-md bg-[var(--color-accent)] px-3.5 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+              className="btn btn-primary btn-sm"
             >
               {busy ? 'đang lưu…' : 'lưu thay đổi'}
             </button>
@@ -177,7 +177,7 @@ export default function Chapter({
               huỷ
             </button>
             {dirty && (
-              <span className="font-mono text-[11px] text-amber-600">
+              <span className="font-mono text-[11px] text-[var(--color-accent)]">
                 chưa lưu
               </span>
             )}
@@ -189,15 +189,15 @@ export default function Chapter({
       ) : (
         <>
           {chapter.title && (
-            <h3 className="font-serif text-[19px]">{chapter.title}</h3>
+            <h3 className="display text-[19px]">{chapter.title}</h3>
           )}
-          <p className="whitespace-pre-wrap font-serif text-[17px] leading-[1.75]">
+          <p className="whitespace-pre-wrap display text-[17px] leading-[1.75]">
             {chapter.textPlain}
           </p>
         </>
       )}
 
-      {error && <p className="font-mono text-[11px] text-amber-600">{error}</p>}
+      {error && <p className="font-mono text-[11px] text-[var(--color-accent)]">{error}</p>}
     </div>
   );
 }

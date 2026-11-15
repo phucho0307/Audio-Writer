@@ -39,20 +39,14 @@ export default function VoicePicker({
   return (
     <div className="flex flex-col gap-2">
       {groups.map((g) => (
-        <div key={g.provider} className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
-          <span className="w-full font-mono text-[10px] uppercase tracking-wider text-[var(--color-muted)] sm:w-28">
-            {g.title}
-          </span>
+        <div key={g.provider} className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <span className="label w-full sm:w-24">{g.title}</span>
           {g.items.map((v) => (
             <button
               key={v.id}
               onClick={() => onChange(v.id)}
               aria-pressed={value === v.id}
-              className={`text-[12px] transition-colors ${
-                value === v.id
-                  ? 'font-medium text-[var(--color-accent)]'
-                  : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
-              }`}
+              className={`chip ${value === v.id ? 'chip-on' : ''}`}
             >
               {v.label}
             </button>

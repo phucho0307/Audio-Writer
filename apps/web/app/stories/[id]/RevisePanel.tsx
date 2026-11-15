@@ -64,7 +64,7 @@ export default function RevisePanel({
   }
 
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+    <section className="flex flex-col gap-3 card p-4">
       {onMain ? (
         <>
           <div>
@@ -97,7 +97,7 @@ export default function RevisePanel({
                 <button
                   onClick={revise}
                   disabled={busy !== null}
-                  className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+                  className="btn btn-primary btn-sm"
                 >
                   {busy === 'revise' ? 'đang tạo…' : 'tạo bản sửa'}
                 </button>
@@ -130,14 +130,14 @@ export default function RevisePanel({
           <button
             onClick={promote}
             disabled={busy !== null}
-            className="self-start rounded-md bg-[var(--color-accent)] px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+            className="self-start btn btn-primary btn-sm"
           >
             {busy === 'promote' ? 'đang cập nhật…' : 'dùng nhánh này làm bản chính'}
           </button>
         </>
       )}
 
-      {error && <p className="font-mono text-[11px] text-red-500">{error}</p>}
+      {error && <p className="font-mono text-[11px] text-[var(--color-son)]">{error}</p>}
     </section>
   );
 }

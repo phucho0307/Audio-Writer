@@ -72,7 +72,7 @@ export default function PublishPanel({
   }
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4">
+    <section className="flex flex-col gap-4 card p-4">
       <div className="flex items-start gap-3">
         <Switch
           on={isPublic}
@@ -126,7 +126,7 @@ export default function PublishPanel({
               onClick={() =>
                 void save({ visibility: 'PUBLIC', allowForks: true })
               }
-              className="rounded-md bg-[var(--color-accent)] px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
+              className="btn btn-primary btn-sm"
             >
               đăng · cho phép
             </button>
@@ -150,7 +150,7 @@ export default function PublishPanel({
         </div>
       )}
 
-      {error && <p className="font-mono text-[11px] text-red-500">{error}</p>}
+      {error && <p className="font-mono text-[11px] text-[var(--color-son)]">{error}</p>}
     </section>
   );
 }
