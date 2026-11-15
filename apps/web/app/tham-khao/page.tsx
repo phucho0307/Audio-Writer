@@ -88,10 +88,10 @@ export default function ReferencesPage() {
         <button
           onClick={() => setGenre(null)}
           aria-pressed={genre === null}
-          className={`rounded-full border px-3 py-1 font-mono text-[12px] transition-colors ${
+          className={`chip ${
             genre === null
-              ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
-              : 'border-[var(--color-line)] text-[var(--color-muted)] hover:text-[var(--color-ink)]'
+              ? 'chip-on'
+              : ''
           }`}
         >
           tất cả
@@ -101,10 +101,10 @@ export default function ReferencesPage() {
             key={g.id}
             onClick={() => setGenre(g.id)}
             aria-pressed={genre === g.id}
-            className={`rounded-full border px-3 py-1 font-mono text-[12px] transition-colors ${
+            className={`chip ${
               genre === g.id
-                ? 'border-[var(--color-accent)] bg-[var(--color-accent-soft)] text-[var(--color-accent)]'
-                : 'border-[var(--color-line)] text-[var(--color-muted)] hover:text-[var(--color-ink)]'
+                ? 'chip-on'
+                : ''
             }`}
           >
             {g.label}
@@ -113,24 +113,24 @@ export default function ReferencesPage() {
       </div>
 
       {current && (
-        <p className="mt-4 border-l-2 border-[var(--color-accent)] pl-3 display text-[16px] text-[var(--color-ink)]">
+        <p className="mt-4 border-l-2 border-[var(--color-accent)] pl-3 font-serif text-[16px] text-[var(--color-ink)]">
           {current.blurb}
         </p>
       )}
 
       {error && (
-        <p className="mt-6 font-mono text-[12px] text-[var(--color-accent)]">
+        <p className="mt-6 text-[12px] text-[var(--color-accent)]">
           {error}
         </p>
       )}
 
       {/* ---------------------------------------------------------- sources */}
       <section className="mt-10">
-        <h2 className="font-mono text-[12px] uppercase tracking-[0.1em] text-[var(--color-muted)]">
+        <h2 className="label text-[12px]">
           Nghe ở đâu
         </h2>
 
-        <ul className="mt-4 flex flex-col">
+        <ul className="card mt-4 flex flex-col px-4">
           {sources.map((s) => (
             <li
               key={s.id}
@@ -145,11 +145,11 @@ export default function ReferencesPage() {
                 >
                   {s.name}
                 </a>
-                <span className="font-mono text-[12px] uppercase tracking-wider text-[var(--color-muted)]">
+                <span className="label">
                   {SOURCE_LABEL[s.kind]}
                 </span>
                 {s.scale && (
-                  <span className="font-mono text-[12px] text-[var(--color-muted)]">
+                  <span className="text-[12px] text-[var(--color-muted)]">
                     {s.scale}
                   </span>
                 )}
@@ -162,7 +162,7 @@ export default function ReferencesPage() {
         </ul>
 
         {sources.length === 0 && !error && (
-          <p className="mt-3 font-mono text-[12px] text-[var(--color-muted)]">
+          <p className="mt-3 text-[12px] text-[var(--color-muted)]">
             Chưa có nguồn nào cho thể loại này.
           </p>
         )}
@@ -170,7 +170,7 @@ export default function ReferencesPage() {
 
       {/* ------------------------------------------------------------ notes */}
       <section className="mt-12">
-        <h2 className="font-mono text-[12px] uppercase tracking-[0.1em] text-[var(--color-muted)]">
+        <h2 className="label text-[12px]">
           Ghi chú nghề ({notes.length})
         </h2>
         <p className="mt-2 max-w-[58ch] text-[12.5px] text-[var(--color-muted)]">
@@ -178,34 +178,34 @@ export default function ReferencesPage() {
           tra cứu khi viết tiếp — bạn đọc được đúng thứ nó đọc.
         </p>
 
-        <ul className="mt-4 flex flex-col">
+        <ul className="card mt-4 flex flex-col px-4">
           {notes.map((n) => {
             const isOpen = open === n.id;
             return (
-              <li key={n.id} className="border-t border-[var(--color-line)]">
+              <li key={n.id} className="border-t border-[var(--color-line)] first:border-t-0">
                 <button
                   onClick={() => setOpen(isOpen ? null : n.id)}
                   aria-expanded={isOpen}
-                  className="flex w-full items-baseline gap-3 py-3 text-left"
+                  className="btn btn-quiet w-full items-baseline gap-3 px-0 py-3 text-left whitespace-normal"
                 >
-                  <span className="w-16 flex-none font-mono text-[12px] uppercase tracking-wider text-[var(--color-muted)]">
+                  <span className="w-16 flex-none label">
                     {KIND_LABEL[n.kind]}
                   </span>
-                  <span className="min-w-0 flex-1 display text-[16px]">
+                  <span className="min-w-0 flex-1 display text-[16px] text-[var(--color-ink)]">
                     {n.title}
                   </span>
-                  <span className="flex-none font-mono text-[12px] text-[var(--color-muted)]">
+                  <span className="flex-none text-[12px] text-[var(--color-muted)]">
                     {isOpen ? '−' : '+'}
                   </span>
                 </button>
 
                 {isOpen && (
                   <div className="pb-4 pl-[4.75rem]">
-                    <p className="max-w-[60ch] text-[14.5px] leading-relaxed">
+                    <p className="max-w-[60ch] font-serif text-[14.5px] leading-relaxed">
                       {n.body}
                     </p>
                     {n.source && (
-                      <p className="mt-2 font-mono text-[12px] text-[var(--color-muted)]">
+                      <p className="mt-2 text-[12px] text-[var(--color-muted)]">
                         gợi ý từ{' '}
                         <a
                           href={n.source.url}
@@ -225,7 +225,7 @@ export default function ReferencesPage() {
         </ul>
       </section>
 
-      <p className="mt-12 border-t border-[var(--color-line)] pt-4 font-mono text-[12px] leading-relaxed text-[var(--color-muted)]">
+      <p className="mt-12 border-t border-[var(--color-line)] pt-4 text-[12px] leading-relaxed text-[var(--color-muted)]">
         Các trang trong danh sách là tài sản của họ. Chúng tôi dẫn link để bạn
         nghe, không lưu lại nội dung của họ và không dùng nội dung đó để huấn
         luyện hay sinh truyện.
