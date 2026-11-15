@@ -86,7 +86,7 @@ export default function Chapter({
       id={`chuong-${chapter.depth + 1}`}
       className="group/ch flex scroll-mt-6 flex-col gap-1.5"
     >
-      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-[var(--color-muted)]">
+      <div className="label flex items-center gap-2.5">
         {/* `depth` is 0-based - it is a position in the chain, not a
             chapter number. Everywhere it is shown to a reader it gets +1. */}
         <span>Chương {chapter.depth + 1}</span>
@@ -110,37 +110,39 @@ export default function Chapter({
             chapter makes the one before it the last, and hunting for a hover
             target that moved is what made deleting a few feel impossible. */}
         {canEdit && !inherited && !editing && (
-          <span className="ml-auto flex items-center gap-2">
-            <button
-              onClick={onOpen}
-              className="normal-case underline hover:text-[var(--color-ink)]"
-            >
-              sửa
+          <span className="ml-auto flex items-center gap-1.5 normal-case tracking-normal">
+            <button onClick={onOpen} className="btn btn-quiet btn-sm">
+              Sửa
             </button>
             {isLast &&
               (confirming ? (
                 <>
-                  <span className="normal-case text-[var(--color-son)]">xoá chương?</span>
+                  {/* Deleting a chapter cannot be undone, so the confirmation
+                      says which one rather than just "are you sure?" - the
+                      sentence is the safeguard. */}
+                  <span className="text-[12px] text-[var(--color-son)]">
+                    Xoá chương {chapter.depth + 1}?
+                  </span>
                   <button
                     onClick={remove}
                     disabled={busy}
-                    className="normal-case text-[var(--color-son)] underline disabled:opacity-40"
+                    className="btn btn-danger btn-sm"
                   >
-                    {busy ? 'đang xoá…' : 'xoá'}
+                    {busy ? 'Đang xoá…' : 'Xoá'}
                   </button>
                   <button
                     onClick={() => setConfirming(false)}
-                    className="normal-case underline"
+                    className="btn btn-quiet btn-sm"
                   >
-                    huỷ
+                    Huỷ
                   </button>
                 </>
               ) : (
                 <button
                   onClick={() => setConfirming(true)}
-                  className="normal-case underline hover:text-[var(--color-son)]"
+                  className="btn btn-quiet btn-sm hover:text-[var(--color-son)]"
                 >
-                  xoá
+                  Xoá
                 </button>
               ))}
           </span>
@@ -148,19 +150,19 @@ export default function Chapter({
       </div>
 
       {editing ? (
-        <div className="flex flex-col gap-2 rounded-lg border border-[var(--color-accent)] bg-[var(--color-surface)] p-3">
+        <div className="flex flex-col gap-2.5 rounded-[5px] border border-[var(--color-accent-line)] bg-[var(--color-surface)] p-3.5">
           <input
             value={titleDraft}
             onChange={(e) => setTitleDraft(e.target.value)}
             placeholder="Tên chương (không bắt buộc)"
-            className="rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-3 py-1.5 text-[14px]"
+            className="field"
           />
           <textarea
             ref={area}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={Math.min(26, draft.split('\n').length + 4)}
-            className="rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-3 py-2 display text-[16px] leading-[1.7]"
+            className="field resize-y font-serif text-[16.5px] leading-[1.75]"
           />
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -170,19 +172,17 @@ export default function Chapter({
             >
               {busy ? 'đang lưu…' : 'lưu thay đổi'}
             </button>
-            <button
-              onClick={onClose}
-              className="font-mono text-[12px] text-[var(--color-muted)] underline"
-            >
-              huỷ
+            <button onClick={onClose} className="btn btn-quiet btn-sm">
+              Huỷ
             </button>
             {dirty && (
-              <span className="font-mono text-[11px] text-[var(--color-accent)]">
+              <span className="flex items-center gap-1.5 text-[12px] text-[var(--color-accent)]">
+                <span className="dot dot-on" aria-hidden />
                 chưa lưu
               </span>
             )}
-            <span className="font-mono text-[11px] text-[var(--color-muted)]">
-              sửa lời thì phải tạo lại giọng đọc cho chương này
+            <span className="text-[11.5px] text-[var(--color-faint)]">
+              Sửa lời thì phải tạo lại giọng đọc cho chương này
             </span>
           </div>
         </div>
@@ -191,13 +191,13 @@ export default function Chapter({
           {chapter.title && (
             <h3 className="display text-[19px]">{chapter.title}</h3>
           )}
-          <p className="whitespace-pre-wrap display text-[17px] leading-[1.75]">
+          <p className="whitespace-pre-wrap font-serif text-[17.5px] leading-[1.78]">
             {chapter.textPlain}
           </p>
         </>
       )}
 
-      {error && <p className="font-mono text-[11px] text-[var(--color-accent)]">{error}</p>}
+      {error && <p className="text-[12px] text-[var(--color-son)]">{error}</p>}
     </div>
   );
 }

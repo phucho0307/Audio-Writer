@@ -25,9 +25,14 @@ function Switch({
         on ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-line)]'
       }`}
     >
+      {/* The knob takes its colour from the track it is sitting on rather
+          than being white in both states - white on near-black is a hole
+          punched in the control, not a switch. */}
       <span
-        className={`absolute top-[3px] h-4 w-4 rounded-full bg-white shadow transition-all ${
-          on ? 'left-[19px]' : 'left-[3px]'
+        className={`absolute top-[3px] h-4 w-4 rounded-full shadow transition-all ${
+          on
+            ? 'left-[19px] bg-[var(--color-on-accent)]'
+            : 'left-[3px] bg-[var(--color-muted)]'
         }`}
       />
     </button>
@@ -112,7 +117,7 @@ export default function PublishPanel({
       )}
 
       {asking && (
-        <div className="flex flex-col gap-2.5 rounded-md border border-[var(--color-accent)] bg-[var(--color-accent-soft)] p-3">
+        <div className="flex flex-col gap-2.5 rounded-[5px] border border-[var(--color-accent-line)] bg-[var(--color-accent-soft)] p-3.5">
           <p className="text-[13px]">
             Cho người khác rẽ nhánh truyện này?
           </p>
@@ -128,29 +133,29 @@ export default function PublishPanel({
               }
               className="btn btn-primary btn-sm"
             >
-              đăng · cho phép
+              Đăng · cho phép
             </button>
             <button
               disabled={busy}
               onClick={() =>
                 void save({ visibility: 'PUBLIC', allowForks: false })
               }
-              className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 font-mono text-[12px] disabled:opacity-40"
+              className="btn btn-ghost btn-sm"
             >
-              đăng · không cho phép
+              Đăng · không cho phép
             </button>
             <button
               disabled={busy}
               onClick={() => setAsking(false)}
-              className="px-2 py-1.5 font-mono text-[12px] text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+              className="btn btn-quiet btn-sm"
             >
-              huỷ
+              Huỷ
             </button>
           </div>
         </div>
       )}
 
-      {error && <p className="font-mono text-[11px] text-[var(--color-son)]">{error}</p>}
+      {error && <p className="text-[12px] text-[var(--color-son)]">{error}</p>}
     </section>
   );
 }

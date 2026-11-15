@@ -30,7 +30,7 @@ export default function Contents({
 
   return (
     <nav className="flex flex-col">
-      <h2 className="flex items-baseline justify-between gap-3 border-b border-[var(--color-line)] pb-2 font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)]">
+      <h2 className="flex items-baseline justify-between gap-3 border-b border-[var(--color-line)] pb-2 font-mono text-[12px] uppercase tracking-widest text-[var(--color-muted)]">
         <span>Mục lục</span>
         {editable && !rail && (
           <span className="normal-case tracking-normal opacity-70">
@@ -58,7 +58,7 @@ export default function Contents({
                     : 'items-baseline gap-4 py-2.5'
                 } ${open ? 'text-[var(--color-accent)]' : ''}`}
               >
-                <span className="w-5 flex-none font-mono text-[11px] tabular-nums text-[var(--color-muted)]">
+                <span className="w-5 flex-none font-mono text-[12px] tabular-nums text-[var(--color-muted)]">
                   {c.depth + 1}
                 </span>
                 <span
@@ -72,7 +72,7 @@ export default function Contents({
                 {/* The rail is narrow enough that word counts crowd out the
                     titles, which are the thing being scanned for. */}
                 {!rail && (
-                  <span className="flex flex-none items-baseline gap-3 font-mono text-[10.5px] text-[var(--color-muted)]">
+                  <span className="flex flex-none items-baseline gap-3 font-mono text-[12px] text-[var(--color-muted)]">
                     {c.authorType === 'AI' && (
                       <span className="text-[var(--color-accent)]">AI</span>
                     )}
@@ -81,7 +81,7 @@ export default function Contents({
                   </span>
                 )}
                 {rail && c.authorType === 'AI' && (
-                  <span className="flex-none font-mono text-[9px] text-[var(--color-accent)]">
+                  <span className="flex-none font-mono text-[12px] text-[var(--color-accent)]">
                     AI
                   </span>
                 )}
@@ -92,7 +92,7 @@ export default function Contents({
 
         {lockedCount > 0 && (
           <li className="flex items-baseline gap-2 border-b border-[var(--color-line)] py-2 opacity-50">
-            <span className="w-5 flex-none font-mono text-[11px]">🔒</span>
+            <span className="w-5 flex-none font-mono text-[12px]">🔒</span>
             <span className="flex-1 text-[13px] text-[var(--color-muted)]">
               Còn {lockedCount} chương chưa mở khoá
             </span>
@@ -101,7 +101,7 @@ export default function Contents({
       </ol>
 
       {editable && rail && (
-        <p className="pt-2 font-mono text-[10px] text-[var(--color-muted)]">
+        <p className="pt-2 font-mono text-[12px] text-[var(--color-muted)]">
           bấm vào chương để sửa
         </p>
       )}

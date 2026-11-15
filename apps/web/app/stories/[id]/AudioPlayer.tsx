@@ -361,7 +361,7 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
                 key={r}
                 onClick={() => setRate(r)}
                 aria-pressed={rate === r}
-                className={`font-mono text-[11px] tabular-nums transition-colors ${
+                className={`font-mono text-[12px] tabular-nums transition-colors ${
                   rate === r
                     ? 'font-medium text-[var(--color-accent)]'
                     : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
@@ -386,13 +386,13 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
                   active ? 'text-[var(--color-accent)]' : ''
                 }`}
               >
-                <span className="w-5 flex-none font-mono text-[11px] tabular-nums text-[var(--color-muted)]">
+                <span className="w-5 flex-none font-mono text-[12px] tabular-nums text-[var(--color-muted)]">
                   {active ? '▶' : c.depth + 1}
                 </span>
                 <span className="min-w-0 flex-1 truncate text-[13px]">
                   {c.locked ? '🔒 Chương bị khoá' : c.preview}
                 </span>
-                <span className="flex-none font-mono text-[10.5px] text-[var(--color-muted)]">
+                <span className="flex-none font-mono text-[12px] text-[var(--color-muted)]">
                   {working === c.depth
                     ? job && (
                         <NarrationProgress
@@ -413,7 +413,7 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
       </ol>
 
       {error && (
-        <p className="font-mono text-[11px] text-[var(--color-accent)]">
+        <p className="font-mono text-[12px] text-[var(--color-accent)]">
           {error}
         </p>
       )}

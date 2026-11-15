@@ -398,14 +398,14 @@ export default function StoryPage({
           <div className="flex flex-wrap items-center gap-4">
             <Link
               href="/"
-              className="font-mono text-[11px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+              className="font-mono text-[12px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
             >
               ← tất cả truyện
             </Link>
             {branchId && (
               <Link
                 href={`/stories/${id}/viet?branch=${branchId}`}
-                className="font-mono text-[11px] text-[var(--color-accent)] hover:underline"
+                className="font-mono text-[12px] text-[var(--color-accent)] hover:underline"
               >
                 ✎ phòng viết chung
               </Link>
@@ -436,7 +436,7 @@ export default function StoryPage({
               <h1 className="display text-[2.1rem] leading-[1.1]">
                 {story.title}
               </h1>
-              <span className="font-mono text-[11px] text-[var(--color-muted)] opacity-0 transition-opacity group-hover:opacity-100">
+              <span className="font-mono text-[12px] text-[var(--color-muted)] opacity-0 transition-opacity group-hover:opacity-100">
                 sửa
               </span>
             </button>
@@ -452,11 +452,11 @@ export default function StoryPage({
             ))}
             <button
               onClick={() => setEditGenres((v) => !v)}
-              className="rounded-full border border-dashed border-[var(--color-line)] px-2 py-0.5 font-mono text-[11px] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
+              className="rounded-full border border-dashed border-[var(--color-line)] px-2 py-0.5 font-mono text-[12px] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
             >
               {story.genres.length ? "sửa thể loại" : "+ thể loại"}
             </button>
-            <span className="font-mono text-[11px] text-[var(--color-muted)]">
+            <span className="font-mono text-[12px] text-[var(--color-muted)]">
               {story.wordCount} từ
             </span>
           </div>
@@ -492,7 +492,7 @@ export default function StoryPage({
         {/* ---- branch switcher ---- */}
         {story.branches.length > 1 && (
           <div className="flex flex-col gap-2">
-            <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)]">
+            <span className="font-mono text-[12px] uppercase tracking-widest text-[var(--color-muted)]">
               Nhánh · {story.branches.length}
             </span>
             <div className="flex flex-wrap gap-1.5">
@@ -513,12 +513,12 @@ export default function StoryPage({
                         ? `${b.isRoot ? "main" : b.name} · đang đăng`
                         : b.name}
                       {b.isDraft && (
-                        <span className="ml-1.5 font-mono text-[10px] opacity-70">
+                        <span className="ml-1.5 font-mono text-[12px] opacity-70">
                           riêng tư
                         </span>
                       )}
                       {b.forkedAtDepth !== null && (
-                        <span className="ml-1.5 font-mono text-[10px] opacity-60">
+                        <span className="ml-1.5 font-mono text-[12px] opacity-60">
                           ⑂{b.forkedAtDepth}
                         </span>
                       )}
@@ -529,7 +529,7 @@ export default function StoryPage({
                       knows about those - so the reason is shown, not guessed. */}
                     {mine &&
                       (confirmBranch === b.id ? (
-                        <span className="flex items-center gap-1.5 font-mono text-[10px]">
+                        <span className="flex items-center gap-1.5 font-mono text-[12px]">
                           {!b.isDraft && (
                             <button
                               onClick={() => void hideBranch(b.id)}
@@ -591,7 +591,7 @@ export default function StoryPage({
               </p>
             </div>
             <label className="flex flex-col gap-1.5">
-              <span className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
+              <span className="font-mono text-[12px] uppercase tracking-wide text-[var(--color-muted)]">
                 Tên nhánh
               </span>
               <input
@@ -617,7 +617,7 @@ export default function StoryPage({
           <section className="flex flex-col gap-3">
             <button
               onClick={() => setShowSettings((v) => !v)}
-              className="flex items-center gap-2 self-start font-mono text-[11px] uppercase tracking-widest text-[var(--color-muted)] hover:text-[var(--color-ink)]"
+              className="flex items-center gap-2 self-start font-mono text-[12px] uppercase tracking-widest text-[var(--color-muted)] hover:text-[var(--color-ink)]"
             >
               Cài đặt truyện {showSettings ? '▴' : '▾'}
             </button>
@@ -626,7 +626,7 @@ export default function StoryPage({
         {/* ---- writer: pricing ---- */}
         {read.access.isOwner && (
           <section className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-3 font-mono text-[11px] text-[var(--color-muted)]">
+            <div className="flex flex-wrap items-center gap-3 font-mono text-[12px] text-[var(--color-muted)]">
               <span>{story.viewCount} lượt xem</span>
               <span>·</span>
               <span>
@@ -681,13 +681,13 @@ export default function StoryPage({
                     }
                     className="w-20 rounded-md border border-[var(--color-line)] bg-[var(--color-ground)] px-2 py-1 font-mono"
                   />
-                  <span className="font-mono text-[11px] text-[var(--color-muted)]">
+                  <span className="font-mono text-[12px] text-[var(--color-muted)]">
                     0 = miễn phí hoàn toàn
                   </span>
                 </label>
 
                 {story.unlockPrice > 0 && (
-                  <p className="font-mono text-[11px] text-[var(--color-muted)]">
+                  <p className="font-mono text-[12px] text-[var(--color-muted)]">
                     bạn nhận {Math.round((story.unlockPrice * 70) / 100)} credit
                     mỗi lượt mở khoá (70%)
                   </p>
@@ -809,13 +809,13 @@ export default function StoryPage({
                   ? "Đang mở khoá…"
                   : `Mở khoá · ${read.access.unlockPrice} credit`}
               </button>
-              <span className="font-mono text-[11px] text-[var(--color-muted)]">
+              <span className="font-mono text-[12px] text-[var(--color-muted)]">
                 bạn có {wallet?.readCredits ?? 0} credit
               </span>
               {(wallet?.readCredits ?? 0) < read.access.unlockPrice && (
                 <button
                   onClick={async () => setWallet(await api.buyReadCredits(20))}
-                  className="rounded-md border border-[var(--color-line)] px-3 py-1.5 font-mono text-[11px] hover:border-[var(--color-accent)]"
+                  className="rounded-md border border-[var(--color-line)] px-3 py-1.5 font-mono text-[12px] hover:border-[var(--color-accent)]"
                 >
                   nạp 20 · dev
                 </button>
@@ -828,12 +828,12 @@ export default function StoryPage({
         {options && (
           <section className="flex flex-col gap-3 rounded-lg border border-[var(--color-accent)] bg-[var(--color-surface)] p-4">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--color-accent)]">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[var(--color-accent)]">
                 Chọn hướng đi · mỗi lựa chọn tạo một nhánh mới
               </span>
               <button
                 onClick={() => setOptions(null)}
-                className="font-mono text-[11px] text-[var(--color-muted)] hover:underline"
+                className="font-mono text-[12px] text-[var(--color-muted)] hover:underline"
               >
                 đóng
               </button>
@@ -847,7 +847,7 @@ export default function StoryPage({
                   className="flex flex-col gap-1.5 rounded-md border border-[var(--color-line)] p-3 text-left transition-colors hover:border-[var(--color-accent)] disabled:opacity-50"
                 >
                   <span className="font-medium">{o.title}</span>
-                  <span className="font-mono text-[10px] uppercase tracking-wide text-[var(--color-muted)]">
+                  <span className="font-mono text-[12px] uppercase tracking-wide text-[var(--color-muted)]">
                     {o.tone}
                   </span>
                   <span className="text-[13px] text-[var(--color-muted)]">
@@ -923,7 +923,7 @@ export default function StoryPage({
             onChange={(e) => setDraft(e.target.value)}
             rows={8}
             placeholder="Viết tiếp câu chuyện…"
-            className="w-full resize-y rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-3.5 display text-[16px] leading-[1.75] outline-none placeholder:font-sans placeholder:text-[14px] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]"
+            className="w-full resize-y rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-3.5 font-serif text-[16.5px] leading-[1.75] outline-none placeholder:font-sans placeholder:text-[14px] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]"
           />
 
           <div className="flex flex-wrap items-center gap-2">
@@ -949,7 +949,7 @@ export default function StoryPage({
 
             {/* How much the AI writes per turn. Short keeps the writer in charge. */}
             <div className="flex items-center gap-1.5">
-              <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--color-muted)]">
+              <span className="font-mono text-[12px] uppercase tracking-widest text-[var(--color-muted)]">
                 đoạn
               </span>
               <div className="flex overflow-hidden rounded-md border border-[var(--color-line)]">
@@ -1007,7 +1007,7 @@ export default function StoryPage({
           )}
 
           {quota && (
-            <p className="font-mono text-[11px] text-[var(--color-muted)]">
+            <p className="font-mono text-[12px] text-[var(--color-muted)]">
               {quota.unlimited ? (
                 <>khoá riêng · không giới hạn lượt AI</>
               ) : (

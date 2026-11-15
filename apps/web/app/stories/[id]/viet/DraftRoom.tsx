@@ -361,7 +361,7 @@ export default function DraftRoom({
       {/* invitations */}
       {room && (
         <details className="border-t border-[var(--color-line)] pt-3">
-          <summary className="cursor-pointer font-mono text-[11px] text-[var(--color-muted)]">
+          <summary className="cursor-pointer font-mono text-[12px] text-[var(--color-muted)]">
             Người viết chung ({room.collaborators.length + 1})
           </summary>
 
@@ -369,7 +369,7 @@ export default function DraftRoom({
             <li className="flex items-center gap-2 text-[13px]">
               <Dot handle={room.owner.handle} color={colorFor(room.owner.handle)} />
               <span>@{room.owner.handle}</span>
-              <span className="font-mono text-[10.5px] text-[var(--color-muted)]">
+              <span className="font-mono text-[12px] text-[var(--color-muted)]">
                 chủ nhánh
               </span>
             </li>
@@ -377,12 +377,12 @@ export default function DraftRoom({
               <li key={c.id} className="flex items-center gap-2 text-[13px]">
                 <Dot handle={c.handle} color={colorFor(c.handle)} />
                 <span>@{c.handle}</span>
-                <span className="font-mono text-[10.5px] text-[var(--color-muted)]">
+                <span className="font-mono text-[12px] text-[var(--color-muted)]">
                   {c.role === 'VIEWER' ? 'chỉ xem' : 'viết được'}
                 </span>
                 <button
                   onClick={() => revoke(c)}
-                  className="ml-auto font-mono text-[10.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+                  className="ml-auto font-mono text-[12px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
                 >
                   gỡ
                 </button>
@@ -400,14 +400,14 @@ export default function DraftRoom({
             <button
               onClick={() => invite('EDITOR')}
               disabled={busy !== null}
-              className="font-mono text-[11.5px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
+              className="font-mono text-[12px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
             >
               mời viết
             </button>
             <button
               onClick={() => invite('VIEWER')}
               disabled={busy !== null}
-              className="font-mono text-[11.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)] disabled:opacity-40"
+              className="font-mono text-[12px] text-[var(--color-muted)] hover:text-[var(--color-accent)] disabled:opacity-40"
             >
               mời xem
             </button>
@@ -430,7 +430,7 @@ function Dot({
   return (
     <span
       title={self ? `${handle} (bạn)` : handle}
-      className="grid h-6 w-6 flex-none place-items-center rounded-full font-mono text-[10px] font-medium text-white"
+      className="grid h-6 w-6 flex-none place-items-center rounded-full font-mono text-[12px] font-medium text-white"
       style={{ background: color }}
     >
       {handle.slice(0, 2)}

@@ -86,7 +86,7 @@ export default function WritePage({
         >
           ← {story.title}
         </Link>
-        <span className="font-mono text-[11px] text-[var(--color-muted)]">
+        <span className="font-mono text-[12px] text-[var(--color-muted)]">
           nhánh {branch.name}
           {branch.isRoot ? '' : ' (nhánh rẽ)'}
         </span>

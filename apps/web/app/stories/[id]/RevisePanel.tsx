@@ -77,7 +77,7 @@ export default function RevisePanel({
           </div>
           {naming ? (
             <div className="flex flex-col gap-2 rounded-md border border-[var(--color-accent)] bg-[var(--color-accent-soft)] p-3">
-              <label className="font-mono text-[11px] uppercase tracking-wide text-[var(--color-muted)]">
+              <label className="font-mono text-[12px] uppercase tracking-wide text-[var(--color-muted)]">
                 Tên bản sửa
               </label>
               <input
@@ -87,7 +87,7 @@ export default function RevisePanel({
                 onKeyDown={(e) => e.key === 'Enter' && void revise()}
                 maxLength={80}
                 placeholder="ví dụ: sửa lỗi chính tả chương 3"
-                className="rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] px-3 py-1.5 text-[14px]"
+                className="field"
               />
               <p className="text-[11px] text-[var(--color-muted)]">
                 Chỉ bạn thấy tên này, để phân biệt các bản sửa với nhau. Bỏ
@@ -99,22 +99,22 @@ export default function RevisePanel({
                   disabled={busy !== null}
                   className="btn btn-primary btn-sm"
                 >
-                  {busy === 'revise' ? 'đang tạo…' : 'tạo bản sửa'}
+                  {busy === 'revise' ? 'Đang tạo…' : 'Tạo bản sửa'}
                 </button>
                 <button
                   onClick={() => setNaming(false)}
-                  className="font-mono text-[12px] text-[var(--color-muted)] underline"
+                  className="btn btn-quiet btn-sm"
                 >
-                  huỷ
+                  Huỷ
                 </button>
               </div>
             </div>
           ) : (
             <button
               onClick={() => setNaming(true)}
-              className="self-start rounded-md border border-[var(--color-line)] px-3 py-1.5 font-mono text-[12px] transition-colors hover:border-[var(--color-accent)]"
+              className="btn btn-ghost btn-sm self-start"
             >
-              ⑂ tạo bản sửa
+              <span aria-hidden>⑂</span> Tạo bản sửa
             </button>
           )}
         </>
@@ -132,12 +132,14 @@ export default function RevisePanel({
             disabled={busy !== null}
             className="self-start btn btn-primary btn-sm"
           >
-            {busy === 'promote' ? 'đang cập nhật…' : 'dùng nhánh này làm bản chính'}
+            {busy === 'promote'
+              ? 'Đang cập nhật…'
+              : 'Dùng nhánh này làm bản chính'}
           </button>
         </>
       )}
 
-      {error && <p className="font-mono text-[11px] text-[var(--color-son)]">{error}</p>}
+      {error && <p className="text-[12px] text-[var(--color-son)]">{error}</p>}
     </section>
   );
 }
