@@ -1040,7 +1040,7 @@ export default function StoryPage({
                 disabled={!draft.trim() || busy !== null}
                 className="btn btn-ghost"
               >
-                Lưu vào chương hiện tại
+                Lưu
               </button>
             )}
 
@@ -1100,7 +1100,7 @@ export default function StoryPage({
           </div>
 
           <p className="text-[12px] text-[var(--color-faint)]">
-            Tạo chương mới: đăng thành chương tiếp theo. Lưu vào chương hiện tại: viết nối vào cuối chương cuối.
+            Lưu: viết nối vào cuối chương hiện tại. Tạo chương mới: đăng thành chương tiếp theo.
           </p>
 
           {error && (
