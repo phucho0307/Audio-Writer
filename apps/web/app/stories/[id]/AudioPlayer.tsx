@@ -11,6 +11,7 @@ import {
 import { awaitNarration, NarrationFailed } from '@/lib/narration';
 import NarrationProgress from '@/app/NarrationProgress';
 import VoicePicker from '@/app/VoicePicker';
+import { setNarrating } from '@/lib/ambience';
 
 function mmss(ms: number | null): string {
   if (!ms) return '--:--';
@@ -60,6 +61,8 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
   // above is which chapter is loaded; these are whether it is moving and
   // where it is up to.
   const [isPlaying, setIsPlaying] = useState(false);
+  const ambienceId = `branch:${branchId}`;
+  useEffect(() => () => setNarrating(ambienceId, false), [ambienceId]);
   const [at, setAt] = useState(0);
   const [length, setLength] = useState<number | null>(null);
 
@@ -241,9 +244,23 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
           instead of tearing down the element and losing the transport. */}
       <audio
         ref={audioRef}
-        onEnded={onEnded}
-        onPlay={() => setIsPlaying(true)}
-        onPause={() => setIsPlaying(false)}
+        onEnded={() => {
+          // `ended` does not reliably fire `pause`, so the room would stay
+          // lit after the last track in a playlist finished. If another
+          // chapter follows, its own `play` raises it again before the ease
+          // has travelled far.
+          setIsPlaying(false);
+          setNarrating(ambienceId, false);
+          onEnded();
+        }}
+        onPlay={() => {
+          setIsPlaying(true);
+          setNarrating(ambienceId, true);
+        }}
+        onPause={() => {
+          setIsPlaying(false);
+          setNarrating(ambienceId, false);
+        }}
         onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) =>
           setLength(

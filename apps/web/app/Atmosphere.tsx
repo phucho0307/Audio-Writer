@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { calm, MOTION_EVENT } from '@/lib/motion';
+import { isNarrating, onNarrating } from '@/lib/ambience';
 
 /**
  * The fog the whole site sits in.
@@ -37,6 +38,7 @@ const FRAG = `
   uniform vec3  uMist;
   uniform vec3  uAccent;
   uniform float uFade;
+  uniform float uLive;
 
   // Value noise. Cheaper than simplex and indistinguishable once it has been
   // through five octaves of fbm and dimmed to a tenth of its strength.
@@ -72,6 +74,7 @@ const FRAG = `
     vec2 uv = vUv;
     vec2 p = vec2(uv.x * (uRes.x / uRes.y), uv.y);
 
+    // While a story is being read aloud the smoke moves a little more.
     float t = uTime * 0.02;
 
     // Two layers moving at different speeds and directions. One layer reads as
@@ -95,8 +98,11 @@ const FRAG = `
     float glow = exp(-d * 2.35);
     float flicker = 0.88
       + 0.12 * sin(uTime * 0.9)
-      + 0.05 * sin(uTime * 2.3 + 1.7);
-    col += uAccent * glow * 0.3 * flicker;
+      + 0.05 * sin(uTime * 2.3 + 1.7)
+      // A slower swell on top while narration plays, so the room reads as
+      // listening rather than as a brightness setting that got turned up.
+      + uLive * 0.10 * sin(uTime * 0.55);
+    col += uAccent * glow * (0.3 + uLive * 0.16) * flicker;
 
     // Corners pulled down, so the page has an edge it fades into.
     float vig = smoothstep(1.15, 0.25, distance(uv, vec2(0.5)));
@@ -180,6 +186,7 @@ export default function Atmosphere() {
         uMist: { value: pick('--color-mist', '#6f8a86') },
         uAccent: { value: pick('--color-accent', '#c8a24e') },
         uFade: { value: 0 },
+        uLive: { value: 0 },
       };
 
       const mesh = new THREE.Mesh(
@@ -216,6 +223,13 @@ export default function Atmosphere() {
         attributeFilter: ['data-theme'],
       });
 
+      // Eased towards its target rather than set, so starting and stopping
+      // playback is a change in the weather and not a light switch.
+      let liveTarget = isNarrating() ? 1 : 0;
+      const stopListening = onNarrating((live) => {
+        liveTarget = live ? 1 : 0;
+      });
+
       let raf = 0;
       let last = performance.now();
       const start = last;
@@ -232,7 +246,10 @@ export default function Atmosphere() {
 
         // Time advances by elapsed seconds rather than frame count, so the
         // drift is the same speed on a 60Hz panel and a 144Hz one.
-        uniforms.uTime.value += Math.min((now - last) / 1000, 0.05);
+        const dt = Math.min((now - last) / 1000, 0.05);
+        uniforms.uTime.value += dt * (1 + uniforms.uLive.value * 0.35);
+        uniforms.uLive.value +=
+          (liveTarget - uniforms.uLive.value) * Math.min(dt * 1.2, 1);
         last = now;
 
         // Faded in over the first second: appearing at full strength in frame
@@ -245,6 +262,7 @@ export default function Atmosphere() {
 
       dispose = () => {
         cancelAnimationFrame(raf);
+        stopListening();
         window.removeEventListener('resize', onResize);
         themes.disconnect();
         mesh.geometry.dispose();

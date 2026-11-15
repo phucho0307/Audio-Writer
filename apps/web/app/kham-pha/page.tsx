@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api, type Story } from '@/lib/api';
 import Reveal from '../Reveal';
 import SpiritText from '../SpiritText';
+import Tilt, { Sheen } from '../Tilt';
+import { calm, gsap, useGSAP } from '@/lib/motion';
 
 /**
  * The library.
@@ -143,6 +145,35 @@ export default function Explore() {
  * and a new cover redecorates it for free.
  */
 function Featured({ story }: { story: Story }) {
+  const backdrop = useRef<HTMLDivElement>(null);
+
+  /**
+   * The wash drifts against the scroll.
+   *
+   * `scrub` rather than `toggleActions`, because this is a position tied to
+   * the scrollbar rather than something that plays - and `ease: 'none'`, since
+   * any other easing makes the backdrop lag the page in a way that reads as
+   * jank rather than as depth. Only the blurred copy moves; nothing anyone is
+   * reading does.
+   */
+  useGSAP(
+    () => {
+      const el = backdrop.current;
+      if (!el?.parentElement || calm()) return;
+      gsap.to(el, {
+        yPercent: 10,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: el.parentElement,
+          start: 'top bottom',
+          end: 'bottom top',
+          scrub: true,
+        },
+      });
+    },
+    { scope: backdrop, dependencies: [story.id], revertOnUpdate: true },
+  );
+
   return (
     <Reveal
       as="section"
@@ -151,8 +182,9 @@ function Featured({ story }: { story: Story }) {
     >
       {story.coverUrl && (
         <div
+          ref={backdrop}
           aria-hidden
-          className="absolute inset-0 scale-110 bg-cover bg-center opacity-35 blur-3xl"
+          className="absolute inset-0 scale-125 bg-cover bg-center opacity-35 blur-3xl"
           style={{ backgroundImage: `url(${story.coverUrl})` }}
         />
       )}
@@ -162,17 +194,17 @@ function Featured({ story }: { story: Story }) {
       />
 
       <div className="relative flex flex-col gap-7 p-6 sm:flex-row sm:items-center sm:gap-9 sm:p-9">
-        <Link
-          href={`/doc/${story.id}`}
-          className="group block w-[150px] flex-none sm:w-[196px]"
-        >
-          <div className="cover aspect-[3/4]">
-            {story.coverUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={story.coverUrl} alt="" />
-            )}
-          </div>
-        </Link>
+        <Tilt className="w-[150px] flex-none sm:w-[196px]">
+          <Link href={`/doc/${story.id}`} className="group block">
+            <div className="cover aspect-[3/4]">
+              {story.coverUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={story.coverUrl} alt="" />
+              )}
+              <Sheen />
+            </div>
+          </Link>
+        </Tilt>
 
         <div className="flex min-w-0 flex-col items-start gap-4">
           <span className="label label-accent flex items-center gap-2">

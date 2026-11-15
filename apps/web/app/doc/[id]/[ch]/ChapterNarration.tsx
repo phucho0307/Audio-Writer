@@ -5,6 +5,7 @@ import { ApiError, api, type RenderStatus, type Voice } from '@/lib/api';
 import { awaitNarration, NarrationFailed } from '@/lib/narration';
 import NarrationProgress from '@/app/NarrationProgress';
 import VoicePicker from '@/app/VoicePicker';
+import { setNarrating } from '@/lib/ambience';
 
 function mmss(seconds: number | null): string {
   if (seconds === null || !Number.isFinite(seconds)) return '--:--';
@@ -52,6 +53,12 @@ export default function ChapterNarration({
   const [length, setLength] = useState<number | null>(null);
 
   const audioRef = useRef<HTMLAudioElement>(null);
+
+  // Identifies this player to the page's atmosphere. Leaving the chapter has
+  // to release it, or navigating away mid-sentence would leave the room lit
+  // for a story nothing is playing.
+  const ambienceId = `chapter:${branchId}:${depth}`;
+  useEffect(() => () => setNarrating(ambienceId, false), [ambienceId]);
 
   useEffect(() => {
     api
@@ -146,9 +153,18 @@ export default function ChapterNarration({
         ref={audioRef}
         src={url ?? undefined}
         preload="metadata"
-        onPlay={() => setPlaying(true)}
-        onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
+        onPlay={() => {
+          setPlaying(true);
+          setNarrating(ambienceId, true);
+        }}
+        onPause={() => {
+          setPlaying(false);
+          setNarrating(ambienceId, false);
+        }}
+        onEnded={() => {
+          setPlaying(false);
+          setNarrating(ambienceId, false);
+        }}
         onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) =>
           setLength(
