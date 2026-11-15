@@ -191,6 +191,23 @@ async function writeInRoom(branchId, token, text) {
     const siblings = await p.branch.count({ where: { forkedFromBranchId: main, ownerId: guest.id } });
     check('no second branch sprouted', siblings === 1, `${siblings}`);
 
+    console.log('\n=== the guest deleting their branch chapter by chapter ===');
+    // Found by hand: deleting a fork's only chapter left an empty branch
+    // behind - still listed everywhere, leading nowhere.
+    const del = async (contributionId) => {
+      const r = await fetch(`${API}/contributions/${contributionId}`, { method: 'DELETE', headers: headers(guestT) });
+      return { status: r.status, body: await r.json() };
+    };
+    const forksBefore = (await p.story.findUnique({ where: { id: story.id } })).branchCount;
+    let d = await del(again.id);
+    check('deleting the tip keeps the branch', d.status === 200 && !d.body.branchDeleted, `HTTP ${d.status}`);
+    check('branch still exists with one chapter', (await p.contribution.count({ where: { branchId: landed.branchId } })) === 1);
+    d = await del(landed.id);
+    check('deleting its only chapter reports the branch gone', d.status === 200 && d.body.branchDeleted === true, `HTTP ${d.status}`);
+    check('branch row is gone', !(await p.branch.findUnique({ where: { id: landed.branchId } })));
+    const forksAfter = (await p.story.findUnique({ where: { id: story.id } })).branchCount;
+    check('story branch count went down by one', forksAfter === forksBefore - 1, `${forksBefore} -> ${forksAfter}`);
+
     console.log('\n=== the owner publishing from the same room ===');
     await writeInRoom(main, ownerT, 'Chương hai của tác giả.');
     r = await fetch(`${API}/branches/${main}/draft/commit`, {

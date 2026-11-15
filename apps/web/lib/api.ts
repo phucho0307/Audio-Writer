@@ -371,7 +371,7 @@ export const api = {
 
   /** Only the last chapter of a branch. */
   deleteChapter: (contributionId: string) =>
-    call<{ deleted: boolean; id: string }>(`/contributions/${contributionId}`, {
+    call<{ deleted: boolean; id: string; branchDeleted?: boolean; branchId?: string }>(`/contributions/${contributionId}`, {
       method: 'DELETE',
     }),
 

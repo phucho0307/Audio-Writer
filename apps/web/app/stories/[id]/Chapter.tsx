@@ -14,6 +14,7 @@ export default function Chapter({
   chapter,
   inherited,
   isLast,
+  onlyOfBranch = false,
   canEdit,
   viewerHandle = null,
   editing,
@@ -24,6 +25,8 @@ export default function Chapter({
   chapter: Contribution;
   inherited: boolean;
   isLast: boolean;
+  /** Its branch's only chapter of its own - deleting it deletes the branch. */
+  onlyOfBranch?: boolean;
   canEdit: boolean;
   /** Who is looking, so "bạn" is said only to the person who wrote it. */
   viewerHandle?: string | null;
@@ -73,8 +76,14 @@ export default function Chapter({
     setBusy(true);
     setError(null);
     try {
-      await api.deleteChapter(chapter.id);
+      const res = await api.deleteChapter(chapter.id);
       onClose();
+      // The branch went with its last chapter, so there is nothing left on
+      // this page to show. Back to the story itself - dropping ?branch=.
+      if (res.branchDeleted) {
+        window.location.href = window.location.pathname;
+        return;
+      }
       await onChange();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : (e as Error).message);
@@ -129,7 +138,9 @@ export default function Chapter({
                       says which one rather than just "are you sure?" - the
                       sentence is the safeguard. */}
                   <span className="text-[12px] text-[var(--color-son)]">
-                    Xoá chương {chapter.depth + 1}?
+                    {onlyOfBranch
+                      ? `Xoá chương ${chapter.depth + 1}? Đây là chương duy nhất của nhánh, nên nhánh cũng bị xoá.`
+                      : `Xoá chương ${chapter.depth + 1}?`}
                   </span>
                   <button
                     onClick={remove}

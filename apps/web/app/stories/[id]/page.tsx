@@ -834,6 +834,13 @@ export default function StoryPage({
               chapter={c}
               inherited={c.branchId !== branchId}
               isLast={i === shown.length - 1}
+              // The fork's only chapter of its own: deleting it deletes the
+              // fork, and the confirmation has to say so.
+              onlyOfBranch={
+                !currentBranch?.isRoot &&
+                shown.filter((x) => x.branchId === branchId).length === 1 &&
+                c.branchId === branchId
+              }
               canEdit={chaptersEditable}
               viewerHandle={user?.handle ?? null}
               editing={editingId === c.id}

@@ -25,6 +25,8 @@ export function forksAt(
     (b) =>
       !b.isRoot &&
       !b.isDraft &&
+      // An empty branch has nothing to read and its link leads nowhere.
+      (b._count?.contributions ?? 0) > 0 &&
       b.forkedFromBranchId === from &&
       b.forkedAtDepth === depth,
   );
@@ -33,7 +35,7 @@ export function forksAt(
 /** Every branch a reader may open, nearest split first. */
 export function readableForks(story: Story): BranchSummary[] {
   return story.branches
-    .filter((b) => !b.isRoot && !b.isDraft)
+    .filter((b) => !b.isRoot && !b.isDraft && (b._count?.contributions ?? 0) > 0)
     .sort((a, b) => (a.forkedAtDepth ?? 0) - (b.forkedAtDepth ?? 0));
 }
 

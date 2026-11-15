@@ -777,6 +777,21 @@ export class StoriesService {
       });
     }
 
+    // The only chapter a fork has of its own: removing it removes the fork.
+    //
+    // A fork and its first chapter are created as one act precisely so that
+    // empty branches never exist - but deleting that chapter used to leave
+    // one behind anyway: a branch with no chapters of its own, still listed
+    // in the switcher, on the shelf and under the chapter it split from, and
+    // leading to a chapter that no longer existed. Someone who pressed "Xoá"
+    // on it reasonably believed the branch was gone. Delegating to
+    // deleteBranch keeps its rules: owner only, refused if someone has built
+    // on it, and the story's counters corrected.
+    if (!branch.isRoot && chapter.parentId === null) {
+      await this.deleteBranch(branch.id);
+      return { deleted: true, id, branchDeleted: true, branchId: branch.id };
+    }
+
     return this.prisma.$transaction(async (tx) => {
       await tx.contribution.delete({ where: { id } });
 
@@ -1132,6 +1147,8 @@ export class StoriesService {
       where: {
         ownerId: user.id,
         isRoot: false,
+        // Nothing of their own on it, nothing to list.
+        contributions: { some: {} },
         story: {
           ownerId: { not: user.id },
           OR: [
