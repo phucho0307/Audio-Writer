@@ -1,11 +1,33 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ApiError, api, type RenderStatus, type Voice } from '@/lib/api';
 import { awaitNarration, NarrationFailed } from '@/lib/narration';
 import NarrationProgress from '@/app/NarrationProgress';
 import VoicePicker from '@/app/VoicePicker';
 import { setNarrating } from '@/lib/ambience';
+
+/** Remembered per browser: a listener who turns it on wants it on tomorrow. */
+const AUTO_KEY = 'aw-auto-next';
+const VOICE_KEY = 'aw-voice';
+const RATE_KEY = 'aw-rate';
+/** Set just before moving on, read by the next chapter's player. */
+const PLAY_ON_ARRIVAL = 'aw-play-on-arrival';
+const COUNTDOWN = 5;
+
+function load(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+function save(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+}
 
 function mmss(seconds: number | null): string {
   if (seconds === null || !Number.isFinite(seconds)) return '--:--';
@@ -26,10 +48,19 @@ function mmss(seconds: number | null): string {
 export default function ChapterNarration({
   branchId,
   depth,
+  next,
 }: {
   branchId: string;
   depth: number;
+  /** The chapter after this one on the same branch, if the reader can open it. */
+  next: { href: string; title: string } | null;
 }) {
+  const router = useRouter();
+  // Off by default: moving someone to another page uninvited is only fine
+  // once they have asked for it.
+  const [autoNext, setAutoNext] = useState(false);
+  /** Seconds left before moving on; null when no move is pending. */
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [voices, setVoices] = useState<Voice[]>([]);
   // Empty until the server says which voice is the default. Guessing a name
   // here ties the page to one provider: under any other driver the guess is an
@@ -61,14 +92,64 @@ export default function ChapterNarration({
   useEffect(() => () => setNarrating(ambienceId, false), [ambienceId]);
 
   useEffect(() => {
+    setAutoNext(load(AUTO_KEY) === '1');
+    const r = Number(load(RATE_KEY));
+    if ([1, 1.25, 1.5, 1.75, 2].includes(r)) setRate(r);
     api
       .voices()
       .then((v) => {
         setVoices(v.voices);
-        setVoice(v.default);
+        const kept = load(VOICE_KEY);
+        setVoice(kept && v.voices.some((x) => x.id === kept) ? kept : v.default);
       })
       .catch(() => {});
   }, []);
+
+  function chooseVoice(v: string) {
+    setVoice(v);
+    save(VOICE_KEY, v);
+  }
+  function chooseRate(r: number) {
+    setRate(r);
+    save(RATE_KEY, String(r));
+  }
+  function toggleAutoNext() {
+    const on = !autoNext;
+    setAutoNext(on);
+    save(AUTO_KEY, on ? '1' : '0');
+    if (!on) setCountdown(null);
+  }
+
+  // Arriving here because the previous chapter ended: carry on listening.
+  // The flag names this exact chapter, so a stale one from another tab or
+  // an old visit cannot start sound on a page nobody asked to hear.
+  const arrivedToPlay = useRef(false);
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(PLAY_ON_ARRIVAL) === `${branchId}:${depth}`) {
+        sessionStorage.removeItem(PLAY_ON_ARRIVAL);
+        arrivedToPlay.current = true;
+      }
+    } catch {}
+  }, [branchId, depth]);
+
+  // The countdown after a chapter ends. Cancelling or switching the setting
+  // off clears it; reaching zero moves on.
+  useEffect(() => {
+    if (countdown === null || !next) return;
+    if (countdown <= 0) {
+      try {
+        sessionStorage.setItem(PLAY_ON_ARRIVAL, `${branchId}:${depth + 1}`);
+      } catch {}
+      setCountdown(null);
+      // Client-side, so the browser still counts the earlier tap on play as
+      // permission to keep making sound.
+      router.push(next.href);
+      return;
+    }
+    const t = setTimeout(() => setCountdown((c) => (c === null ? null : c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [countdown, next, branchId, depth, router]);
 
   useEffect(() => {
     setUrl(null);
@@ -81,8 +162,15 @@ export default function ChapterNarration({
       .then((all) => {
         const c = all.find((x) => x.depth === depth);
         setUrl(c?.url ?? null);
+        if (arrivedToPlay.current) {
+          arrivedToPlay.current = false;
+          if (c?.url) setTimeout(() => void audioRef.current?.play().catch(() => {}), 60);
+          else void narrate();
+        }
       })
       .catch(() => {});
+    // narrate reads the current voice, which is in the dependencies already.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchId, depth, voice]);
 
   // Loading a source resets the rate, so it is reapplied per track.
@@ -164,6 +252,7 @@ export default function ChapterNarration({
         onEnded={() => {
           setPlaying(false);
           setNarrating(ambienceId, false);
+          if (autoNext && next) setCountdown(COUNTDOWN);
         }}
         onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) =>
@@ -241,6 +330,7 @@ export default function ChapterNarration({
               {label}
             </span>
             <span className="tabular-nums">{rate}×</span>
+            {autoNext && <span title="Tự chuyển chương đang bật">· tự chuyển</span>}
             <span aria-hidden>{open ? '▴' : '▾'}</span>
           </button>
         </div>
@@ -265,21 +355,39 @@ export default function ChapterNarration({
                 aria-expanded={open}
                 className="btn btn-quiet text-[11.5px]"
               >
-                {label} · {rate}× <span aria-hidden>{open ? '▴' : '▾'}</span>
+                {label} · {rate}×{autoNext ? ' · tự chuyển' : ''} <span aria-hidden>{open ? '▴' : '▾'}</span>
               </button>
             </>
           )}
         </div>
       )}
 
+      {countdown !== null && next && (
+        <div
+          role="status"
+          className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-[5px] border border-[var(--color-accent-line)] bg-[var(--color-accent-soft)] px-3 py-2 text-[13px]"
+        >
+          <span className="min-w-0 flex-1">
+            Hết chương. Sang <span className="font-medium">{next.title}</span> sau{' '}
+            <span className="tabular-nums text-[var(--color-accent)]">{countdown}s</span>
+          </span>
+          <button onClick={() => setCountdown(0)} className="btn btn-primary btn-sm">
+            Nghe luôn
+          </button>
+          <button onClick={() => setCountdown(null)} className="btn btn-quiet btn-sm">
+            Huỷ
+          </button>
+        </div>
+      )}
+
       {open && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-[var(--color-line)] pt-3">
-          <VoicePicker voices={voices} value={voice} onChange={setVoice} />
+          <VoicePicker voices={voices} value={voice} onChange={chooseVoice} />
           <div className="ml-auto flex items-center gap-1">
             {[1, 1.25, 1.5, 1.75, 2].map((r) => (
               <button
                 key={r}
-                onClick={() => setRate(r)}
+                onClick={() => chooseRate(r)}
                 aria-pressed={rate === r}
                 className={`rounded-[3px] px-1.5 py-1 text-[11.5px] tabular-nums transition-colors ${
                   rate === r
@@ -290,6 +398,27 @@ export default function ChapterNarration({
                 {r}×
               </button>
             ))}
+          </div>
+          <div className="flex w-full cursor-pointer items-center gap-2.5 text-[12.5px] text-[var(--color-muted)]">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={autoNext}
+              onClick={toggleAutoNext}
+              className={`relative h-[18px] w-[32px] flex-none rounded-full transition-colors ${
+                autoNext ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-line-strong)]'
+              }`}
+            >
+              <span
+                aria-hidden
+                className={`absolute top-[2px] h-[14px] w-[14px] rounded-full bg-white shadow transition-[left] ${
+                  autoNext ? 'left-[16px]' : 'left-[2px]'
+                }`}
+              />
+            </button>
+            <span onClick={toggleAutoNext}>
+              Tự chuyển chương · nghe hết thì sang chương tiếp
+            </span>
           </div>
         </div>
       )}

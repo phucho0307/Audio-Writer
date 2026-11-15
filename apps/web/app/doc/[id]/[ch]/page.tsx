@@ -258,7 +258,20 @@ export default function Reader({
 
         {current && <BranchBanner story={story} branch={current} />}
 
-        <ChapterNarration branchId={read.branch.id} depth={depth} />
+        <ChapterNarration
+          branchId={read.branch.id}
+          depth={depth}
+          next={
+            next !== null
+              ? {
+                  href: `/doc/${id}/${next}${q}`,
+                  title:
+                    chapters.find((c) => c.depth === depth + 1)?.title ??
+                    `Chương ${next}`,
+                }
+              : null
+          }
+        />
 
         <article ref={article} className="prose-read">
           {/* The chapter's own document - bold, italics, lists - falling back
