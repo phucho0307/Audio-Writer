@@ -154,6 +154,16 @@ async function writeInRoom(branchId, token, text) {
     check('branch is named after them', own?.name === `@${guest.handle}`, own?.name);
     check('split from main at chapter 1', own?.forkedFromBranchId === main && own?.forkedAtDepth === 0);
 
+    // A fork's opening chapter must reach the retrieval index like any other
+    // commit. It did not: only commit() announced chapters, so every fork's
+    // first chapter was invisible to the AI continuing that branch.
+    let indexed = 0;
+    for (let i = 0; i < 20 && !indexed; i++) {
+      indexed = await p.ragChunk.count({ where: { contributionId: landed.id } });
+      if (!indexed) await sleep(1000);
+    }
+    check("the branch's first chapter was indexed", indexed > 0, `${indexed} chunk(s)`);
+
     const mainRow = await p.branch.findUnique({ where: { id: main } });
     const storyRow = await p.story.findUnique({ where: { id: story.id } });
     check('main did not move', mainRow.depth === 0, `depth ${mainRow.depth}`);

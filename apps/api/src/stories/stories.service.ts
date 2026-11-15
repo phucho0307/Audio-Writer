@@ -1012,7 +1012,7 @@ export class StoriesService {
   ): Promise<Branch> {
     const user = await this.currentUser.current();
 
-    return this.prisma.$transaction(async (tx) => {
+    const branch = await this.prisma.$transaction(async (tx) => {
       const parent = await tx.branch.findUnique({ where: { id: branchId } });
       if (!parent) throw new NotFoundException(`Branch ${branchId} not found`);
 
@@ -1058,7 +1058,7 @@ export class StoriesService {
         });
       }
 
-      const branch = await tx.branch.create({
+      const created = await tx.branch.create({
         data: {
           storyId: parent.storyId,
           ownerId: user.id,
@@ -1076,7 +1076,7 @@ export class StoriesService {
       // never happened.
       const first = await tx.contribution.create({
         data: {
-          branchId: branch.id,
+          branchId: created.id,
           parentId: null,
           depth: dto.atDepth + 1,
           title: dto.title,
@@ -1091,7 +1091,7 @@ export class StoriesService {
       });
 
       await tx.branch.update({
-        where: { id: branch.id },
+        where: { id: created.id },
         data: { headContributionId: first.id, depth: first.depth },
       });
 
@@ -1100,8 +1100,19 @@ export class StoriesService {
         data: { branchCount: { increment: 1 }, updatedAt: new Date() },
       });
 
-      return { ...branch, headContributionId: first.id, depth: first.depth };
+      return { ...created, headContributionId: first.id, depth: first.depth };
     });
+
+    // A fork's first chapter is a committed chapter like any other, and has
+    // to be announced like one. It was not: the event lived only in
+    // `commit()`, so every fork's opening chapter was never indexed for
+    // retrieval - the AI continuing a branch could not see how it began.
+    this.events.emit('chapter.committed', {
+      contributionId: branch.headContributionId!,
+      branchId: branch.id,
+    });
+
+    return branch;
   }
 
   /**
@@ -1227,13 +1238,6 @@ export class StoriesService {
       } as ForkBranchDto,
       { invited: true },
     );
-
-    // The fork writes its first chapter itself, so announce it the way an
-    // ordinary commit would - it is indexed for retrieval like any other.
-    this.events.emit('chapter.committed', {
-      contributionId: branch.headContributionId!,
-      branchId: branch.id,
-    });
 
     return {
       contributionId: branch.headContributionId!,

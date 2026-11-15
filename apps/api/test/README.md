@@ -10,6 +10,7 @@ Run the API first (`npm run dev` in `apps/api`), then:
     node test/collab-room.js    # auth, convergence, persistence, read-only
     node test/draft-commit.js   # commit, the ghost-row race, invite edges
     node test/collab-branching.js  # who may append where; a guest's chapter becomes their own branch
+    node test/rag-access.js        # search never returns text the asker could not read
     node test/ai-in-room.js     # the model writing into a live room (spends AI quota)
     node test/rag-search.js     # indexes the craft corpus, then queries it
     node test/rag-pipeline.js   # a committed chapter indexes itself and is retrievable

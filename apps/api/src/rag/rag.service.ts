@@ -225,6 +225,38 @@ export class RagService {
     return pieces.length;
   }
 
+  /**
+   * Index every chapter that has never been indexed.
+   *
+   * Chapters index themselves when committed, which says nothing about the
+   * ones committed before indexing existed - or by a path that forgot to
+   * announce them, as forks did. Fifty chapters were sitting unindexed, so
+   * the model continuing any of the original stories retrieved nothing from
+   * them. Idempotent: an indexed chapter has chunks and is skipped, so this
+   * is safe to run on every start.
+   */
+  async backfillChapters(limit = 500): Promise<number> {
+    if (!this.embeddings.available) return 0;
+    const missing = await this.prisma.$queryRaw<{ id: string }[]>`
+      SELECT c.id FROM contributions c
+      WHERE length(trim(c."textPlain")) > 0
+        AND NOT EXISTS (SELECT 1 FROM rag_chunks r WHERE r."contributionId" = c.id)
+      ORDER BY c."createdAt"
+      LIMIT ${limit}
+    `;
+    let done = 0;
+    for (const { id } of missing) {
+      // One at a time: a backfill should never compete with a writer's
+      // request for the embedding quota.
+      try {
+        if ((await this.indexChapter(id)) > 0) done++;
+      } catch (e) {
+        this.logger.warn(`backfill skipped ${id.slice(0, 8)}: ${(e as Error).message}`);
+      }
+    }
+    return done;
+  }
+
   private async store(
     rows: {
       text: string;

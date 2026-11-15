@@ -1,4 +1,9 @@
-import { Injectable, Logger, type OnModuleInit } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  type OnApplicationBootstrap,
+  type OnModuleInit,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DomainEvents } from '../events/domain-events';
 import { RagService } from './rag.service';
@@ -16,7 +21,7 @@ import { RagService } from './rag.service';
  * performed on behalf of whoever happened to press the button.
  */
 @Injectable()
-export class RagIndexer implements OnModuleInit {
+export class RagIndexer implements OnModuleInit, OnApplicationBootstrap {
   private readonly logger = new Logger(RagIndexer.name);
 
   constructor(
@@ -39,5 +44,21 @@ export class RagIndexer implements OnModuleInit {
         );
       }
     });
+  }
+  /**
+   * Catch up on chapters that were never indexed, in the background.
+   *
+   * Not awaited: the API is serving the moment it has started, and a backfill
+   * that held up boot would make every restart slower by however many
+   * chapters are behind.
+   */
+  onApplicationBootstrap(): void {
+    if (this.config.get<string>('RAG_BACKFILL_ON_BOOT', 'true') !== 'true') return;
+    void this.rag
+      .backfillChapters()
+      .then((n) => {
+        if (n > 0) this.logger.log(`backfilled ${n} chapter(s) that had never been indexed`);
+      })
+      .catch((e: Error) => this.logger.warn(`backfill failed: ${e.message}`));
   }
 }
