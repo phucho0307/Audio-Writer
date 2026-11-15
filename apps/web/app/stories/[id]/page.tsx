@@ -301,7 +301,7 @@ export default function StoryPage({
     setBusy("delete");
     try {
       await api.deleteStory(id);
-      window.location.href = "/";
+      window.location.href = "/cua-toi";
     } catch (e) {
       setError((e as Error).message);
       setBusy(null);
@@ -340,7 +340,7 @@ export default function StoryPage({
         <p className="font-mono text-sm text-[var(--color-son)]">
           {error}
         </p>
-        <Link href="/" className="mt-4 inline-block text-sm underline">
+        <Link href="/cua-toi" className="mt-4 inline-block text-sm underline">
           ← Về trang chủ
         </Link>
       </main>
@@ -397,7 +397,7 @@ export default function StoryPage({
         <div className="flex flex-col gap-2">
           <div className="flex flex-wrap items-center gap-4">
             <Link
-              href="/"
+              href="/cua-toi"
               className="font-mono text-[12px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
             >
               ← tất cả truyện

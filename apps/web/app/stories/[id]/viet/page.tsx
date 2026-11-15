@@ -54,7 +54,7 @@ export default function WritePage({
     return (
       <main className="mx-auto max-w-3xl px-6 py-14">
         <p className="font-mono text-sm text-[var(--color-son)]">{error}</p>
-        <Link href="/" className="mt-4 inline-block text-sm underline">
+        <Link href="/cua-toi" className="mt-4 inline-block text-sm underline">
           Về trang chủ
         </Link>
       </main>

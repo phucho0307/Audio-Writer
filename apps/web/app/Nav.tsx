@@ -9,9 +9,10 @@ import Account from './Account';
  * leaving the whole bar dark while someone is three chapters into a story.
  */
 const LINKS = [
+  { href: '/', label: 'Trang chủ', match: [] as string[] },
   { href: '/kham-pha', label: 'Khám phá', match: ['/kham-pha', '/doc'] },
   { href: '/tham-khao', label: 'Tham khảo', match: ['/tham-khao'] },
-  { href: '/', label: 'Truyện của tôi', match: ['/stories'] },
+  { href: '/cua-toi', label: 'Truyện của tôi', match: ['/cua-toi', '/stories'] },
 ];
 
 export default function Nav() {
