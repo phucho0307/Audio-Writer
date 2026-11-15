@@ -133,6 +133,11 @@ export class StoriesService {
           title: dto.title,
           genres: dto.genres ?? [],
           language: dto.language ?? 'vi',
+          visibility: dto.visibility ?? Visibility.PRIVATE,
+          // A public story needs a fork policy (update() refuses one without),
+          // so a story created public gets one: the writer's, or "allowed".
+          allowForks:
+            dto.visibility === Visibility.PUBLIC ? (dto.allowForks ?? true) : null,
         },
       });
 
@@ -203,6 +208,9 @@ export class StoriesService {
       branches: canSeeDrafts
         ? story.branches
         : story.branches.filter((b) => !b.isDraft),
+      // How many other people have forked it. Non-zero on a public story
+      // means its chapters are locked and it can no longer be taken down.
+      forkedByOthers: await this.forkedByOthers(story),
     };
   }
 
@@ -217,6 +225,22 @@ export class StoriesService {
    */
   async update(id: string, dto: UpdateStoryDto) {
     const { story } = await this.ownedStory(id);
+
+    // Taking a public story down once others have forked it would take their
+    // branches with it: a private story is unreadable to anyone but its
+    // owner, so every fork of it would turn into a 404 for its own writer.
+    if (
+      dto.visibility !== undefined &&
+      dto.visibility !== story.visibility &&
+      story.visibility === Visibility.PUBLIC &&
+      (await this.forkedByOthers(story)) > 0
+    ) {
+      throw new ConflictException({
+        code: 'STORY_FORKED',
+        message:
+          'Đã có người đọc rẽ nhánh từ truyện này, nên không gỡ được nữa: gỡ đi thì nhánh của họ cũng mất chỗ dựa.',
+      });
+    }
 
     const visibility = dto.visibility ?? story.visibility;
     const allowForks =
@@ -253,7 +277,15 @@ export class StoriesService {
    * contributions, scenes and unlocks do the rest.
    */
   async remove(id: string) {
-    await this.ownedStory(id);
+    const { story } = await this.ownedStory(id);
+    // Deleting would cascade into other people's branches.
+    if ((await this.forkedByOthers(story)) > 0) {
+      throw new ConflictException({
+        code: 'STORY_FORKED',
+        message:
+          'Đã có người đọc rẽ nhánh từ truyện này, nên không xoá được: xoá truyện sẽ xoá luôn nhánh của họ.',
+      });
+    }
     await this.prisma.story.delete({ where: { id } });
     return { deleted: true, id };
   }
@@ -684,20 +716,26 @@ export class StoriesService {
       });
     }
 
-    // A published story is a fixed thing to everyone reading it. Changing a
-    // chapter under them is what `revise` exists for: work on a copy, then
-    // promote it, so the swap happens once and in the open.
+    // A published story locks once someone else has forked it - not before.
+    //
+    // It used to lock the moment it was published, which made fixing a typo
+    // in chapter 2 a revise-and-promote ritual even when nobody but its writer
+    // had ever built on it. What actually needs protecting is other people's
+    // work: a fork reads its ancestors' chapters, so changing one changes the
+    // story someone else is writing on top of. Until that exists, the story
+    // is its writer's to edit. Afterwards `revise` is still the way.
     const story = await this.prisma.story.findUniqueOrThrow({
       where: { id: chapter.branch.storyId },
     });
     if (
       this.isMain(story, chapter.branch) &&
-      story.visibility !== Visibility.PRIVATE
+      story.visibility !== Visibility.PRIVATE &&
+      (await this.forkedByOthers(story)) > 0
     ) {
       throw new ConflictException({
-        code: 'STORY_PUBLISHED',
+        code: 'STORY_FORKED',
         message:
-          'Truyện đã đăng nên không sửa trực tiếp được. Hãy tạo một nhánh để sửa, rồi dùng nhánh đó làm bản chính.',
+          'Đã có người đọc rẽ nhánh từ truyện này, nên chương không sửa hay xoá trực tiếp được nữa: nhánh của họ đang dựa vào nó. Hãy tạo bản sửa nếu cần.',
       });
     }
 
@@ -1174,6 +1212,26 @@ export class StoriesService {
             owner: { select: { handle: true, displayName: true } },
           },
         },
+      },
+    });
+  }
+
+  /**
+   * Branches of this story written by someone other than its author.
+   *
+   * The one question behind every "can the author still change this?" rule:
+   * once another reader has forked the story and written on it, its chapters
+   * are the ground their branch stands on. Empty branches and the author's
+   * own revisions do not count - neither is anybody else's work.
+   */
+  private forkedByOthers(story: { id: string; ownerId: string }) {
+    return this.prisma.branch.count({
+      where: {
+        storyId: story.id,
+        isRoot: false,
+        isDraft: false,
+        ownerId: { not: story.ownerId },
+        contributions: { some: {} },
       },
     });
   }

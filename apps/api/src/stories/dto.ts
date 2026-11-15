@@ -34,6 +34,19 @@ export class CreateStoryDto {
   @IsOptional()
   @IsIn(['vi', 'en'])
   language?: 'vi' | 'en';
+
+  /**
+   * Chosen when the story is created. Private unless asked otherwise - a
+   * first draft is nobody else's business until its writer says so.
+   */
+  @IsOptional()
+  @IsIn([Visibility.PRIVATE, Visibility.PUBLIC])
+  visibility?: Visibility;
+
+  /** Only meaningful when public; defaults to allowing forks. */
+  @IsOptional()
+  @IsBoolean()
+  allowForks?: boolean;
 }
 
 export class UpdateStoryDto {
