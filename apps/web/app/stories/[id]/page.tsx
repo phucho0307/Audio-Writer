@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/useAuth";
 import AudioPlayer from "./AudioPlayer";
 import PublishPanel from "./PublishPanel";
 import Chapter from "./Chapter";
+import RichEditor, { type RichEditorHandle } from "../../RichEditor";
+import { concatDocs, docOf, textToDoc, type PMDoc } from "@/lib/prose";
 import RevisePanel from "./RevisePanel";
 import Contents from "./Contents";
 import {
@@ -88,7 +90,10 @@ export default function StoryPage({
    * down that a refusal up here read as nothing happening. */
   const [branchError, setBranchError] = useState<string | null>(null);
 
-  const draftRef = useRef<HTMLTextAreaElement>(null);
+  // The composer is a rich editor now; this is its handle (focus, clear,
+  // and the AI writing into it), and `draftDoc` is what it holds.
+  const editorRef = useRef<RichEditorHandle>(null);
+  const [draftDoc, setDraftDoc] = useState<PMDoc | null>(null);
 
   const loadStory = useCallback(async () => {
     const s = await api.getStory(id);
@@ -144,6 +149,7 @@ export default function StoryPage({
           atDepth: forkAt,
           name: forkName.trim() || `nhánh từ chương ${forkAt + 2}`,
           textPlain: draft.trim(),
+          content: draftDoc ?? textToDoc(draft),
           authorType,
         });
         window.location.href = `/stories/${id}?branch=${branch.id}`;
@@ -152,9 +158,11 @@ export default function StoryPage({
 
       await api.commit(branchId, {
         textPlain: draft.trim(),
+        content: draftDoc ?? textToDoc(draft),
         authorType,
       });
       setDraft("");
+      editorRef.current?.clear();
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -169,11 +177,14 @@ export default function StoryPage({
     setNeedGenres(false);
     setPaywall(null);
     setDraft("");
+    editorRef.current?.clear();
+    let written = "";
     try {
-      await streamProse(path, { paragraphs }, (chunk) =>
-        setDraft((d) => d + chunk),
-      );
-      draftRef.current?.focus();
+      await streamProse(path, { paragraphs }, (chunk) => {
+        written += chunk;
+        editorRef.current?.setText(written);
+      });
+      editorRef.current?.focus();
     } catch (e) {
       handleAiError(e);
     } finally {
@@ -233,8 +244,9 @@ export default function StoryPage({
       setOptions(null);
       setBranchId(branch.id);
       setDraft("");
+      editorRef.current?.clear();
       await loadStory();
-      draftRef.current?.focus();
+      editorRef.current?.focus();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -393,8 +405,10 @@ export default function StoryPage({
     try {
       await api.editChapter(lastChapter.id, {
         textPlain: `${lastChapter.textPlain.trimEnd()}\n\n${draft.trim()}`,
+        content: concatDocs(docOf(lastChapter), draftDoc ?? textToDoc(draft)),
       });
       setDraft("");
+      editorRef.current?.clear();
       await refresh();
     } catch (e) {
       setError((e as Error).message);
@@ -968,7 +982,7 @@ export default function StoryPage({
               <button
                 onClick={() => {
                   setPaywall(null);
-                  draftRef.current?.focus();
+                  editorRef.current?.focus();
                 }}
                 className="btn btn-primary"
               >
@@ -1016,13 +1030,13 @@ export default function StoryPage({
             server now refuses, so the honest offer is the one that works. */}
         {ownsBranch || forking ? (
         <section className="flex flex-col gap-3">
-          <textarea
-            ref={draftRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={8}
+          <RichEditor
+            ref={editorRef}
             placeholder="Viết tiếp câu chuyện…"
-            className="w-full resize-y rounded-md border border-[var(--color-line)] bg-[var(--color-surface)] p-3.5 font-serif text-[16.5px] leading-[1.75] outline-none placeholder:font-sans placeholder:text-[14px] placeholder:text-[var(--color-muted)] focus:border-[var(--color-accent)]"
+            onChange={(doc, text) => {
+              setDraftDoc(doc);
+              setDraft(text);
+            }}
           />
 
           <div className="flex flex-wrap items-center gap-2">

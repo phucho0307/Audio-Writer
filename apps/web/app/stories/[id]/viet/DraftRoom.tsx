@@ -8,6 +8,8 @@ import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { HocuspocusProvider, WebSocketStatus } from '@hocuspocus/provider';
 import * as Y from 'yjs';
 import { ApiError, api, type Collaborator, type Room } from '@/lib/api';
+import FormatToolbar from '@/app/FormatToolbar';
+import ShareDialog from './ShareDialog';
 import { getToken } from '@/lib/auth';
 import { collabUrl, colorFor, roomFor } from '@/lib/collab';
 
@@ -43,7 +45,11 @@ function RoomEditor({
     extensions: [
       // History is Yjs's own: ProseMirror's undo stack would undo other
       // people's typing as readily as your own.
-      StarterKit.configure({ undoRedo: false }),
+      StarterKit.configure({
+        undoRedo: false,
+        heading: { levels: [3] },
+        link: { openOnClick: false, autolink: true },
+      }),
       Collaboration.configure({ document: doc, field: 'body' }),
       CollaborationCaret.configure({
         provider,
@@ -70,7 +76,14 @@ function RoomEditor({
     );
   }
 
-  return <EditorContent editor={editor} />;
+  // The same formatting bar as every other writing box; it hides itself
+  // for viewers, whose editor is read-only.
+  return (
+    <div className="flex flex-col gap-2">
+      <FormatToolbar editor={editor} />
+      <EditorContent editor={editor} />
+    </div>
+  );
 }
 
 type Peer = { handle: string; color: string };
@@ -102,6 +115,7 @@ export default function DraftRoom({
   const [peers, setPeers] = useState<Peer[]>([]);
   const [ai, setAi] = useState<AiState>(null);
   const [room, setRoom] = useState<Room | null>(null);
+  const [sharing, setSharing] = useState(false);
   const [busy, setBusy] = useState<'ai' | 'commit' | 'invite' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
@@ -318,7 +332,22 @@ export default function DraftRoom({
         <span className="ml-auto text-[12px] tabular-nums text-[var(--color-muted)]">
           {words} từ
         </span>
+        {/* Owner only: who is in the room, and the link. */}
+        {room && !guest && (
+          <button onClick={() => setSharing(true)} className="btn btn-primary btn-sm">
+            Chia sẻ
+          </button>
+        )}
       </div>
+
+      {sharing && room && (
+        <ShareDialog
+          branchId={branchId}
+          room={room}
+          onRoomChange={setRoom}
+          onClose={() => setSharing(false)}
+        />
+      )}
 
       {ai?.state === 'writing' && (
         <p className="text-[12.5px] text-[var(--color-accent)]">
@@ -433,30 +462,6 @@ export default function DraftRoom({
             ))}
           </ul>
 
-          {!guest && (
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <input
-              value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              placeholder="@tên người dùng"
-              className="field min-w-0 flex-1 py-1.5 text-[13px]"
-            />
-            <button
-              onClick={() => invite('EDITOR')}
-              disabled={busy !== null}
-              className="btn btn-primary btn-sm"
-            >
-              Mời viết
-            </button>
-            <button
-              onClick={() => invite('VIEWER')}
-              disabled={busy !== null}
-              className="btn btn-ghost btn-sm"
-            >
-              Mời xem
-            </button>
-          </div>
-          )}
         </details>
       )}
     </div>

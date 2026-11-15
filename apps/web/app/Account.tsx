@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useAuth, useProviders } from '@/lib/useAuth';
+import { takeReturnPath } from '@/lib/auth';
 
 /** Initials, for when Google has no avatar or the image fails to load. */
 function initials(name: string): string {
@@ -14,6 +15,15 @@ function initials(name: string): string {
 
 export default function Account() {
   const { user, ready, signIn, signOut } = useAuth();
+
+  // Back to where sign-in was started from, once the session is in.
+  useEffect(() => {
+    if (!ready || !user) return;
+    const back = takeReturnPath();
+    if (back && back !== window.location.pathname + window.location.search) {
+      window.location.replace(back);
+    }
+  }, [ready, user]);
   const providers = useProviders();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(false);

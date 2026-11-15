@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ApiError, api, type Contribution } from '@/lib/api';
+import RichEditor, { type RichEditorHandle } from '@/app/RichEditor';
+import RichText from '@/app/RichText';
+import { docOf, type PMDoc } from '@/lib/prose';
 
 /**
  * One chapter, and its editor.
@@ -40,7 +43,12 @@ export default function Chapter({
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const area = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<RichEditorHandle>(null);
+  const [doc, setDoc] = useState<PMDoc | null>(null);
+  // The document as the editor first reported it. Comparing text alone
+  // would call a bold-only change "unchanged" and refuse to save it.
+  const baseline = useRef<string | null>(null);
+  const [docJson, setDocJson] = useState<string | null>(null);
 
   // Reset from the server copy each time it opens, so a cancelled edit does
   // not come back when the chapter is opened again.
@@ -49,11 +57,14 @@ export default function Chapter({
     setDraft(chapter.textPlain);
     setTitleDraft(chapter.title ?? '');
     setError(null);
-    area.current?.focus();
+    baseline.current = null;
+    setDocJson(null);
+    setTimeout(() => editorRef.current?.focus(), 0);
   }, [editing, chapter.textPlain, chapter.title]);
 
   const dirty =
-    draft !== chapter.textPlain || titleDraft !== (chapter.title ?? '');
+    (docJson !== null && docJson !== baseline.current) ||
+    titleDraft !== (chapter.title ?? '');
 
   async function save() {
     setBusy(true);
@@ -61,6 +72,7 @@ export default function Chapter({
     try {
       await api.editChapter(chapter.id, {
         textPlain: draft,
+        ...(doc ? { content: doc } : {}),
         title: titleDraft.trim() || undefined,
       });
       await onChange();
@@ -176,12 +188,17 @@ export default function Chapter({
             placeholder="Tên chương (không bắt buộc)"
             className="field"
           />
-          <textarea
-            ref={area}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            rows={Math.min(26, draft.split('\n').length + 4)}
-            className="field resize-y font-serif text-[16.5px] leading-[1.75]"
+          <RichEditor
+            ref={editorRef}
+            initial={docOf(chapter)}
+            minHeight="18rem"
+            onChange={(d, text) => {
+              const j = JSON.stringify(d);
+              if (baseline.current === null) baseline.current = j;
+              setDoc(d);
+              setDocJson(j);
+              setDraft(text);
+            }}
           />
           <div className="flex flex-wrap items-center gap-3">
             <button
@@ -210,9 +227,9 @@ export default function Chapter({
           {chapter.title && (
             <h3 className="display text-[19px]">{chapter.title}</h3>
           )}
-          <p className="whitespace-pre-wrap font-serif text-[17.5px] leading-[1.78]">
-            {chapter.textPlain}
-          </p>
+          <div className="font-serif text-[17.5px] leading-[1.78] [&_p]:mb-[0.9em]">
+            <RichText doc={docOf(chapter)} />
+          </div>
         </>
       )}
 

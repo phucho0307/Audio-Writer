@@ -1,0 +1,4 @@
+# Prisma checksums every applied migration. Git rewriting their line endings
+# (CRLF on Windows checkouts) changes the checksum and makes `migrate dev`
+# demand a full database reset. Keep migrations byte-for-byte as written.
+apps/api/prisma/migrations/**/*.sql text eol=lf

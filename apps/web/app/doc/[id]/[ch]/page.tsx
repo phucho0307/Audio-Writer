@@ -7,6 +7,8 @@ import { mainBranch, api, type BranchRead, type Story } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { signIn } from '@/lib/auth';
 import ChapterNarration from './ChapterNarration';
+import RichText from '@/app/RichText';
+import { docOf } from '@/lib/prose';
 import { BranchBanner, BranchLink, forksAt } from '../../Branches';
 
 /**
@@ -190,16 +192,8 @@ export default function Reader({
     ? story.contributionCount
     : chapters.length;
 
-  // Real paragraphs rather than one pre-wrapped block: it is what the text
-  // actually is, it lets the opening take a drop cap, and it gives the browser
-  // something to break pages on.
   const current = story.branches.find((b) => b.id === read.branch.id);
   const split = forksAt(story, read.branch.id, depth);
-
-  const paragraphs = chapter.textPlain
-    .split(/\n\s*\n|\n/)
-    .map((p) => p.trim())
-    .filter(Boolean);
 
   return (
     <>
@@ -267,9 +261,11 @@ export default function Reader({
         <ChapterNarration branchId={read.branch.id} depth={depth} />
 
         <article ref={article} className="prose-read">
-          {paragraphs.map((p, i) => (
-            <p key={i}>{p}</p>
-          ))}
+          {/* The chapter's own document - bold, italics, lists - falling back
+              to its plain text for chapters saved before the editors were
+              rich. Rendered without a wrapper so the drop cap still finds
+              the first paragraph. */}
+          <RichText doc={docOf(chapter)} />
         </article>
 
         {/* Where the story already splits. Shown before the offer to write

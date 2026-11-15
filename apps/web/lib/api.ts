@@ -57,6 +57,8 @@ export type MyBranch = {
 
 export type Contribution = {
   id: string;
+  /** The editor's document; older chapters hold only a placeholder here. */
+  content?: unknown;
   branchId: string;
   depth: number;
   title: string | null;
@@ -110,6 +112,11 @@ export type Collaborator = {
   avatarUrl: string | null;
   role: 'EDITOR' | 'VIEWER';
   since: string;
+};
+
+export type ShareSettings = {
+  linkAccess: 'EDITOR' | 'VIEWER' | null;
+  token: string | null;
 };
 
 export type Room = {
@@ -370,7 +377,7 @@ export const api = {
   /** Owner-only, and refused once someone has forked from this chapter. */
   editChapter: (
     contributionId: string,
-    body: { textPlain?: string; title?: string },
+    body: { textPlain?: string; title?: string; content?: unknown },
   ) =>
     call<Contribution>(`/contributions/${contributionId}`, {
       method: 'PATCH',
@@ -390,6 +397,7 @@ export const api = {
       authorType: 'HUMAN' | 'AI';
       modelName?: string;
       modelProvider?: string;
+      content?: unknown;
     },
   ) =>
     call<Contribution>(`/branches/${branchId}/contributions`, {
@@ -417,6 +425,7 @@ export const api = {
       title?: string;
       modelProvider?: string;
       modelName?: string;
+      content?: unknown;
     },
   ) =>
     call<BranchSummary>(`/branches/${branchId}/fork`, {
@@ -457,6 +466,26 @@ export const api = {
 
   room: (branchId: string) =>
     call<Room>(`/branches/${branchId}/draft/collaborators`),
+
+  /** The room's general access: restricted, or anyone with the link. */
+  share: (branchId: string) =>
+    call<ShareSettings>(`/branches/${branchId}/draft/share`),
+
+  setShare: (branchId: string, access: 'NONE' | 'VIEWER' | 'EDITOR') =>
+    call<ShareSettings>(`/branches/${branchId}/draft/share`, {
+      method: 'PUT',
+      body: JSON.stringify({ access }),
+    }),
+
+  resetShare: (branchId: string) =>
+    call<ShareSettings>(`/branches/${branchId}/draft/share/reset`, { method: 'POST' }),
+
+  /** Open a share link: joins the room at the link's level. */
+  joinShare: (token: string) =>
+    call<{ storyId: string; branchId: string; role: 'OWNER' | 'EDITOR' | 'VIEWER' }>(
+      `/share/${encodeURIComponent(token)}/join`,
+      { method: 'POST' },
+    ),
 
   invite: (branchId: string, handle: string, role: 'EDITOR' | 'VIEWER') =>
     call<Room>(`/branches/${branchId}/draft/collaborators`, {

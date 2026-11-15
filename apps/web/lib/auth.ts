@@ -145,7 +145,29 @@ export async function ensureSession(): Promise<void> {
 
 /** Full-page navigation, not fetch: the browser has to follow Google's redirects. */
 export function signIn(): void {
+  // Google's round trip ends on the site's front page, wherever it started.
+  // Remember where the reader was - a share link, a chapter - so they can be
+  // put back there afterwards instead of losing it.
+  try {
+    sessionStorage.setItem(RETURN_KEY, window.location.pathname + window.location.search);
+  } catch {
+    // Storage blocked: they land on the front page, as before.
+  }
   window.location.href = `${API}/auth/google`;
+}
+
+const RETURN_KEY = 'aw-return-to';
+
+/** After sign-in: the page the reader left for it, once, if any. */
+export function takeReturnPath(): string | null {
+  try {
+    const path = sessionStorage.getItem(RETURN_KEY);
+    sessionStorage.removeItem(RETURN_KEY);
+    // Same-site paths only - never a full URL.
+    return path && path.startsWith('/') && !path.startsWith('//') ? path : null;
+  } catch {
+    return null;
+  }
 }
 
 export async function signOut(): Promise<void> {
