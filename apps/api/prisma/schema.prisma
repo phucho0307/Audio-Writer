@@ -172,6 +172,11 @@ model Branch {
   /// someone's own story and public from the first word.
   isDraft Boolean @default(false)
 
+  /// Link sharing for the branch's draft room, as in Google Docs: a secret
+  /// token, and what anyone who opens it gets. Null access = restricted.
+  shareToken String?     @unique
+  linkAccess CollabRole?
+
   headContributionId String? @db.Uuid
   depth              Int     @default(0)
 
@@ -267,6 +272,9 @@ model BranchCollaborator {
   userId   String     @db.Uuid
   user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   role     CollabRole @default(EDITOR)
+  /// Joined through the share link rather than invited by name - so turning
+  /// the link off, or resetting it, takes this access away again.
+  viaLink  Boolean    @default(false)
 
   invitedById String?  @db.Uuid
   createdAt   DateTime @default(now())

@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { CollabAccessService } from './collab-access.service';
-import { CollabController } from './collab.controller';
+import { CollabController, ShareController } from './collab.controller';
 import { CollabGateway } from './collab.gateway';
 import { DraftService } from './draft.service';
 import { LlmModule } from '../llm/llm.module';
@@ -17,7 +17,7 @@ import { StoriesModule } from '../stories/stories.module';
  */
 @Module({
   imports: [JwtModule.register({}), StoriesModule, LlmModule],
-  controllers: [CollabController],
+  controllers: [CollabController, ShareController],
   providers: [CollabGateway, CollabAccessService, DraftService],
   exports: [CollabAccessService, DraftService],
 })

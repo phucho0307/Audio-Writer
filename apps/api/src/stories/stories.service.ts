@@ -770,7 +770,7 @@ export class StoriesService {
           ...(dto.textPlain !== undefined
             ? {
                 textPlain: dto.textPlain,
-                content: { type: 'doc', text: dto.textPlain } as never,
+                content: (dto.content ?? { type: 'doc', text: dto.textPlain }) as never,
                 wordCount: words,
               }
             : {}),

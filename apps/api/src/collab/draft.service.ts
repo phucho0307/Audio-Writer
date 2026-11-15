@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AuthorType, type Contribution } from '@prisma/client';
 import * as Y from 'yjs';
+import { yXmlFragmentToProsemirrorJSON } from 'y-prosemirror';
 import { PrismaService } from '../prisma/prisma.service';
 import { StoriesService } from '../stories/stories.service';
 import { LlmService } from '../llm/llm.service';
@@ -129,7 +130,10 @@ export class DraftService {
     });
 
     const dto = {
-      content: toProseMirror(draft.text.split(/\n\n+/).filter(Boolean)),
+      // The room's own structure - bold, italics, lists - not a flattening
+      // of its text: rebuilding from paragraphs threw every mark away at the
+      // moment of publishing.
+      content: (await this.docJson(branchId)) ?? toProseMirror(draft.text.split(/\n\n+/).filter(Boolean)),
       textPlain: draft.text.trim(),
       title: title?.trim() || undefined,
       authorType: AuthorType.HUMAN,
@@ -161,6 +165,19 @@ export class DraftService {
           : ''),
     );
     return landed;
+  }
+
+  /** The room as a ProseMirror document, marks and all. */
+  private async docJson(branchId: string): Promise<Record<string, unknown> | null> {
+    const live = this.gateway.server?.documents.get(this.room(branchId));
+    if (live) return yXmlFragmentToProsemirrorJSON(live.getXmlFragment(BODY));
+    const row = await this.prisma.draftDoc.findUnique({ where: { branchId } });
+    if (!row) return null;
+    const doc = new Y.Doc();
+    Y.applyUpdate(doc, Uint8Array.from(row.state));
+    const json = yXmlFragmentToProsemirrorJSON(doc.getXmlFragment(BODY));
+    doc.destroy();
+    return json;
   }
 
   /** Empty the room and forget the snapshot. */

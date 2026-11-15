@@ -179,6 +179,11 @@ export class GrantCreditsDto {
 
 /** Both optional: renaming a chapter and rewriting it are separate acts. */
 export class EditContributionDto {
+  /** The rich document, when the editor produced one. */
+  @IsOptional()
+  @IsObject()
+  content?: Record<string, unknown>;
+
   @IsOptional()
   @IsString()
   @MinLength(1)

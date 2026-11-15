@@ -6,6 +6,7 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Put,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { CollabRole } from '@prisma/client';
@@ -52,6 +53,22 @@ class AiContinueDto {
   pov?: 'first' | 'third_limited';
 }
 
+class ShareDto {
+  @IsIn(['NONE', 'VIEWER', 'EDITOR'])
+  access!: 'NONE' | 'VIEWER' | 'EDITOR';
+}
+
+/** Opening a share link. Its own path: the token is the only key it has. */
+@Controller('share')
+export class ShareController {
+  constructor(private readonly access: CollabAccessService) {}
+
+  @Post(':token/join')
+  join(@Param('token') token: string) {
+    return this.access.joinByLink(token);
+  }
+}
+
 @Controller('branches/:id/draft')
 export class CollabController {
   constructor(
@@ -91,6 +108,21 @@ export class CollabController {
   }
 
   /** Turn the shared draft into an immutable chapter. */
+  @Get('share')
+  share(@Param('id', ParseUUIDPipe) id: string) {
+    return this.access.share(id);
+  }
+
+  @Put('share')
+  setShare(@Param('id', ParseUUIDPipe) id: string, @Body() dto: ShareDto) {
+    return this.access.setShare(id, dto.access);
+  }
+
+  @Post('share/reset')
+  resetShare(@Param('id', ParseUUIDPipe) id: string) {
+    return this.access.resetShare(id);
+  }
+
   @Post('commit')
   commit(
     @Param('id', ParseUUIDPipe) id: string,
