@@ -21,6 +21,8 @@ function MyStories() {
   const [stories, setStories] = useState<Story[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [title, setTitle] = useState('');
+  const [visibility, setVisibility] = useState<'PRIVATE' | 'PUBLIC'>('PRIVATE');
+  const [allowForks, setAllowForks] = useState(true);
   const [creating, setCreating] = useState(false);
 
   const [branches, setBranches] = useState<MyBranch[]>([]);
@@ -40,7 +42,11 @@ function MyStories() {
     setCreating(true);
     setError(null);
     try {
-      const story = await api.createStory({ title: title.trim() });
+      const story = await api.createStory({
+        title: title.trim(),
+        visibility,
+        ...(visibility === 'PUBLIC' ? { allowForks } : {}),
+      });
       window.location.href = `/stories/${story.id}`;
     } catch (e) {
       setError((e as Error).message);
@@ -97,6 +103,43 @@ function MyStories() {
         >
           {creating ? 'Đang tạo…' : 'Tạo truyện'}
         </button>
+        <div className="flex w-full flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="label">Hiển thị</span>
+            <button
+              type="button"
+              aria-pressed={visibility === 'PRIVATE'}
+              onClick={() => setVisibility('PRIVATE')}
+              className={`chip ${visibility === 'PRIVATE' ? 'chip-on' : ''}`}
+            >
+              Riêng tư
+            </button>
+            <button
+              type="button"
+              aria-pressed={visibility === 'PUBLIC'}
+              onClick={() => setVisibility('PUBLIC')}
+              className={`chip ${visibility === 'PUBLIC' ? 'chip-on' : ''}`}
+            >
+              Công khai
+            </button>
+          </div>
+          {visibility === 'PUBLIC' && (
+            <label className="flex items-center gap-2 text-[13px]">
+              <input
+                type="checkbox"
+                checked={allowForks}
+                onChange={(e) => setAllowForks(e.target.checked)}
+                className="accent-[var(--color-accent)]"
+              />
+              Cho người khác rẽ nhánh
+            </label>
+          )}
+          <p className="text-[12px] text-[var(--color-muted)]">
+            {visibility === 'PRIVATE'
+              ? 'Chỉ mình bạn thấy cho tới khi bạn đăng.'
+              : 'Hiện ngay ở Khám phá. Khi đã có người rẽ nhánh, truyện không sửa hay gỡ được nữa.'}
+          </p>
+        </div>
       </form>
 
       {error && (

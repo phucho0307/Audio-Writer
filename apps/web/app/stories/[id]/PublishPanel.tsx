@@ -53,6 +53,7 @@ export default function PublishPanel({
   const [asking, setAsking] = useState(false);
 
   const isPublic = story.visibility !== 'PRIVATE';
+  const locked = story.visibility === 'PUBLIC' && (story.forkedByOthers ?? 0) > 0;
 
   async function save(patch: Parameters<typeof api.updateStory>[1]) {
     setBusy(true);
@@ -81,7 +82,7 @@ export default function PublishPanel({
       <div className="flex items-start gap-3">
         <Switch
           on={isPublic}
-          disabled={busy}
+          disabled={busy || locked}
           onChange={togglePublic}
           label="Công khai"
         />
@@ -92,6 +93,11 @@ export default function PublishPanel({
               ? 'Truyện đang hiện ở Khám phá, ai cũng đọc được.'
               : 'Chỉ mình bạn thấy. Truyện nằm yên ở đây cho tới khi bạn đăng.'}
           </p>
+          {locked && (
+            <p className="text-[12px] text-[var(--color-muted)]">
+              Đã có người rẽ nhánh nên không gỡ được nữa.
+            </p>
+          )}
         </div>
       </div>
 

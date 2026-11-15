@@ -14,6 +14,7 @@ export type Story = {
   wordCount: number;
   contributionCount: number;
   branchCount: number;
+  forkedByOthers?: number;
   viewCount: number;
   freeChapters: number;
   unlockPrice: number;
@@ -305,7 +306,13 @@ export const api = {
 
   getStory: (id: string) => call<Story>(`/stories/${id}`),
 
-  createStory: (body: { title: string; genres?: string[]; language?: string }) =>
+  createStory: (body: {
+    title: string;
+    genres?: string[];
+    language?: string;
+    visibility?: 'PRIVATE' | 'PUBLIC';
+    allowForks?: boolean;
+  }) =>
     call<Story>('/stories', { method: 'POST', body: JSON.stringify(body) }),
 
   updateStory: (

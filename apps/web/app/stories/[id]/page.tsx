@@ -363,12 +363,11 @@ export default function StoryPage({
 
   const empty = read.contributions.length === 0;
 
-  // The branch readers land on is frozen once the story is public - changing a
-  // chapter under them is what a revision is for. Unlike the fork-inheritance
-  // rule, this one is knowable here, so the controls are hidden rather than
-  // offered and refused.
+  // The live branch is frozen only once other readers have forked a public
+  // story. Other branches remain editable under their existing ownership rules.
   const liveBranchId = mainBranchId(story) ?? null;
-  const frozen = story.visibility !== "PRIVATE" && branchId === liveBranchId;
+  const locked = story.visibility === "PUBLIC" && (story.forkedByOthers ?? 0) > 0;
+  const frozen = locked && branchId === liveBranchId;
   // Two different kinds of ownership, which this page used to treat as one.
   //
   // The story belongs to its author: its title, genres, publishing and
@@ -773,6 +772,11 @@ export default function StoryPage({
                 Xoá cả {story.contributionCount} chương, mọi nhánh và giọng đọc.
                 Không khôi phục được.
               </p>
+              {locked && (
+                <p className="text-[12px] text-[var(--color-muted)]">
+                  Đã có người rẽ nhánh nên không xoá được truyện.
+                </p>
+              )}
             </div>
 
             {confirmDelete ? (
@@ -782,7 +786,7 @@ export default function StoryPage({
                 </span>
                 <button
                   onClick={remove}
-                  disabled={busy !== null}
+                  disabled={busy !== null || locked}
                   className="rounded-md bg-[var(--color-son)] px-3 py-1.5 font-mono text-[12px] text-white disabled:opacity-40"
                 >
                   {busy === "delete" ? "đang xoá…" : "xoá vĩnh viễn"}
@@ -797,7 +801,8 @@ export default function StoryPage({
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}
-                className="self-start rounded-md border border-[color-mix(in_oklab,var(--color-son)_55%,transparent)] px-3 py-1.5 font-mono text-[12px] text-[var(--color-son)] transition-colors hover:bg-[var(--color-son)] hover:text-white dark:text-[var(--color-son)]"
+                disabled={locked}
+                className="self-start rounded-md border border-[color-mix(in_oklab,var(--color-son)_55%,transparent)] px-3 py-1.5 font-mono text-[12px] text-[var(--color-son)] transition-colors hover:bg-[var(--color-son)] hover:text-white disabled:opacity-40 dark:text-[var(--color-son)]"
               >
                 xoá truyện
               </button>
@@ -810,6 +815,12 @@ export default function StoryPage({
         )}
 
         {/* ---- contents, inline on narrow screens ---- */}
+        {frozen && (
+          <p className="text-[12px] text-[var(--color-muted)]">
+            Đã có {story.forkedByOthers} người đọc rẽ nhánh từ truyện này, nên các
+            chương không sửa hay xoá trực tiếp được nữa. Muốn sửa, hãy tạo bản sửa.
+          </p>
+        )}
         <div className="lg:hidden">
           <Contents
             chapters={shown}
