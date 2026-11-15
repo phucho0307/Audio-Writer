@@ -1,10 +1,11 @@
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { Fragment, use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import Reveal from '@/app/Reveal';
 import SpiritText from '@/app/SpiritText';
+import { BranchBanner, BranchLink, forksAt, readableForks } from '../Branches';
 import {
   mainBranch,
   api,
@@ -97,6 +98,10 @@ export default function Contents({
   const q = wantedBranch ? `?branch=${wantedBranch}` : '';
   const narrated = new Map(audio.filter((a) => a.url).map((a) => [a.depth, a]));
   const locked = read.access.lockedCount;
+  // The branch being read, as the story lists it - which is where its author
+  // and fork point live.
+  const current = story.branches.find((b) => b.id === read.branch.id);
+  const others = readableForks(story).filter((b) => b.id !== read.branch.id);
   const minutes = Math.round(
     audio.reduce((n, a) => n + (a.durationMs ?? 0), 0) / 1000 / 1.5 / 60,
   );
@@ -123,6 +128,8 @@ export default function Contents({
         >
           <span aria-hidden>←</span> Khám phá
         </Link>
+
+        {current && <BranchBanner story={story} branch={current} />}
 
         <Reveal as="header" className="flex flex-col gap-6 sm:flex-row sm:gap-7">
           <div className="cover aspect-[3/4] w-[150px] flex-none self-start sm:w-[176px]">
@@ -195,8 +202,10 @@ export default function Contents({
           <ol className="flex flex-col">
             {read.contributions.map((c) => {
               const clip = narrated.get(c.depth);
+              const split = forksAt(story, read.branch.id, c.depth);
               return (
-                <li key={c.id}>
+                <Fragment key={c.id}>
+                <li>
                   <Link
                     href={`/doc/${id}/${c.depth + 1}${q}`}
                     className="group flex items-baseline gap-4 border-b border-[var(--color-line)] px-2 py-3 transition-colors hover:bg-[var(--color-surface)]"
@@ -224,6 +233,19 @@ export default function Contents({
                     </span>
                   </Link>
                 </li>
+                {/* The story splits here: the other ways it goes on after
+                    this chapter, each tagged with whoever wrote it. */}
+                {split.length > 0 && (
+                  <li className="flex flex-col gap-2 border-b border-[var(--color-line)] py-3 pl-12 pr-2">
+                    <span className="label label-accent">
+                      ⑂ {split.length} hướng khác rẽ từ chương {c.depth + 1}
+                    </span>
+                    {split.map((b) => (
+                      <BranchLink key={b.id} story={story} branch={b} compact />
+                    ))}
+                  </li>
+                )}
+                </Fragment>
               );
             })}
 
@@ -245,6 +267,24 @@ export default function Contents({
             )}
           </ol>
         </section>
+
+        {/* Every version of the story in one place, including ones that split
+            from another branch rather than from the chapters above. */}
+        {others.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <div className="flex items-baseline justify-between border-b border-[var(--color-line)] pb-2.5">
+              <h2 className="label">Các hướng khác của truyện</h2>
+              <span className="text-[11.5px] text-[var(--color-faint)]">
+                {others.length} nhánh
+              </span>
+            </div>
+            <div className="flex flex-col gap-2">
+              {others.map((b) => (
+                <BranchLink key={b.id} story={story} branch={b} />
+              ))}
+            </div>
+          </section>
+        )}
       </main>
     </>
   );

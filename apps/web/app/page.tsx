@@ -158,7 +158,7 @@ function MyStories() {
                 </h2>
                 <p className="text-[11.5px] text-[var(--color-faint)]">
                   {s.contributionCount} chương · {s.wordCount.toLocaleString('vi-VN')} từ
-                  {s.branchCount > 1 && ` · ${s.branchCount} nhánh`}
+                  {s.branchCount > 1 && ` · ⑂ ${s.branchCount - 1} nhánh rẽ`}
                 </p>
               </div>
             </Link>

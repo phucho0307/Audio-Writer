@@ -234,7 +234,9 @@ function Featured({ story }: { story: Story }) {
             {story.branchCount > 1 && (
               <>
                 <Dot />
-                <span>{story.branchCount} nhánh</span>
+                <span className="text-[var(--color-accent)]">
+                  ⑂ {story.branchCount - 1} nhánh rẽ
+                </span>
               </>
             )}
             {story.genres.length > 0 && (
@@ -273,8 +275,17 @@ function StoryCard({ story: s }: { story: Story }) {
           // eslint-disable-next-line @next/next/no-img-element
           <img src={s.coverUrl} alt="" />
         )}
-        <span className="scrim label text-white/85">
+        <span className="scrim label flex items-center gap-2 text-white/85">
           {s.contributionCount} chương
+          {/* `branchCount` includes the story itself, so the forks are one
+              fewer. Shown on the cover because it is the one thing that sets
+              a story here apart from the same story anywhere else: other
+              people have taken it somewhere. */}
+          {s.branchCount > 1 && (
+            <span className="rounded-full bg-[var(--color-accent)] px-1.5 py-px text-[9.5px] text-[var(--color-on-accent)]">
+              ⑂ {s.branchCount - 1} nhánh
+            </span>
+          )}
         </span>
       </div>
 

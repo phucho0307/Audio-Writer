@@ -7,6 +7,7 @@ import { mainBranch, api, type BranchRead, type Story } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { signIn } from '@/lib/auth';
 import ChapterNarration from './ChapterNarration';
+import { BranchBanner, BranchLink, forksAt } from '../../Branches';
 
 /**
  * How far through the chapter the reader is.
@@ -192,6 +193,9 @@ export default function Reader({
   // Real paragraphs rather than one pre-wrapped block: it is what the text
   // actually is, it lets the opening take a drop cap, and it gives the browser
   // something to break pages on.
+  const current = story.branches.find((b) => b.id === read.branch.id);
+  const split = forksAt(story, read.branch.id, depth);
+
   const paragraphs = chapter.textPlain
     .split(/\n\s*\n|\n/)
     .map((p) => p.trim())
@@ -231,10 +235,22 @@ export default function Reader({
 
           <p className="flex flex-wrap items-center gap-x-2.5 text-[12px] text-[var(--color-faint)]">
             <span>{chapter.wordCount} từ</span>
-            {story.owner && (
+            {/* Who wrote this chapter - not who owns the story. On a branch
+                they are different people, and crediting the story's author
+                with a stranger's chapter is the exact mix-up branches exist
+                to prevent. */}
+            {(chapter.author ?? story.owner) && (
               <>
                 <span aria-hidden>·</span>
-                <span>@{story.owner.handle}</span>
+                <span
+                  className={
+                    chapter.author && chapter.author.handle !== story.owner?.handle
+                      ? 'text-[var(--color-accent)]'
+                      : undefined
+                  }
+                >
+                  @{(chapter.author ?? story.owner)!.handle}
+                </span>
               </>
             )}
             {chapter.authorType === 'AI' && (
@@ -246,6 +262,8 @@ export default function Reader({
           </p>
         </header>
 
+        {current && <BranchBanner story={story} branch={current} />}
+
         <ChapterNarration branchId={read.branch.id} depth={depth} />
 
         <article ref={article} className="prose-read">
@@ -253,6 +271,26 @@ export default function Reader({
             <p key={i}>{p}</p>
           ))}
         </article>
+
+        {/* Where the story already splits. Shown before the offer to write
+            one's own: the ending a reader wants may already exist, written by
+            someone else. */}
+        {split.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="display text-[19px] leading-snug">
+              Câu chuyện rẽ ở đây
+            </h2>
+            <p className="text-[13.5px] text-[var(--color-muted)]">
+              Sau chương {depth + 1}, {split.length === 1 ? 'có một người' : `có ${split.length} hướng`}{' '}
+              đã viết tiếp theo cách khác.
+            </p>
+            <div className="flex flex-col gap-2">
+              {split.map((b) => (
+                <BranchLink key={b.id} story={story} branch={b} />
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* The offer, kept quiet. A filled panel here reads as an advert
             interrupting the story; a rule and a question reads as an aside. */}
