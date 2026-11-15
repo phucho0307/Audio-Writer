@@ -132,7 +132,7 @@ export default function StoryPage({
 
   // -------------------------------------------------------------------------
 
-  async function commit(authorType: "HUMAN" | "AI") {
+  async function commit(authorType: "HUMAN") {
     if (!branchId || !draft.trim()) return;
     setBusy("commit");
     setError(null);
@@ -145,9 +145,6 @@ export default function StoryPage({
           name: forkName.trim() || `nhánh từ chương ${forkAt + 2}`,
           textPlain: draft.trim(),
           authorType,
-          ...(authorType === "AI"
-            ? { modelProvider: "gemini", modelName: "gemini-2.5-flash" }
-            : {}),
         });
         window.location.href = `/stories/${id}?branch=${branch.id}`;
         return;
@@ -156,9 +153,6 @@ export default function StoryPage({
       await api.commit(branchId, {
         textPlain: draft.trim(),
         authorType,
-        ...(authorType === "AI"
-          ? { modelProvider: "gemini", modelName: "gemini-2.5-flash" }
-          : {}),
       });
       setDraft("");
       await refresh();
@@ -389,6 +383,26 @@ export default function StoryPage({
   const shown = forking
     ? read.contributions.filter((c) => c.depth <= forkAt)
     : read.contributions;
+  const lastChapter = shown[shown.length - 1];
+  const canAppend = chaptersEditable && lastChapter?.branchId === branchId;
+
+  async function appendToChapter() {
+    if (!canAppend || !lastChapter || !draft.trim() || busy !== null) return;
+    setBusy("append");
+    setError(null);
+    try {
+      await api.editChapter(lastChapter.id, {
+        textPlain: `${lastChapter.textPlain.trimEnd()}\n\n${draft.trim()}`,
+      });
+      setDraft("");
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+
   // Grey the AI out when it is spent, rather than letting a click fail. Writing
   // by hand stays available regardless - that is the point of the cap.
   const aiSpent =
@@ -1017,16 +1031,16 @@ export default function StoryPage({
               disabled={!draft.trim() || busy !== null}
               className="btn btn-primary"
             >
-              {busy === "commit" ? "Đang lưu…" : "Lưu thay đổi"}
+              Tạo chương mới
             </button>
 
-            {draft.trim() && (
+            {canAppend && (
               <button
-                onClick={() => commit("AI")}
-                disabled={busy !== null}
-                className="rounded-md border border-[var(--color-line)] px-3.5 py-2 text-sm hover:border-[var(--color-accent)] disabled:opacity-40"
+                onClick={appendToChapter}
+                disabled={!draft.trim() || busy !== null}
+                className="btn btn-ghost"
               >
-                Lưu thay đổi · ghi nhận AI viết
+                Lưu vào chương hiện tại
               </button>
             )}
 
@@ -1084,6 +1098,10 @@ export default function StoryPage({
               </>
             )}
           </div>
+
+          <p className="text-[12px] text-[var(--color-faint)]">
+            Tạo chương mới: đăng thành chương tiếp theo. Lưu vào chương hiện tại: viết nối vào cuối chương cuối.
+          </p>
 
           {error && (
             <p className="font-mono text-[13px] text-[var(--color-son)]">
