@@ -2,6 +2,7 @@
 
 import { useRef } from 'react';
 import { calm, gsap, ScrollTrigger, useGSAP } from '@/lib/motion';
+import { BRAND } from '@/lib/brand';
 
 const ROW_A = ['kinh dị', 'ngoại tình', 'tâm linh', 'bùa ngải', 'giật gân', 'trinh thám'];
 const ROW_B = ['báo thù', 'trọng sinh', 'nhà có ma', 'mạt thế', 'tiểu tam', 'ngôn tình ngược'];
@@ -66,7 +67,7 @@ export default function Marquee() {
   return (
     <section
       ref={root}
-      aria-label="Thể loại trên Audio Writer"
+      aria-label={`Thể loại trên ${BRAND}`}
       className="relative overflow-hidden border-y border-[var(--color-line)] py-8"
     >
       <div className="display flex flex-col gap-1 text-[clamp(3rem,9vw,7.5rem)] leading-[1.02] [font-variation-settings:'SOFT'_100,'WONK'_1]">

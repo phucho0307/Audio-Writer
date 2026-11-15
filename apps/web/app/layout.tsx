@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import Nav from './Nav';
+import { BRAND } from '@/lib/brand';
 import ThemeToggle from './ThemeToggle';
 import Atmosphere from './Atmosphere';
 import MotionToggle from './MotionToggle';
@@ -11,8 +12,8 @@ export const viewport = { width: 'device-width', initialScale: 1, viewportFit: '
 
 export const metadata: Metadata = {
   title: {
-    default: 'Audio Writer',
-    template: '%s · Audio Writer',
+    default: BRAND,
+    template: `%s · ${BRAND}`,
   },
   description:
     'Viết truyện cùng AI. Rẽ nhánh câu chuyện. Nghe bản audio miễn phí.',
@@ -73,10 +74,10 @@ export default function RootLayout({
             <Link
               href="/"
               className="group flex items-baseline gap-2.5"
-              aria-label="Audio Writer, trang chủ"
+              aria-label={`${BRAND}, trang chủ`}
             >
-              <span className="display text-[21px] leading-none">
-                Audio&nbsp;Writer
+              <span className="display whitespace-nowrap text-[21px] leading-none">
+                {BRAND}
               </span>
               <span
                 className="label hidden text-[9.5px] text-[var(--color-faint)] sm:block"
@@ -101,7 +102,7 @@ export default function RootLayout({
         <footer className="relative z-10 mt-24 border-t border-[var(--color-line)] pb-[calc(64px+env(safe-area-inset-bottom))] sm:pb-0">
           <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-5 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:px-8">
             <p className="display text-[15px] text-[var(--color-muted)]">
-              Audio Writer
+              {BRAND}
             </p>
             <p className="max-w-[46ch] text-[12.5px] leading-relaxed text-[var(--color-faint)]">
               Truyện trên nền tảng do người dùng viết. Các trang nghe truyện

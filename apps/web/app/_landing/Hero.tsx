@@ -7,6 +7,7 @@ import { calm, gsap, useGSAP } from '@/lib/motion';
 import SpiritText from '../SpiritText';
 import Magnetic from './Magnetic';
 import Waveform from './Waveform';
+import { BRAND } from '@/lib/brand';
 
 /** Where each cover sits in the fan: angle, offset, depth. */
 const FAN = [
@@ -160,7 +161,7 @@ export default function Hero({ stories }: { stories: Story[] }) {
         </h1>
 
         <p className="max-w-[50ch] text-[16px] leading-[1.7] text-[var(--color-muted)]">
-          Audio Writer là chỗ tụ tập của hội mê{' '}
+          {BRAND} là chỗ tụ tập của hội mê{' '}
           <span className="text-[var(--color-ink)]">kinh dị, mystery với drama ngoại tình</span>
           : nghe truyện bằng giọng đọc AI, thấy cái kết làm mình tức thì rẽ nhánh viết kết mới,
           rủ bạn thân viết chung một trang y như Google Docs. Hông cần văn hay, chỉ cần lắm
