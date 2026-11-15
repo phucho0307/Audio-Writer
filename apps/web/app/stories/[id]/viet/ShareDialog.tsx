@@ -29,7 +29,6 @@ export default function ShareDialog({
 }) {
   const [share, setShare] = useState<ShareSettings | null>(null);
   const [handle, setHandle] = useState('');
-  const [role, setRole] = useState<Role>('EDITOR');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -83,7 +82,7 @@ export default function ShareDialog({
             e.preventDefault();
             const h = handle.trim().replace(/^@/, '');
             if (!h) return;
-            void run(() => api.invite(branchId, h, role), (r) => {
+            void run(() => api.invite(branchId, h, 'EDITOR'), (r) => {
               onRoomChange(r);
               setHandle('');
             });
@@ -92,26 +91,17 @@ export default function ShareDialog({
           <input
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
-            placeholder="Thêm người bằng @username"
+            placeholder="Mời bằng @username"
             aria-label="Username người được mời"
             className="field min-w-0 flex-1"
           />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value as Role)}
-            aria-label="Quyền"
-            className="field w-auto"
-          >
-            <option value="EDITOR">Người viết</option>
-            <option value="VIEWER">Người xem</option>
-          </select>
           <button type="submit" disabled={busy || !handle.trim()} className="btn btn-primary">
             Mời
           </button>
         </form>
 
         <div className="flex flex-col gap-1">
-          <span className="label">Người có quyền truy cập</span>
+          <span className="label">Người trong phòng</span>
           <ul className="flex flex-col">
             <li className="flex items-center gap-3 py-2 text-[14px]">
               <span className="min-w-0 flex-1 truncate">@{room.owner.handle}</span>
@@ -146,45 +136,32 @@ export default function ShareDialog({
 
         {/* ---- general access ---- */}
         <div className="flex flex-col gap-3 border-t border-[var(--color-line)] pt-4">
-          <span className="label">Quyền truy cập chung</span>
-          <div className="flex flex-wrap items-center gap-2">
-            <span aria-hidden className="grid h-9 w-9 place-items-center rounded-full bg-[var(--color-raised)] text-[16px]">
+          <span className="label">Chia sẻ bằng đường liên kết</span>
+          <div className="flex items-start gap-3">
+            <span aria-hidden className="grid h-9 w-9 flex-none place-items-center rounded-full bg-[var(--color-raised)] text-[16px]">
               {access === 'NONE' ? '🔒' : '🔗'}
             </span>
             <div className="flex min-w-0 flex-1 flex-col gap-1">
+              {/* One choice, not two: off, or on and at which level. */}
               <select
-                value={access === 'NONE' ? 'NONE' : 'LINK'}
+                value={access}
                 disabled={busy || !share}
                 onChange={(e) =>
-                  void run(
-                    () => api.setShare(branchId, e.target.value === 'NONE' ? 'NONE' : 'VIEWER'),
-                    setShare,
-                  )
+                  void run(() => api.setShare(branchId, e.target.value as 'NONE' | Role), setShare)
                 }
-                aria-label="Ai có thể mở phòng"
-                className="field w-auto self-start py-1 text-[13.5px] font-medium"
+                aria-label="Ai có thể mở phòng bằng đường liên kết"
+                className="field w-full py-1.5 text-[13.5px] font-medium"
               >
-                <option value="NONE">Hạn chế</option>
-                <option value="LINK">Bất kỳ ai có đường liên kết</option>
+                <option value="NONE">Tắt · chỉ người được mời</option>
+                <option value="VIEWER">Ai có liên kết · được xem</option>
+                <option value="EDITOR">Ai có liên kết · được viết</option>
               </select>
               <span className="text-[12.5px] text-[var(--color-faint)]">
                 {access === 'NONE'
-                  ? 'Chỉ những người được thêm ở trên mới mở được phòng.'
-                  : 'Ai có đường liên kết và đã đăng nhập đều vào được phòng.'}
+                  ? 'Chỉ những người trong danh sách trên mới mở được phòng.'
+                  : `Ai có đường liên kết và đã đăng nhập đều vào được, với quyền ${ROLE_LABEL[access].toLowerCase()}.`}
               </span>
             </div>
-            {access !== 'NONE' && (
-              <select
-                value={access}
-                disabled={busy}
-                onChange={(e) => void run(() => api.setShare(branchId, e.target.value as Role), setShare)}
-                aria-label="Quyền của người có đường liên kết"
-                className="field w-auto py-1 text-[13px]"
-              >
-                <option value="VIEWER">{ROLE_LABEL.VIEWER}</option>
-                <option value="EDITOR">{ROLE_LABEL.EDITOR}</option>
-              </select>
-            )}
           </div>
 
           {access !== 'NONE' && link && (
