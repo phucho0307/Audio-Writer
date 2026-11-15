@@ -256,11 +256,28 @@ export default function DraftRoom({
   }
 
   if (denied) {
+    // The server's reason is a protocol code - "permission-denied" - which
+    // was being shown to people verbatim. What they need is what it means and
+    // what they can do instead: a room is by invitation, and anyone can still
+    // write their own version by forking.
     return (
-      <div className="rounded border border-[var(--color-line)] p-6 text-center">
-        <p className="font-mono text-[13px] text-[var(--color-accent)]">
-          {denied}
+      <div className="card flex flex-col items-start gap-3 p-6">
+        <span className="label label-accent">Phòng viết chung</span>
+        <h2 className="display text-[22px] leading-snug">
+          Bạn chưa được mời vào phòng này.
+        </h2>
+        <p className="max-w-[52ch] text-[14px] leading-relaxed text-[var(--color-muted)]">
+          Phòng viết chung chỉ dành cho chủ nhánh và những người họ mời. Muốn viết theo
+          hướng của bạn thì rẽ nhánh từ truyện, bản gốc không bị ảnh hưởng.
         </p>
+        <div className="flex flex-wrap gap-2">
+          <a href={`/kham-pha/${storyId}`} className="btn btn-primary">
+            <span aria-hidden>⑂</span> Rẽ nhánh
+          </a>
+          <a href={`/doc/${storyId}`} className="btn btn-ghost">
+            Đọc truyện
+          </a>
+        </div>
       </div>
     );
   }
@@ -404,38 +421,42 @@ export default function DraftRoom({
                 <span className="font-mono text-[12px] text-[var(--color-muted)]">
                   {c.role === 'VIEWER' ? 'chỉ xem' : 'viết được'}
                 </span>
-                <button
-                  onClick={() => revoke(c)}
-                  className="ml-auto font-mono text-[12px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
-                >
-                  gỡ
-                </button>
+                {/* Owner-only, like the invite form below: the server refuses
+                    anyone else, so a guest was offered controls that could
+                    only fail. */}
+                {!guest && (
+                  <button onClick={() => revoke(c)} className="btn btn-quiet btn-sm ml-auto">
+                    Gỡ
+                  </button>
+                )}
               </li>
             ))}
           </ul>
 
+          {!guest && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <input
               value={handle}
               onChange={(e) => setHandle(e.target.value)}
               placeholder="@tên người dùng"
-              className="min-w-0 flex-1 rounded border border-[var(--color-line)] bg-transparent px-2.5 py-1.5 text-[13px]"
+              className="field min-w-0 flex-1 py-1.5 text-[13px]"
             />
             <button
               onClick={() => invite('EDITOR')}
               disabled={busy !== null}
-              className="font-mono text-[12px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
+              className="btn btn-primary btn-sm"
             >
-              mời viết
+              Mời viết
             </button>
             <button
               onClick={() => invite('VIEWER')}
               disabled={busy !== null}
-              className="font-mono text-[12px] text-[var(--color-muted)] hover:text-[var(--color-accent)] disabled:opacity-40"
+              className="btn btn-ghost btn-sm"
             >
-              mời xem
+              Mời xem
             </button>
           </div>
+          )}
         </details>
       )}
     </div>

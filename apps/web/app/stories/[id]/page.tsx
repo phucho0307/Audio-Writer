@@ -37,6 +37,10 @@ const GENRES = [
   "hài hước",
 ];
 
+
+/** Development-only controls (free credit grants) are compiled out of production. */
+const DEV_UI = process.env.NODE_ENV !== "production";
+
 export default function StoryPage({
   params,
 }: {
@@ -865,7 +869,10 @@ export default function StoryPage({
               <span className="font-mono text-[12px] text-[var(--color-muted)]">
                 bạn có {wallet?.readCredits ?? 0} credit
               </span>
-              {(wallet?.readCredits ?? 0) < read.access.unlockPrice && (
+              {/* Development builds only: these call the free-credit grant,
+                  which must be switched off in production - so in production
+                  they would be buttons that always fail. */}
+              {DEV_UI && (wallet?.readCredits ?? 0) < read.access.unlockPrice && (
                 <button
                   onClick={async () => setWallet(await api.buyReadCredits(20))}
                   className="rounded-md border border-[var(--color-line)] px-3 py-1.5 font-mono text-[12px] hover:border-[var(--color-accent)]"
@@ -935,6 +942,7 @@ export default function StoryPage({
               >
                 Tự viết tiếp
               </button>
+              {DEV_UI && (
               <button
                 onClick={async () => {
                   setQuota(await api.grantCredits(10));
@@ -944,6 +952,7 @@ export default function StoryPage({
               >
                 Mua 10 lượt · dev
               </button>
+              )}
             </div>
           </section>
         )}
