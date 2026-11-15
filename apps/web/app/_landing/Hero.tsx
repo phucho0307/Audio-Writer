@@ -47,7 +47,6 @@ export default function Hero({ stories }: { stories: Story[] }) {
       // Dealt in, one at a time, from below.
       gsap.from(cards, {
         y: 160,
-        rotation: 0,
         opacity: 0,
         duration: 1.1,
         ease: 'power3.out',
@@ -88,8 +87,16 @@ export default function Hero({ stories }: { stories: Story[] }) {
       const mm = gsap.matchMedia();
       mm.add('(min-width: 1024px)', () => {
         // Scattering as the hero leaves: the outer cards travel furthest.
-        cards.forEach((c, i) => {
-          const side = i - (cards.length - 1) / 2;
+        //
+        // On a layer of its own, never the card. This used to tween the card's
+        // opacity - the property the deal-in animates - and a scrubbed tween
+        // records its starting values when it is created. That moment fell
+        // inside the deal-in, while every card sat at opacity 0, so 0 became
+        // the scatter's "top of the page" value: scroll down, scroll back up,
+        // and all five covers vanished.
+        const layers = gsap.utils.toArray<HTMLElement>('[data-fan-scatter]', el);
+        layers.forEach((c, i) => {
+          const side = i - (layers.length - 1) / 2;
           gsap.to(c, {
             x: `+=${side * 70}`,
             rotation: `+=${side * 6}`,
@@ -207,6 +214,7 @@ export default function Hero({ stories }: { stories: Story[] }) {
                     zIndex: 10 - Math.abs(i - 2),
                   }}
                 >
+                <div data-fan-scatter className="[transform-style:preserve-3d]">
                 <Link
                   href={`/doc/${s.id}`}
                   data-fan-card
@@ -223,6 +231,7 @@ export default function Hero({ stories }: { stories: Story[] }) {
                     </span>
                   </div>
                 </Link>
+                </div>
                 </div>
               );
             })}
