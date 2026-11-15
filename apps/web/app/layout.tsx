@@ -4,7 +4,10 @@ import Nav from './Nav';
 import ThemeToggle from './ThemeToggle';
 import Atmosphere from './Atmosphere';
 import MotionToggle from './MotionToggle';
+import MobileTabs from './MobileTabs';
 import './globals.css';
+
+export const viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' as const };
 
 export const metadata: Metadata = {
   title: {
@@ -95,7 +98,7 @@ export default function RootLayout({
 
         <div className="relative z-10">{children}</div>
 
-        <footer className="relative z-10 mt-24 border-t border-[var(--color-line)]">
+        <footer className="relative z-10 mt-24 border-t border-[var(--color-line)] pb-[calc(64px+env(safe-area-inset-bottom))] sm:pb-0">
           <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-5 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:px-8">
             <p className="display text-[15px] text-[var(--color-muted)]">
               Audio Writer
@@ -106,6 +109,7 @@ export default function RootLayout({
             </p>
           </div>
         </footer>
+        <MobileTabs />
       </body>
     </html>
   );

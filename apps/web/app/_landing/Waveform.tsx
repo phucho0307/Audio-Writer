@@ -42,9 +42,21 @@ export default function Waveform({
     };
     size();
 
-    const css = getComputedStyle(document.documentElement);
-    const gold = css.getPropertyValue('--color-accent').trim() || '#c8a24e';
-    const dim = css.getPropertyValue('--color-line-strong').trim() || '#2c313c';
+    // Re-read when the reader switches night and day. Read once, the bars
+    // kept the dark theme's gold and grey on the paper background.
+    let gold = '#c8a24e';
+    let dim = '#2c313c';
+    const readColours = () => {
+      const css = getComputedStyle(document.documentElement);
+      gold = css.getPropertyValue('--color-accent').trim() || gold;
+      dim = css.getPropertyValue('--color-line-strong').trim() || dim;
+    };
+    readColours();
+    const themes = new MutationObserver(() => {
+      readColours();
+      if (calm()) draw(9000);
+    });
+    themes.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
 
     const draw = (t: number) => {
       const w = canvas.width;
@@ -105,6 +117,7 @@ export default function Waveform({
     return () => {
       cancelAnimationFrame(raf);
       io.disconnect();
+      themes.disconnect();
       window.removeEventListener('resize', onResize);
     };
   }, [bars, height]);

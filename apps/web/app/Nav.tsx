@@ -30,16 +30,15 @@ export default function Nav() {
             key={l.href}
             href={l.href}
             aria-current={active ? 'page' : undefined}
-            className={`relative px-1.5 py-1 text-[13px] font-medium tracking-[0.01em] transition-colors sm:px-0 ${
+            className={`relative hidden py-1 text-[13px] font-medium tracking-[0.01em] transition-colors sm:inline ${
               active
                 ? 'text-[var(--color-ink)]'
                 : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
             }`}
           >
-            {/* The second word is dropped on a phone rather than wrapped - a
-                two-line nav item in a 48px bar pushes the whole header open. */}
-            <span className="sm:hidden">{l.label.split(' ')[0]}</span>
-            <span className="hidden sm:inline">{l.label}</span>
+            {/* Desktop only. On a phone the sections live in the bottom tab
+                bar - see MobileTabs - because they do not fit across. */}
+            {l.label}
 
             {/* An underline rather than a colour swap alone - colour on its own
                 is easy to miss at this size, and invisible to anyone who

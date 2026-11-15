@@ -165,7 +165,10 @@ export default function Atmosphere() {
       // Capped: this is a background wash, and a 4K pass of five-octave fbm
       // every frame is a laptop fan for something nobody is looking at.
       renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      // `false`: size the drawing buffer only. Letting three.js write an
+      // inline width from innerWidth (which includes the scrollbar) made
+      // the canvas 13px wider than the page it sits behind.
+      renderer.setSize(window.innerWidth, window.innerHeight, false);
       el.appendChild(renderer.domElement);
 
       const scene = new THREE.Scene();
@@ -203,7 +206,7 @@ export default function Atmosphere() {
       scene.add(mesh);
 
       const onResize = () => {
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth, window.innerHeight, false);
         uniforms.uRes.value.set(window.innerWidth, window.innerHeight);
       };
       window.addEventListener('resize', onResize);

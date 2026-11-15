@@ -230,7 +230,7 @@ export default function ForkPicker({
 
         {/* Sticky, because the decision is made up in the list and confirmed
             down here - on a long story those are two different screens. */}
-        <div className="card sticky bottom-4 flex flex-col gap-3 p-4 shadow-[0_18px_40px_-14px_rgb(0_0_0/0.75)] backdrop-blur-sm">
+        <div className="card sticky bottom-[calc(76px+env(safe-area-inset-bottom))] sm:bottom-4 flex flex-col gap-3 p-4 shadow-[0_18px_40px_-14px_rgb(0_0_0/0.75)] backdrop-blur-sm">
           {picked === null ? (
             <p className="text-[13.5px] text-[var(--color-muted)]">
               Chọn một chương ở trên để bắt đầu.

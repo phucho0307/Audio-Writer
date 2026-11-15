@@ -79,32 +79,44 @@ export default function Hero({ stories }: { stories: Story[] }) {
       };
       el.addEventListener('pointermove', onMove);
 
-      // Scattering as the hero leaves: the outer cards travel furthest.
-      cards.forEach((c, i) => {
-        const side = i - (cards.length - 1) / 2;
-        gsap.to(c, {
-          x: `+=${side * 70}`,
-          rotation: `+=${side * 6}`,
-          opacity: 0.25,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: el,
-            start: 'top top',
-            end: 'bottom top',
-            scrub: true,
-          },
+      // Scattering as the hero leaves, and the copy rising away - on a wide
+      // screen only. There the fan sits beside the headline at the top of the
+      // page, so "the hero is leaving" means the reader has moved on. On a
+      // phone the fan is stacked *below* the copy: by the time it is on
+      // screen the hero is already half scrolled, so it arrived pre-scattered
+      // at a quarter opacity and nobody ever saw the fan.
+      const mm = gsap.matchMedia();
+      mm.add('(min-width: 1024px)', () => {
+        // Scattering as the hero leaves: the outer cards travel furthest.
+        cards.forEach((c, i) => {
+          const side = i - (cards.length - 1) / 2;
+          gsap.to(c, {
+            x: `+=${side * 70}`,
+            rotation: `+=${side * 6}`,
+            opacity: 0.25,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: el,
+              start: 'top top',
+              end: 'bottom top',
+              scrub: true,
+            },
+          });
         });
-      });
 
-      // The copy rises away a little faster than the page, for depth.
-      gsap.to('[data-hero-copy]', {
-        yPercent: -14,
-        opacity: 0.2,
-        ease: 'none',
-        scrollTrigger: { trigger: el, start: 'top top', end: 'bottom top', scrub: true },
-      });
+        // The copy rises away a little faster than the page, for depth.
+        gsap.to('[data-hero-copy]', {
+          yPercent: -14,
+          opacity: 0.2,
+          ease: 'none',
+          scrollTrigger: { trigger: el, start: 'top top', end: 'bottom top', scrub: true },
+        });
 
-      return () => el.removeEventListener('pointermove', onMove);
+      });
+      return () => {
+        el.removeEventListener('pointermove', onMove);
+        mm.revert();
+      };
     },
     { scope: root, dependencies: [covers.length], revertOnUpdate: true },
   );
@@ -176,7 +188,10 @@ export default function Hero({ stories }: { stories: Story[] }) {
 
       <div className="relative flex flex-col items-center gap-10">
         <div className="relative h-[330px] w-full max-w-[520px] sm:h-[380px]" style={{ perspective: '1100px' }}>
-          <div data-fan className="absolute inset-0 [transform-style:preserve-3d]">
+          {/* `--spread` narrows the fan on a phone. At full width the outer
+              cards sit 168px either side of centre, which on a 376px screen
+              cut three of the five off at the edges. */}
+          <div data-fan className="absolute inset-0 [--spread:0.55] [transform-style:preserve-3d] sm:[--spread:1]">
             {covers.map((s, i) => {
               const f = FAN[i + Math.floor((FAN.length - covers.length) / 2)] ?? FAN[2];
               return (
@@ -188,7 +203,7 @@ export default function Hero({ stories }: { stories: Story[] }) {
                   key={s.id}
                   className="absolute left-1/2 top-1/2 [transform-style:preserve-3d]"
                   style={{
-                    transform: `translate(-50%, -50%) translate3d(${f.x}px, ${f.y}px, ${f.z}px) rotate(${f.r}deg)`,
+                    transform: `translate(-50%, -50%) translate3d(calc(${f.x}px * var(--spread)), ${f.y}px, ${f.z}px) rotate(calc(${f.r}deg * var(--spread)))`,
                     zIndex: 10 - Math.abs(i - 2),
                   }}
                 >
