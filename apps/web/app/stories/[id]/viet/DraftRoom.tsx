@@ -11,6 +11,68 @@ import { ApiError, api, type Collaborator, type Room } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import { collabUrl, colorFor, roomFor } from '@/lib/collab';
 
+/**
+ * The editor itself, mounted only once there is a socket to bind it to.
+ *
+ * This is a component rather than a `useEditor` call up in the room for one
+ * blunt reason: TipTap builds a ProseMirror schema the moment it is
+ * constructed, and a schema needs at least a document node. The previous
+ * version passed an empty extension list while the provider was still
+ * connecting, which threw `Schema is missing its top node type ('doc')` and
+ * left the room on "Đang mở tài liệu…" forever. Deferring the whole component
+ * means the extension list is never empty and the editor is never rebuilt - a
+ * rebuild re-binds the document and drops every caret in the room.
+ *
+ * It was invisible to the test suite, which drives Yjs and the socket directly
+ * and never constructs an editor. Only a browser could have caught it.
+ */
+function RoomEditor({
+  provider,
+  doc,
+  handle,
+  canEdit,
+}: {
+  provider: HocuspocusProvider;
+  doc: Y.Doc;
+  handle: string;
+  canEdit: boolean;
+}) {
+  const editor = useEditor({
+    editable: canEdit,
+    immediatelyRender: false,
+    extensions: [
+      // History is Yjs's own: ProseMirror's undo stack would undo other
+      // people's typing as readily as your own.
+      StarterKit.configure({ undoRedo: false }),
+      Collaboration.configure({ document: doc, field: 'body' }),
+      CollaborationCaret.configure({
+        provider,
+        user: { name: handle, color: colorFor(handle) },
+      }),
+    ],
+    editorProps: {
+      attributes: { class: 'prose-editor', spellcheck: 'false' },
+    },
+  });
+
+  // Permission arrives a moment after the room does, and flipping it must not
+  // cost anyone their cursor - so it is applied to the live editor rather than
+  // being a reason to build a new one.
+  useEffect(() => {
+    editor?.setEditable(canEdit);
+  }, [editor, canEdit]);
+
+  if (!editor) {
+    return (
+      <p className="min-h-[42vh] text-[13px] text-[var(--color-muted)]">
+        Đang mở tài liệu…
+      </p>
+    );
+  }
+
+  return <EditorContent editor={editor} />;
+}
+
 type Peer = { handle: string; color: string };
 type AiState = { state: 'writing' | 'failed'; by?: string; message?: string } | null;
 
@@ -128,47 +190,6 @@ export default function DraftRoom({
     return () => meta.unobserve(read);
   }, [doc]);
 
-  /**
-   * Built once, when the socket exists.
-   *
-   * The dependency list is the whole point. Rebuilding a collaborative editor
-   * re-binds it to the document and drops every caret in the room, so it must
-   * not happen for anything that can change while someone is typing - which is
-   * why `canEdit` is applied through `setEditable` below rather than being a
-   * dependency here.
-   */
-  const editor = useEditor(
-    {
-      editable: canEdit,
-      immediatelyRender: false,
-      extensions: provider
-        ? [
-            // History is Yjs's own: ProseMirror's undo stack would undo other
-            // people's typing as readily as your own.
-            StarterKit.configure({ undoRedo: false }),
-            Collaboration.configure({ document: doc, field: 'body' }),
-            CollaborationCaret.configure({
-              provider,
-              user: { name: me.handle, color: colorFor(me.handle) },
-            }),
-          ]
-        : [],
-      editorProps: {
-        attributes: {
-          class: 'prose-editor',
-          spellcheck: 'false',
-        },
-      },
-    },
-    [provider],
-  );
-
-  // Permission arrives a moment after the room does, and flipping it must not
-  // cost anyone their cursor.
-  useEffect(() => {
-    editor?.setEditable(canEdit);
-  }, [editor, canEdit]);
-
   useEffect(() => {
     api.room(branchId).then(setRoom).catch(() => undefined);
   }, [branchId]);
@@ -245,14 +266,21 @@ export default function DraftRoom({
     <div className="flex flex-col gap-4">
       {/* who is here */}
       <div className="flex flex-wrap items-center gap-3 border-y border-[var(--color-line)] py-2.5">
+        {/* The connected state used to read "đang kết nối phòng viết", which
+            is what you say while you are still connecting - so a room that was
+            working looked stuck, and a room that was genuinely reconnecting
+            looked the same. It now says what is true, and counts the people in
+            it, which is the thing a writer actually wants to know. */}
         <span
-          className={`h-1.5 w-1.5 flex-none rounded-full ${
-            live ? 'bg-[var(--color-accent)]' : 'bg-[var(--color-faint)]'
-          }`}
+          className={`dot ${live ? 'dot-on' : 'dot-live'}`}
           aria-hidden
         />
-        <span className="font-mono text-[11px] text-[var(--color-muted)]">
-          {live ? 'đang kết nối phòng viết' : 'đang kết nối lại…'}
+        <span className="text-[12px] text-[var(--color-muted)]" aria-live="polite">
+          {live
+            ? peers.length > 0
+              ? `Phòng mở · ${peers.length + 1} người đang viết`
+              : 'Phòng mở · chỉ có bạn'
+            : 'Đang kết nối lại…'}
         </span>
 
         <div className="flex items-center gap-1.5">
@@ -262,32 +290,37 @@ export default function DraftRoom({
           ))}
         </div>
 
-        <span className="ml-auto font-mono text-[11px] tabular-nums text-[var(--color-muted)]">
+        <span className="ml-auto text-[12px] tabular-nums text-[var(--color-muted)]">
           {words} từ
         </span>
       </div>
 
       {ai?.state === 'writing' && (
-        <p className="font-mono text-[11.5px] text-[var(--color-accent)]">
+        <p className="text-[12.5px] text-[var(--color-accent)]">
           ✍ AI đang viết tiếp{ai.by ? ` (${ai.by} yêu cầu)` : ''}…
         </p>
       )}
       {ai?.state === 'failed' && (
-        <p className="font-mono text-[11.5px] text-[var(--color-accent)]">
+        <p className="text-[12.5px] text-[var(--color-accent)]">
           AI dừng giữa chừng: {ai.message}
         </p>
       )}
 
-      {editor ? (
-        <EditorContent editor={editor} />
+      {provider ? (
+        <RoomEditor
+          provider={provider}
+          doc={doc}
+          handle={me.handle}
+          canEdit={canEdit}
+        />
       ) : (
-        <p className="min-h-[42vh] font-mono text-[12px] text-[var(--color-muted)]">
+        <p className="min-h-[42vh] text-[13px] text-[var(--color-muted)]">
           Đang mở tài liệu…
         </p>
       )}
 
       {!canEdit && (
-        <p className="font-mono text-[11px] text-[var(--color-muted)]">
+        <p className="text-[12px] text-[var(--color-muted)]">
           Bạn đang xem. Chỉ người được mời mới viết được.
         </p>
       )}
@@ -320,7 +353,7 @@ export default function DraftRoom({
       )}
 
       {error && (
-        <p className="font-mono text-[11.5px] text-[var(--color-accent)]">
+        <p className="text-[12.5px] text-[var(--color-accent)]">
           {error}
         </p>
       )}
