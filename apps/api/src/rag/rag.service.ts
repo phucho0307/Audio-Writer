@@ -60,6 +60,12 @@ export class RagService {
       storyId?: string | null;
       limit?: number;
       kinds?: ChunkKind[];
+      /**
+       * Who is asking. Chapter passages come back only if this person could
+       * read them on the site - see `readableBy`. Null means a stranger, who
+       * gets craft notes and public, unlocked chapters only.
+       */
+      viewerId?: string | null;
     } = {},
   ): Promise<Passage[]> {
     const limit = opts.limit ?? 6;
@@ -104,7 +110,13 @@ export class RagService {
 
   private async vectorSearch(
     query: string,
-    opts: { genre?: Genre | null; storyId?: string | null; kinds: ChunkKind[]; pool: number },
+    opts: {
+      genre?: Genre | null;
+      storyId?: string | null;
+      kinds: ChunkKind[];
+      pool: number;
+      viewerId?: string | null;
+    },
   ): Promise<Row[]> {
     if (!this.embeddings.available) return [];
 
@@ -124,6 +136,7 @@ export class RagService {
         AND c.kind = ANY(${opts.kinds}::"ChunkKind"[])
         AND (${opts.genre}::"Genre" IS NULL OR c.genre = ${opts.genre}::"Genre")
         AND (${opts.storyId}::uuid IS NULL OR c.kind = 'CRAFT' OR c."storyId" = ${opts.storyId}::uuid)
+        AND ${readableBy(opts.viewerId ?? null, opts.storyId ?? null)}
       ORDER BY c.embedding <=> ${literal}::vector
       LIMIT ${opts.pool}
     `;
@@ -131,7 +144,13 @@ export class RagService {
 
   private async textSearch(
     query: string,
-    opts: { genre?: Genre | null; storyId?: string | null; kinds: ChunkKind[]; pool: number },
+    opts: {
+      genre?: Genre | null;
+      storyId?: string | null;
+      kinds: ChunkKind[];
+      pool: number;
+      viewerId?: string | null;
+    },
   ): Promise<Row[]> {
     // websearch_to_tsquery takes what a person would actually type - quotes,
     // "or", a stray minus - without throwing on syntax the way to_tsquery does.
@@ -145,6 +164,7 @@ export class RagService {
         AND c.kind = ANY(${opts.kinds}::"ChunkKind"[])
         AND (${opts.genre}::"Genre" IS NULL OR c.genre = ${opts.genre}::"Genre")
         AND (${opts.storyId}::uuid IS NULL OR c.kind = 'CRAFT' OR c."storyId" = ${opts.storyId}::uuid)
+        AND ${readableBy(opts.viewerId ?? null, opts.storyId ?? null)}
       ORDER BY ts_rank(c.search, websearch_to_tsquery('simple', immutable_unaccent(${query}))) DESC
       LIMIT ${opts.pool}
     `;
@@ -258,6 +278,47 @@ export class RagService {
     ]);
     return { craft, chapter, embedded, model: this.embeddings.fingerprint };
   }
+}
+
+/**
+ * The rule that keeps the index from becoming a way around the site.
+ *
+ * Every committed chapter is indexed - private stories, unpublished revision
+ * branches, chapters behind the paywall - because the author's own AI needs
+ * all of it. Search did not check any of that, so an anonymous
+ * `GET /rag/search?storyId=…&kind=CHAPTER` returned the full text of a private
+ * story, and the same search feeding a stranger's AI continuation could put a
+ * locked chapter into the prompt and out the other side.
+ *
+ * A chapter passage is returned only when the viewer:
+ *   - owns the story, or
+ *   - could read it anyway: the story is PUBLIC (or UNLISTED and asked for by
+ *     id - unlisted means "by link", not "searchable"), the chapter is not on
+ *     a draft branch, and it is not past the free chapters of a paid story.
+ *
+ * Deliberately stricter than the reader: a purchased unlock is not consulted,
+ * so a buyer's AI simply does not draw on locked chapters. Under-retrieving
+ * costs a little context; over-retrieving leaks text someone paid for.
+ */
+function readableBy(viewerId: string | null, storyId: string | null) {
+  return Prisma.sql`(
+    c.kind = 'CRAFT' OR EXISTS (
+      SELECT 1
+      FROM stories s2
+      JOIN contributions k ON k.id = c."contributionId"
+      JOIN branches b2 ON b2.id = k."branchId"
+      WHERE s2.id = c."storyId"
+        AND (
+          s2."ownerId" = ${viewerId}::uuid
+          OR (
+            (s2.visibility = 'PUBLIC'
+              OR (s2.visibility = 'UNLISTED' AND s2.id = ${storyId}::uuid))
+            AND b2."isDraft" = false
+            AND (s2."unlockPrice" = 0 OR k.depth < s2."freeChapters")
+          )
+        )
+    )
+  )`;
 }
 
 type Row = {

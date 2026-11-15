@@ -38,6 +38,22 @@ export type BranchSummary = {
   _count?: { contributions: number };
 };
 
+export type MyBranch = {
+  id: string;
+  name: string;
+  depth: number;
+  forkedAtDepth: number | null;
+  updatedAt: string;
+  _count: { contributions: number };
+  story: {
+    id: string;
+    title: string;
+    coverUrl: string | null;
+    genres: string[];
+    owner: { handle: string; displayName: string };
+  };
+};
+
 export type Contribution = {
   id: string;
   branchId: string;
@@ -283,6 +299,9 @@ export const api = {
 
   /** Your own workspace: every story you own, drafts included. */
   myStories: () => call<Story[]>('/stories?mine=true'),
+
+  /** Branches I wrote in other people's stories. */
+  myBranches: () => call<MyBranch[]>('/me/branches'),
 
   getStory: (id: string) => call<Story>(`/stories/${id}`),
 

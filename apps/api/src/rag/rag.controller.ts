@@ -5,12 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RagService } from './rag.service';
 import { DevOnlyGuard } from '../auth/dev-only.guard';
 import { SEARCH_TIER } from '../throttler/tiers';
+import { CurrentUserService } from '../auth/current-user.service';
 
 @Controller()
 export class RagController {
   constructor(
     private readonly prisma: PrismaService,
     private readonly rag: RagService,
+    private readonly currentUser: CurrentUserService,
   ) {}
 
   /**
@@ -52,16 +54,20 @@ export class RagController {
    */
   @Get('rag/search')
   @Throttle(SEARCH_TIER)
-  search(
+  async search(
     @Query('q') q: string,
     @Query('genre') genre?: Genre,
     @Query('storyId') storyId?: string,
     @Query('kind') kind?: ChunkKind,
   ) {
+    // Still public - "what would the model read?" is worth asking without an
+    // account - but only ever answered with what the asker could read anyway.
+    const viewer = await this.currentUser.optional();
     return this.rag.search(q ?? '', {
       genre: genre ?? null,
       storyId: storyId ?? null,
       kinds: kind ? [kind] : undefined,
+      viewerId: viewer?.id ?? null,
     });
   }
 

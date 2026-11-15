@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/lib/useAuth";
 import AudioPlayer from "./AudioPlayer";
 import PublishPanel from "./PublishPanel";
 import Chapter from "./Chapter";
@@ -46,6 +47,7 @@ export default function StoryPage({
   // rather than the original they just diverged from.
   const query = useSearchParams();
   const wanted = query.get("branch");
+  const { user } = useAuth();
   /**
    * Fork mode: the reader chose a chapter to diverge from, but no branch
    * exists yet. It is created by the first save, so leaving this page costs
@@ -363,7 +365,21 @@ export default function StoryPage({
   // offered and refused.
   const liveBranchId = mainBranchId(story) ?? null;
   const frozen = story.visibility !== "PRIVATE" && branchId === liveBranchId;
-  const chaptersEditable = read.access.isOwner && !frozen && !forking;
+  // Two different kinds of ownership, which this page used to treat as one.
+  //
+  // The story belongs to its author: its title, genres, publishing and
+  // revisions. A branch belongs to whoever wrote it - on a fork that is a
+  // different person. Using story ownership for branch actions meant a fork's
+  // writer could not edit or delete chapters they wrote, while the story's
+  // author was offered edit and delete buttons on a stranger's branch that the
+  // server then refused. The server has always checked the branch owner; the
+  // page now asks the same question.
+  const ownsStory = read.access.isOwner;
+  const currentBranch = story.branches.find((b) => b.id === branchId);
+  const ownsBranch =
+    !!user &&
+    (user.role === "ADMIN" || currentBranch?.owner?.handle === user.handle);
+  const chaptersEditable = ownsBranch && !frozen && !forking;
 
   // Only what the fork will inherit. Chapters past the fork point belong to
   // the branch being left behind.
@@ -427,6 +443,8 @@ export default function StoryPage({
               aria-label="Tên truyện"
               className="w-full rounded-md border border-[var(--color-accent)] bg-[var(--color-surface)] px-2 py-1 display text-[2.1rem] leading-[1.1] outline-none"
             />
+          ) : !ownsStory ? (
+            <h1 className="display text-[2.1rem] leading-[1.1]">{story.title}</h1>
           ) : (
             <button
               onClick={() => setTitleDraft(story.title)}
@@ -450,12 +468,14 @@ export default function StoryPage({
                 {g}
               </span>
             ))}
+            {ownsStory && (
             <button
               onClick={() => setEditGenres((v) => !v)}
               className="rounded-full border border-dashed border-[var(--color-line)] px-2 py-0.5 font-mono text-[12px] text-[var(--color-muted)] hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]"
             >
               {story.genres.length ? "sửa thể loại" : "+ thể loại"}
             </button>
+            )}
             <span className="font-mono text-[12px] text-[var(--color-muted)]">
               {story.wordCount} từ
             </span>
@@ -496,7 +516,9 @@ export default function StoryPage({
             <div className="flex flex-wrap gap-2">
               {story.branches.map((b) => {
                 const live = b.id === liveBranchId;
-                const mine = read.access.isOwner;
+                const mine =
+                  !!user &&
+                  (user.role === "ADMIN" || b.owner?.handle === user.handle);
                 // Someone else's branch says whose it is. A collaborator's
                 // branch is already named "@handle", so the name is not
                 // repeated next to itself.
@@ -809,6 +831,7 @@ export default function StoryPage({
               inherited={c.branchId !== branchId}
               isLast={i === shown.length - 1}
               canEdit={chaptersEditable}
+              viewerHandle={user?.handle ?? null}
               editing={editingId === c.id}
               onOpen={() => setEditingId(c.id)}
               onClose={() => setEditingId(null)}
@@ -946,6 +969,11 @@ export default function StoryPage({
         )}
 
         {/* ---- composer ---- */}
+        {/* Offered on a branch you can write to, or while starting a fork of
+            your own. On anyone else's branch the box used to be there anyway,
+            and its button posted a chapter onto their branch - which the
+            server now refuses, so the honest offer is the one that works. */}
+        {ownsBranch || forking ? (
         <section className="flex flex-col gap-3">
           <textarea
             ref={draftRef}
@@ -1062,6 +1090,27 @@ export default function StoryPage({
             </p>
           )}
         </section>
+        ) : (
+          <section className="card flex flex-col items-start gap-3 p-5">
+            <span className="label">⑂ Viết theo hướng của bạn</span>
+            <p className="max-w-[56ch] text-[14px] leading-relaxed text-[var(--color-muted)]">
+              {currentBranch?.owner
+                ? <>Đây là {currentBranch.isRoot ? "truyện" : "nhánh"} của <span className="text-[var(--color-ink)]">@{currentBranch.owner.handle}</span>, nên bạn không viết thêm vào đây được. </>
+                : null}
+              Rẽ nhánh từ chương cuối để viết tiếp theo cách của bạn. Bản này giữ nguyên.
+            </p>
+            {user ? (
+              <Link
+                href={`/stories/${id}?forkFrom=${branchId}&atDepth=${read.branch.depth}`}
+                className="btn btn-primary"
+              >
+                <span aria-hidden>⑂</span> Rẽ nhánh và viết tiếp
+              </Link>
+            ) : (
+              <span className="text-[13px] text-[var(--color-faint)]">Đăng nhập để rẽ nhánh.</span>
+            )}
+          </section>
+        )}
       </main>
     </div>
   );

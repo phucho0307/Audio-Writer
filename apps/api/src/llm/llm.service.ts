@@ -190,6 +190,10 @@ export class LlmService {
   ): Promise<{ continuityNotes?: string[]; craftNotes?: string[] }> {
     const tail = storySoFar.slice(-1200);
     const genre = firstKnownGenre(genres);
+    // The writer asking, so the passages fed to the model are ones they could
+    // read themselves - a stranger continuing a public story must not get a
+    // locked chapter back through the prompt.
+    const viewer = await this.currentUser.optional();
 
     try {
       const [craft, continuity] = await Promise.all([
@@ -198,6 +202,7 @@ export class LlmService {
           storyId,
           kinds: [ChunkKind.CHAPTER],
           limit: 3,
+          viewerId: viewer?.id ?? null,
         }),
       ]);
 

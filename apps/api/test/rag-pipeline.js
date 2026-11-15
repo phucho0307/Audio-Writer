@@ -59,12 +59,15 @@ const ok = (b) => (b ? 'PASS' : '**FAIL**');
   console.log('  embedded                :', ok(rows.every((r) => r.embeddedBy)), rows[0]?.embeddedBy ?? '');
 
   // Retrieval over the story's own text.
-  const hits = await (await fetch(`${API}/rag/search?q=${encodeURIComponent('hoá đơn cà phê thứ Năm')}&storyId=${story.id}`)).json();
+  // As the owner. The story is private, and this used to pass anonymously -
+  // which was the search index handing private chapters to anyone who asked.
+  const asOwner = { headers: { authorization: `Bearer ${token}` } };
+  const hits = await (await fetch(`${API}/rag/search?q=${encodeURIComponent('hoá đơn cà phê thứ Năm')}&storyId=${story.id}`, asOwner)).json();
   console.log('\nsearch finds the new chapter:', ok(hits.some((h) => h.kind === 'CHAPTER')));
   hits.slice(0, 3).forEach((h) => console.log(`   ${h.kind.padEnd(7)} ${h.label}`));
 
   // And both corpora answer a continuation-shaped query.
-  const mixed = await (await fetch(`${API}/rag/search?q=${encodeURIComponent('cô nghi ngờ chồng, tìm được bằng chứng nhỏ')}&genre=INFIDELITY`)).json();
+  const mixed = await (await fetch(`${API}/rag/search?q=${encodeURIComponent('cô nghi ngờ chồng, tìm được bằng chứng nhỏ')}&genre=INFIDELITY`, asOwner)).json();
   const kinds = new Set(mixed.map((h) => h.kind));
   console.log('\nmixed query returns both kinds:', ok(kinds.has('CRAFT') && kinds.has('CHAPTER')), [...kinds].join(' + '));
 

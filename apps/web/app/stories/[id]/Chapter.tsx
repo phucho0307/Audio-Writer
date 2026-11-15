@@ -15,6 +15,7 @@ export default function Chapter({
   inherited,
   isLast,
   canEdit,
+  viewerHandle = null,
   editing,
   onOpen,
   onClose,
@@ -24,6 +25,8 @@ export default function Chapter({
   inherited: boolean;
   isLast: boolean;
   canEdit: boolean;
+  /** Who is looking, so "bạn" is said only to the person who wrote it. */
+  viewerHandle?: string | null;
   editing: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -97,9 +100,14 @@ export default function Chapter({
               : undefined
           }
         >
+          {/* Every human chapter used to be labelled "bạn" - so on a fork,
+              the seven chapters inherited from the original author were
+              credited to whoever had forked it. */}
           {chapter.authorType === 'AI'
             ? `AI · ${chapter.modelName ?? ''}`
-            : 'bạn'}
+            : chapter.author && chapter.author.handle !== viewerHandle
+              ? `@${chapter.author.handle}`
+              : 'bạn'}
         </span>
         {inherited && <span className="opacity-60">· kế thừa</span>}
 

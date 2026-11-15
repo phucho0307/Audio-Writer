@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { api, type Story } from '@/lib/api';
+import { api, type MyBranch, type Story } from '@/lib/api';
 import SignInWall from '../SignInWall';
 import Reveal from '../Reveal';
 import SpiritText from '../SpiritText';
@@ -23,11 +23,15 @@ function MyStories() {
   const [title, setTitle] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const [branches, setBranches] = useState<MyBranch[]>([]);
+
   useEffect(() => {
     api
       .myStories()
       .then(setStories)
       .catch((e: Error) => setError(e.message));
+    // Separate and quiet: a shelf without its branches is still a shelf.
+    api.myBranches().then(setBranches).catch(() => {});
   }, []);
 
   async function create(e: React.FormEvent) {
@@ -101,7 +105,7 @@ function MyStories() {
 
       {!stories && <ShelfSkeleton />}
 
-      {stories?.length === 0 && (
+      {stories?.length === 0 && branches.length === 0 && (
         <div
           className="reveal flex flex-col items-start gap-4 rounded-[5px] border border-dashed border-[var(--color-line-strong)] px-6 py-12"
           style={{ ['--d' as string]: '120ms' }}
@@ -170,7 +174,70 @@ function MyStories() {
           ))}
         </Reveal>
       )}
+
+      {branches.length > 0 && <MyBranches branches={branches} />}
     </main>
+  );
+}
+
+/**
+ * Branches written in other people's stories: what a reader who became a
+ * writer here has actually made. Each opens at its first chapter of its own,
+ * with a second link straight back into writing it.
+ */
+function MyBranches({ branches }: { branches: MyBranch[] }) {
+  return (
+    <section className="flex flex-col gap-5">
+      <div className="flex items-baseline justify-between border-b border-[var(--color-line)] pb-2.5">
+        <h2 className="label label-accent">⑂ Nhánh của tôi</h2>
+        <span className="text-[11.5px] text-[var(--color-faint)]">
+          {branches.length} nhánh trong truyện của người khác
+        </span>
+      </div>
+      <Reveal childrenStagger stagger={0.05} deps={[branches.length]} className="grid gap-3 md:grid-cols-2">
+        {branches.map((b) => {
+          const from = (b.forkedAtDepth ?? 0) + 1;
+          return (
+            <div
+              key={b.id}
+              className="card group flex gap-4 p-3.5 transition-colors hover:border-[var(--color-accent-line)]"
+            >
+              <Link
+                href={`/doc/${b.story.id}/${from + 1}?branch=${b.id}`}
+                className="cover aspect-[3/4] w-[64px] flex-none"
+                aria-label={`Đọc nhánh ${b.name}`}
+              >
+                {b.story.coverUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={b.story.coverUrl} alt="" />
+                )}
+              </Link>
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <Link
+                  href={`/doc/${b.story.id}/${from + 1}?branch=${b.id}`}
+                  className="display truncate text-[17px] transition-colors group-hover:text-[var(--color-accent)]"
+                >
+                  {b.name}
+                </Link>
+                <span className="truncate text-[12.5px] text-[var(--color-muted)]">
+                  từ <span className="text-[var(--color-ink)]">{b.story.title}</span> của @
+                  {b.story.owner.handle}
+                </span>
+                <span className="text-[11.5px] text-[var(--color-faint)]">
+                  rẽ sau chương {from} · {b._count.contributions} chương của bạn
+                </span>
+                <Link
+                  href={`/stories/${b.story.id}?branch=${b.id}`}
+                  className="mt-auto self-start text-[12.5px] text-[var(--color-accent)] hover:underline"
+                >
+                  Viết tiếp →
+                </Link>
+              </div>
+            </div>
+          );
+        })}
+      </Reveal>
+    </section>
   );
 }
 

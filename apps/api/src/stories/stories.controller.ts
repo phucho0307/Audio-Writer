@@ -69,6 +69,11 @@ export class StoriesController {
     return this.paywall.unlock(id);
   }
 
+  @Get('me/branches')
+  myBranches() {
+    return this.stories.myBranches();
+  }
+
   @Get('me/wallet')
   wallet() {
     return this.paywall.wallet();

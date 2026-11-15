@@ -1105,6 +1105,52 @@ export class StoriesService {
   }
 
   /**
+   * Branches this person wrote in other people's stories.
+   *
+   * The shelf listed only stories you own, so someone who had written two
+   * whole branches of somebody else's story opened "Truyện của tôi" to be told
+   * they had written nothing. A branch is the main thing a reader-turned-writer
+   * makes here; it belongs on their shelf.
+   *
+   * A private story's branches are listed only while the person still has a
+   * way in - an invitation - since otherwise the link would lead to a 404.
+   */
+  async myBranches() {
+    const user = await this.currentUser.current();
+    return this.prisma.branch.findMany({
+      where: {
+        ownerId: user.id,
+        isRoot: false,
+        story: {
+          ownerId: { not: user.id },
+          OR: [
+            { visibility: { not: Visibility.PRIVATE } },
+            { branches: { some: { collaborators: { some: { userId: user.id } } } } },
+          ],
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        depth: true,
+        forkedAtDepth: true,
+        updatedAt: true,
+        _count: { select: { contributions: true } },
+        story: {
+          select: {
+            id: true,
+            title: true,
+            coverUrl: true,
+            genres: true,
+            owner: { select: { handle: true, displayName: true } },
+          },
+        },
+      },
+    });
+  }
+
+  /**
    * Who may add a chapter straight onto a branch: its owner, or an admin.
    *
    * Kept as one predicate because the draft room has to make the same call
