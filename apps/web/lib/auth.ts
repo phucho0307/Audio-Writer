@@ -127,6 +127,22 @@ export function refresh(): Promise<string | null> {
   return inflight;
 }
 
+/**
+ * Wait until the page knows who is signed in.
+ *
+ * The access token lives in memory, so every page load starts without one,
+ * and `call()` only renews on a 401. But a private story fetched anonymously
+ * is a 404, not a 401 - deliberately, so its existence is not confirmed to
+ * strangers - which meant no renewal ever happened: creating a story (private
+ * by default) and landing on its page showed "Story not found" to its own
+ * author, as did reloading any private story. The first request of a page
+ * now waits for the session to be restored. Single-flighted through
+ * `refresh`, and a no-op once settled, so it costs one round trip per load.
+ */
+export async function ensureSession(): Promise<void> {
+  if (!ready) await refresh();
+}
+
 /** Full-page navigation, not fetch: the browser has to follow Google's redirects. */
 export function signIn(): void {
   window.location.href = `${API}/auth/google`;

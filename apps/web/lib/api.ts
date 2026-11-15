@@ -1,5 +1,5 @@
 import { API } from './env';
-import { getToken, refresh } from './auth';
+import { ensureSession, getToken, refresh } from './auth';
 
 export { API };
 
@@ -268,6 +268,7 @@ async function call<T>(
   init?: RequestInit,
   retry = true,
 ): Promise<T> {
+  await ensureSession();
   const res = await fetch(API + path, {
     ...init,
     headers: authHeaders(init?.headers),
