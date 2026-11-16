@@ -1,5 +1,6 @@
 'use client';
 
+import { thumbUrl } from '@/lib/thumb';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, type PublicProfile } from '@/lib/api';
@@ -121,7 +122,7 @@ export default function Profile({ params }: { params: Promise<{ handle: string }
                 {s.coverUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={s.coverUrl}
+                    src={thumbUrl(s.coverUrl)}
                     alt=""
                     className="h-[104px] w-[74px] flex-none rounded-[4px] object-cover"
                   />
