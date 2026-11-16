@@ -12,6 +12,7 @@ import { StorageModule } from './storage/storage.module';
 import { RagModule } from './rag/rag.module';
 import { CollabModule } from './collab/collab.module';
 import { TtsModule } from './tts/tts.module';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { TtsModule } from './tts/tts.module';
     AuthModule,
     HealthModule,
     StoriesModule,
+    UsersModule,
     LlmModule,
     EventsModule,
     StorageModule,

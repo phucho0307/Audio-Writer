@@ -302,6 +302,37 @@ async function call<T>(
   return res.json() as Promise<T>;
 }
 
+/** The signed-in user's own settings. */
+export type MyProfile = {
+  id: string;
+  handle: string;
+  displayName: string;
+  email: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  handleChangedAt: string | null;
+  /** When the handle may next be changed; null if it may be changed now. */
+  nextHandleChangeAt: string | null;
+};
+
+/** What anyone sees on /u/[handle]. */
+export type PublicProfile = {
+  handle: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string | null;
+  createdAt: string;
+  stories: {
+    id: string;
+    title: string;
+    synopsis: string | null;
+    coverUrl: string | null;
+    genres: string[];
+    contributionCount: number;
+    viewCount: number;
+  }[];
+};
+
 export const api = {
   /** The public shelf: PUBLIC stories only, works signed out. */
   listStories: () => call<Story[]>('/stories'),
@@ -481,6 +512,19 @@ export const api = {
     call<ShareSettings>(`/branches/${branchId}/draft/share/reset`, { method: 'POST' }),
 
   /** Open a share link: joins the room at the link's level. */
+  myProfile: () => call<MyProfile>('/me/profile'),
+
+  updateProfile: (patch: { displayName?: string; handle?: string; bio?: string | null }) =>
+    call<MyProfile>('/me/profile', { method: 'PATCH', body: JSON.stringify(patch) }),
+
+  checkHandle: (handle: string) =>
+    call<{ handle: string; available: boolean; problem: string | null }>(
+      `/me/handle-check?handle=${encodeURIComponent(handle)}`,
+    ),
+
+  profile: (handle: string) =>
+    call<PublicProfile>(`/users/${encodeURIComponent(handle)}`),
+
   joinShare: (token: string) =>
     call<{ storyId: string; branchId: string; role: 'OWNER' | 'EDITOR' | 'VIEWER' }>(
       `/share/${encodeURIComponent(token)}/join`,

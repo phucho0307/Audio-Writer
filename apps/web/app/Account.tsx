@@ -134,13 +134,27 @@ export default function Account() {
               )}
             </div>
           </div>
+          <a
+            role="menuitem"
+            href={`/u/${user.handle}`}
+            className="block px-3.5 py-2.5 text-[13px] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-ink)]"
+          >
+            Trang của tôi
+          </a>
+          <a
+            role="menuitem"
+            href="/cai-dat"
+            className="block px-3.5 py-2.5 text-[13px] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-ink)]"
+          >
+            Cài đặt
+          </a>
           <button
             role="menuitem"
             onClick={() => {
               setOpen(false);
               void signOut();
             }}
-            className="w-full px-3.5 py-2.5 text-left text-[13px] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-ink)]"
+            className="w-full border-t border-[var(--color-line)] px-3.5 py-2.5 text-left text-[13px] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-ink)]"
           >
             Đăng xuất
           </button>
