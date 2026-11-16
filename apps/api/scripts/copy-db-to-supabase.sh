@@ -47,10 +47,19 @@ remote -c "create extension if not exists vector with schema public;" \
        -c "create extension if not exists unaccent with schema public;"
 
 echo "Copying schema and data (one transaction)..."
-docker exec "$CONTAINER" pg_dump -U "$SOURCE_USER" -d "$SOURCE_DB" \
-    --no-owner --no-privileges --schema=public \
-  | sed -E '/^CREATE SCHEMA public;$/d; /^COMMENT ON SCHEMA public IS/d' \
-  | remote --single-transaction > /dev/null
+# Multi-row INSERTs rather than COPY: COPY through the Supabase pooler
+# stalled for minutes and then dropped the connection, while ordinary
+# statements of the same size go through in seconds. With INSERTs the
+# whole database (about 20 MB) took three minutes from the US to Singapore.
+# The dump runs inside the container, and the URL goes in as an environment
+# variable so it never appears in a command line or a process listing.
+docker exec -e TARGET="$TARGET" -e SRC_USER="$SOURCE_USER" -e SRC_DB="$SOURCE_DB" "$CONTAINER" sh -c '
+  set -e
+  pg_dump -U "$SRC_USER" -d "$SRC_DB" --no-owner --no-privileges --schema=public --inserts --rows-per-insert=50 > /tmp/aw-dump.sql
+  sed -i -E "/^CREATE SCHEMA public;\$/d; /^COMMENT ON SCHEMA public IS/d" /tmp/aw-dump.sql
+  psql "$TARGET" -v ON_ERROR_STOP=1 -X -q --single-transaction -f /tmp/aw-dump.sql > /dev/null
+  rm -f /tmp/aw-dump.sql
+'
 
 echo "Comparing row counts..."
 tables="$(local_ -c "select tablename from pg_tables where schemaname = 'public' order by 1;")"
