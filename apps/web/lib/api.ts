@@ -517,6 +517,12 @@ export const api = {
   updateProfile: (patch: { displayName?: string; handle?: string; bio?: string | null }) =>
     call<MyProfile>('/me/profile', { method: 'PATCH', body: JSON.stringify(patch) }),
 
+  /** `image` is a data: URL of an already cropped, shrunken square. */
+  setAvatar: (image: string) =>
+    call<MyProfile>('/me/avatar', { method: 'PUT', body: JSON.stringify({ image }) }),
+
+  clearAvatar: () => call<MyProfile>('/me/avatar', { method: 'DELETE' }),
+
   checkHandle: (handle: string) =>
     call<{ handle: string; available: boolean; problem: string | null }>(
       `/me/handle-check?handle=${encodeURIComponent(handle)}`,

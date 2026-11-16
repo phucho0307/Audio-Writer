@@ -15,21 +15,35 @@ export default function Profile({ params }: { params: Promise<{ handle: string }
   const { user } = useAuth();
   const [p, setP] = useState<PublicProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [missing, setMissing] = useState(false);
 
   useEffect(() => {
     setP(null);
     setError(null);
+    setMissing(false);
     api
       .profile(decodeURIComponent(handle).replace(/^@/, ''))
       .then(setP)
-      .catch((e: Error) => setError(e.message));
+      .catch((e: Error & { status?: number }) => {
+        setMissing(e.status === 404);
+        setError(e.message);
+      });
   }, [handle]);
 
   if (error) {
+    const name = decodeURIComponent(handle).replace(/^@/, '');
     return (
-      <main className="mx-auto max-w-[44rem] px-5 py-14 sm:px-8">
-        <p className="panel text-sm text-[var(--color-son)]">{error}</p>
-        <Link href="/kham-pha" className="btn btn-ghost mt-5">
+      <main className="mx-auto flex max-w-[44rem] flex-col items-start gap-4 px-5 py-16 sm:px-8">
+        <span className="label label-accent">Hồ sơ</span>
+        <h1 className="display text-[1.9rem] leading-tight">
+          {missing ? `@${name} chưa có trang trên Rợn Bút` : 'Không mở được trang này'}
+        </h1>
+        <p className="max-w-[46ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
+          {missing
+            ? 'Có thể người này đã đổi username, hoặc tài khoản không còn nữa.'
+            : error}
+        </p>
+        <Link href="/kham-pha" className="btn btn-ghost">
           <span aria-hidden>←</span> Khám phá
         </Link>
       </main>

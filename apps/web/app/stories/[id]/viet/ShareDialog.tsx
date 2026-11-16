@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api, type Room, type ShareSettings } from '@/lib/api';
+import Handle from '@/app/Handle';
 
 type Role = 'EDITOR' | 'VIEWER';
 const ROLE_LABEL: Record<Role, string> = { EDITOR: 'Người viết', VIEWER: 'Người xem' };
@@ -104,12 +105,12 @@ export default function ShareDialog({
           <span className="label">Người trong phòng</span>
           <ul className="flex flex-col">
             <li className="flex items-center gap-3 py-2 text-[14px]">
-              <span className="min-w-0 flex-1 truncate">@{room.owner.handle}</span>
+              <Handle handle={room.owner.handle} className="min-w-0 flex-1 truncate" />
               <span className="text-[12.5px] text-[var(--color-faint)]">Chủ nhánh</span>
             </li>
             {room.collaborators.map((c) => (
               <li key={c.id} className="flex items-center gap-3 border-t border-[var(--color-line)] py-2 text-[14px]">
-                <span className="min-w-0 flex-1 truncate">@{c.handle}</span>
+                <Handle handle={c.handle} className="min-w-0 flex-1 truncate" />
                 <select
                   value={c.role}
                   disabled={busy}

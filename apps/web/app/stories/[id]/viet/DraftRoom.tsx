@@ -12,6 +12,7 @@ import FormatToolbar from '@/app/FormatToolbar';
 import ShareDialog from './ShareDialog';
 import { getToken } from '@/lib/auth';
 import { collabUrl, colorFor, roomFor } from '@/lib/collab';
+import Handle from '@/app/Handle';
 
 /**
  * The editor itself, mounted only once there is a socket to bind it to.
@@ -438,7 +439,7 @@ export default function DraftRoom({
           <ul className="mt-3 flex flex-col gap-2">
             <li className="flex items-center gap-2 text-[13px]">
               <Dot handle={room.owner.handle} color={colorFor(room.owner.handle)} />
-              <span>@{room.owner.handle}</span>
+              <Handle handle={room.owner.handle} />
               <span className="font-mono text-[12px] text-[var(--color-muted)]">
                 chủ nhánh
               </span>
@@ -446,7 +447,7 @@ export default function DraftRoom({
             {room.collaborators.map((c) => (
               <li key={c.id} className="flex items-center gap-2 text-[13px]">
                 <Dot handle={c.handle} color={colorFor(c.handle)} />
-                <span>@{c.handle}</span>
+                <Handle handle={c.handle} />
                 <span className="font-mono text-[12px] text-[var(--color-muted)]">
                   {c.role === 'VIEWER' ? 'chỉ xem' : 'viết được'}
                 </span>

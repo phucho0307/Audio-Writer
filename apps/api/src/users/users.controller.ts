@@ -1,6 +1,8 @@
-import { Body, Controller, Get, Param, Patch, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Put, Query } from '@nestjs/common';
 import { IsOptional, IsString, MaxLength, ValidateIf } from 'class-validator';
-import { BIO_MAX, NAME_MAX, UsersService } from './users.service';
+import { Throttle } from '@nestjs/throttler';
+import { COSTLY_TIER } from '../throttler/tiers';
+import { AVATAR_MAX_BYTES, BIO_MAX, NAME_MAX, UsersService } from './users.service';
 
 class ProfileDto {
   @IsOptional()
@@ -21,6 +23,13 @@ class ProfileDto {
   bio?: string | null;
 }
 
+class AvatarDto {
+  /** A data: URL. Base64 is a third larger than the bytes it carries. */
+  @IsString()
+  @MaxLength(Math.ceil((AVATAR_MAX_BYTES * 4) / 3) + 100)
+  image!: string;
+}
+
 @Controller()
 export class UsersController {
   constructor(private readonly users: UsersService) {}
@@ -33,6 +42,17 @@ export class UsersController {
   @Patch('me/profile')
   update(@Body() dto: ProfileDto) {
     return this.users.update(dto);
+  }
+
+  @Put('me/avatar')
+  @Throttle(COSTLY_TIER)
+  setAvatar(@Body() dto: AvatarDto) {
+    return this.users.setAvatar(dto.image);
+  }
+
+  @Delete('me/avatar')
+  clearAvatar() {
+    return this.users.clearAvatar();
   }
 
   /** For the settings form, as the user types. */

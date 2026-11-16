@@ -1,16 +1,34 @@
 import {
   BadRequestException,
   ConflictException,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
+import { AUDIO_STORAGE, type StorageDriver } from '../storage/storage-driver';
 
 /** Lowercase letters, digits and underscores; what sign-up already produces. */
 export const HANDLE_RE = /^[a-z0-9_]{3,24}$/;
 export const BIO_MAX = 300;
 export const NAME_MAX = 50;
+/**
+ * The browser crops and shrinks the picture to a small square before sending
+ * it, so a real avatar is a few tens of kilobytes. The cap is for anything
+ * that skipped that step.
+ */
+// Under the JSON body limit (100 kB) once base64-encoded.
+export const AVATAR_MAX_BYTES = 64 * 1024;
+
+/** Accepted formats, recognised by their first bytes rather than a label. */
+const IMAGE_KINDS: { type: string; ext: string; is: (b: Buffer) => boolean }[] = [
+  { type: 'image/webp', ext: 'webp', is: (b) => b.subarray(0, 4).toString('latin1') === 'RIFF' && b.subarray(8, 12).toString('latin1') === 'WEBP' },
+  { type: 'image/jpeg', ext: 'jpg', is: (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff },
+  { type: 'image/png', ext: 'png', is: (b) => b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])) },
+];
+
 /** Long enough that a handle cannot be passed around to impersonate someone. */
 export const HANDLE_COOLDOWN_DAYS = 14;
 
@@ -36,7 +54,45 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly currentUser: CurrentUserService,
+    // The one object store the app has. Avatars sit beside the narration
+    // under their own prefix; they are public, as narration is.
+    @Inject(AUDIO_STORAGE) private readonly storage: StorageDriver,
   ) {}
+
+  /** Store a new picture (a data: URL) and make it the avatar. */
+  async setAvatar(dataUrl: string) {
+    const me = await this.currentUser.current();
+    const m = /^data:([\w/+.-]+);base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl.trim());
+    if (!m) throw new BadRequestException({ code: 'AVATAR_INVALID', message: 'Ảnh không hợp lệ.' });
+    const bytes = Buffer.from(m[2], 'base64');
+    if (bytes.length > AVATAR_MAX_BYTES) {
+      throw new BadRequestException({ code: 'AVATAR_TOO_LARGE', message: 'Ảnh quá lớn.' });
+    }
+    const kind = IMAGE_KINDS.find((k) => k.is(bytes));
+    if (!kind) {
+      throw new BadRequestException({ code: 'AVATAR_TYPE', message: 'Chỉ nhận ảnh JPG, PNG hoặc WebP.' });
+    }
+    // Content-addressed, so a new picture is a new URL and no cache anywhere
+    // keeps showing the old one. No slash: the local driver writes keys flat.
+    const digest = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
+    const key = `avatar-${me.id}-${digest}.${kind.ext}`;
+    const stored = await this.storage.put(key, bytes, kind.type);
+    const updated = await this.prisma.user.update({
+      where: { id: me.id },
+      data: { avatarUrl: stored.url },
+    });
+    return this.view(updated);
+  }
+
+  /** Back to initials. */
+  async clearAvatar() {
+    const me = await this.currentUser.current();
+    const updated = await this.prisma.user.update({
+      where: { id: me.id },
+      data: { avatarUrl: null },
+    });
+    return this.view(updated);
+  }
 
   /** Why a handle cannot be taken, or null if it can. */
   async handleProblem(handle: string, selfId?: string): Promise<string | null> {

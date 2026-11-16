@@ -22,6 +22,43 @@ function cleanHandle(v: string): string {
     .replace(/[^a-z0-9_]/g, '');
 }
 
+/**
+ * The picked file as a small square: centre-cropped, 256 px, WebP where the
+ * browser can write it and JPEG where it cannot. Done here so the server
+ * never handles a twelve-megapixel phone photo.
+ */
+async function squareAvatar(file: File): Promise<string> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('Không đọc được ảnh này.'));
+      i.src = url;
+    });
+    const side = Math.min(img.naturalWidth, img.naturalHeight);
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Trình duyệt không xử lý được ảnh.');
+    ctx.drawImage(
+      img,
+      (img.naturalWidth - side) / 2,
+      (img.naturalHeight - side) / 2,
+      side,
+      side,
+      0,
+      0,
+      256,
+      256,
+    );
+    const webp = canvas.toDataURL('image/webp', 0.86);
+    return webp.startsWith('data:image/webp') ? webp : canvas.toDataURL('image/jpeg', 0.86);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 function Settings() {
   const [me, setMe] = useState<MyProfile | null>(null);
   const [name, setName] = useState('');
@@ -32,6 +69,38 @@ function Settings() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const seq = useRef(0);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+
+  async function changeAvatar(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) return setError('Hãy chọn một file ảnh.');
+    setAvatarBusy(true);
+    setError(null);
+    try {
+      const p = await api.setAvatar(await squareAvatar(file));
+      setMe(p);
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAvatarBusy(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  async function removeAvatar() {
+    setAvatarBusy(true);
+    setError(null);
+    try {
+      setMe(await api.clearAvatar());
+      await refresh();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
 
   useEffect(() => {
     api
@@ -113,29 +182,55 @@ function Settings() {
       }}
     >
       <section className="card flex flex-col gap-6 p-6 sm:p-7">
-        <div className="flex items-center gap-4">
-          {me.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={me.avatarUrl}
-              alt=""
-              width={56}
-              height={56}
-              referrerPolicy="no-referrer"
-              className="h-14 w-14 rounded-full object-cover"
-            />
-          ) : (
-            <span className="grid h-14 w-14 place-items-center rounded-full border border-[var(--color-accent-line)] bg-[var(--color-accent-soft)] text-[18px] text-[var(--color-accent)]">
-              {(name.trim()[0] ?? '?').toUpperCase()}
+        <div className="flex flex-wrap items-center gap-4">
+          <button
+            type="button"
+            onClick={() => fileRef.current?.click()}
+            disabled={avatarBusy}
+            aria-label="Đổi ảnh đại diện"
+            title="Đổi ảnh đại diện"
+            className="group relative h-16 w-16 flex-none overflow-hidden rounded-full"
+          >
+            {me.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={me.avatarUrl}
+                alt=""
+                width={64}
+                height={64}
+                referrerPolicy="no-referrer"
+                className="h-16 w-16 object-cover"
+              />
+            ) : (
+              <span className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-accent-line)] bg-[var(--color-accent-soft)] text-[20px] text-[var(--color-accent)]">
+                {(name.trim()[0] ?? '?').toUpperCase()}
+              </span>
+            )}
+            <span className="absolute inset-0 grid place-items-center bg-black/55 text-[11px] font-medium text-white opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+              {avatarBusy ? '…' : 'Đổi ảnh'}
             </span>
-          )}
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/heic"
+            className="hidden"
+            onChange={(e) => void changeAvatar(e.target.files?.[0])}
+          />
           <div className="flex min-w-0 flex-col">
             <span className="truncate text-[16px] font-medium">{name.trim() || '—'}</span>
             <span className="truncate text-[13px] text-[var(--color-muted)]">@{handle || '…'}</span>
           </div>
-          <Link href={`/u/${me.handle}`} className="btn btn-ghost btn-sm ml-auto">
-            Xem trang của tôi
-          </Link>
+          <div className="ml-auto flex flex-wrap gap-2">
+            {me.avatarUrl && (
+              <button type="button" onClick={() => void removeAvatar()} disabled={avatarBusy} className="btn btn-quiet btn-sm">
+                Gỡ ảnh
+              </button>
+            )}
+            <Link href={`/u/${me.handle}`} className="btn btn-ghost btn-sm">
+              Xem trang của tôi
+            </Link>
+          </div>
         </div>
 
         <label className="flex flex-col gap-1.5">
