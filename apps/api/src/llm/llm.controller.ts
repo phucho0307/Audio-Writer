@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Response } from 'express';
-import { IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsIn, IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
 import type { Paragraphs, Pov } from '@aw/shared';
 import { LlmService } from './llm.service';
 import { DevOnlyGuard } from '../auth/dev-only.guard';
@@ -47,6 +47,11 @@ class SuggestDto {
   @Min(2)
   @Max(6)
   count?: number;
+
+  /** Skip the shared answer and ask the model again. Uses a quota turn. */
+  @IsOptional()
+  @IsBoolean()
+  fresh?: boolean;
 }
 
 class GrantDto {
@@ -110,7 +115,7 @@ export class LlmController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: SuggestDto,
   ) {
-    return this.llm.suggest(id, dto.count ?? 4);
+    return this.llm.suggest(id, dto.count ?? 4, dto.fresh ?? false);
   }
 
   /**

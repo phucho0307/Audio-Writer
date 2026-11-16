@@ -18,6 +18,12 @@ export interface QuotaStatus {
   resetsAt: string;
 }
 
+/** Which turn a consume() took, so a failed request can give it back. */
+export type Spend =
+  | { kind: 'free'; key: string }
+  | { kind: 'credit'; packId: string }
+  | null;
+
 /**
  * Meters AI turns.
  *
@@ -114,21 +120,24 @@ export class AiQuotaService {
    * has to arrive before any tokens stream, or the client has already been
    * given a 200 and cannot be shown a paywall.
    */
-  async consume(user: User): Promise<QuotaStatus> {
+  async consume(user: User): Promise<QuotaStatus & { spent: Spend }> {
     const status = await this.status(user);
-    if (status.unlimited) return status;
+    if (status.unlimited) return { ...status, spent: null };
 
     if (status.freeRemaining > 0) {
       const key = this.dayKey(user.id);
       // 48h covers the longest possible day plus timezone slack; the key is
       // date-stamped, so an over-long TTL can never leak into tomorrow.
       await this.redis.incrementWindow(key, 60 * 60 * 48);
-      return this.status(user);
+      return { ...(await this.status(user)), spent: { kind: 'free', key } };
     }
 
     if (status.creditsRemaining > 0) {
-      await this.spendCredit(user.id);
-      return this.status(user);
+      const packId = await this.spendCredit(user.id);
+      return {
+        ...(await this.status(user)),
+        spent: packId ? { kind: 'credit', packId } : null,
+      };
     }
 
     throw new ForbiddenException({
@@ -140,7 +149,24 @@ export class AiQuotaService {
     });
   }
 
-  private async spendCredit(userId: string): Promise<void> {
+  /**
+   * Gives back a turn the AI never delivered on - the provider was down or
+   * out of quota. The reader should not pay for our outage.
+   */
+  async refund(spent: Spend): Promise<void> {
+    if (!spent) return;
+    if (spent.kind === 'free') {
+      const left = await this.redis.client.decr(spent.key);
+      if (left < 0) await this.redis.client.set(spent.key, 0, 'KEEPTTL');
+      return;
+    }
+    await this.prisma.entitlement.updateMany({
+      where: { id: spent.packId, consumed: { gt: 0 } },
+      data: { consumed: { decrement: 1 } },
+    });
+  }
+
+  private async spendCredit(userId: string): Promise<string | null> {
     // Oldest pack first, so anything with an expiry is used before it lapses.
     const pack = await this.prisma.entitlement.findFirst({
       where: {
@@ -150,12 +176,13 @@ export class AiQuotaService {
       },
       orderBy: { createdAt: 'asc' },
     });
-    if (!pack || pack.consumed >= pack.granted) return;
+    if (!pack || pack.consumed >= pack.granted) return null;
 
     await this.prisma.entitlement.update({
       where: { id: pack.id },
       data: { consumed: { increment: 1 } },
     });
+    return pack.id;
   }
 
   /** Grants credits. Stands in for the payment webhook until checkout exists. */

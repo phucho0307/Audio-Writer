@@ -208,13 +208,13 @@ export default function StoryPage({
     setError((e as Error).message);
   }
 
-  async function suggest() {
+  async function suggest(fresh = false) {
     if (!branchId) return;
     setBusy("suggest");
     setError(null);
     setPaywall(null);
     try {
-      setOptions(await api.suggest(branchId, 4));
+      setOptions(await api.suggest(branchId, 4, fresh));
     } catch (e) {
       handleAiError(e);
     } finally {
@@ -937,12 +937,22 @@ export default function StoryPage({
               <span className="font-mono text-[12px] uppercase tracking-widest text-[var(--color-accent)]">
                 Chọn hướng đi · mỗi lựa chọn tạo một nhánh mới
               </span>
-              <button
-                onClick={() => setOptions(null)}
-                className="font-mono text-[12px] text-[var(--color-muted)] hover:underline"
-              >
-                đóng
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => suggest(true)}
+                  disabled={busy !== null || aiSpent}
+                  title="Hỏi AI lại từ đầu. Dùng 1 lượt AI."
+                  className="font-mono text-[12px] text-[var(--color-accent)] hover:underline disabled:opacity-40"
+                >
+                  {busy === "suggest" ? "đang nghĩ…" : "ý khác (1 lượt)"}
+                </button>
+                <button
+                  onClick={() => setOptions(null)}
+                  className="font-mono text-[12px] text-[var(--color-muted)] hover:underline"
+                >
+                  đóng
+                </button>
+              </div>
             </div>
             <div className="grid gap-2.5">
               {options.map((o) => (
@@ -1103,7 +1113,7 @@ export default function StoryPage({
                   {busy === "continue" ? "AI đang viết…" : "✦ AI viết tiếp"}
                 </button>
                 <button
-                  onClick={suggest}
+                  onClick={() => suggest()}
                   disabled={busy !== null || aiSpent}
                   className="rounded-md border border-[var(--color-line)] px-3.5 py-2 text-sm hover:border-[var(--color-accent)] disabled:opacity-40"
                 >

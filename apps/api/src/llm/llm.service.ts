@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createHash } from 'node:crypto';
 import { ChunkKind } from '@prisma/client';
 import type {
   ContinueRequest,
@@ -13,9 +14,17 @@ import type {
 import { RateLimitedError } from '@aw/shared';
 import { GeminiDriver } from './drivers/gemini.driver';
 import { StoriesService } from '../stories/stories.service';
-import { AiQuotaService, type QuotaStatus } from './ai-quota.service';
+import { AiQuotaService, type QuotaStatus, type Spend } from './ai-quota.service';
 import { RagService, firstKnownGenre } from '../rag/rag.service';
 import { CurrentUserService } from '../auth/current-user.service';
+import { RedisService } from '../redis/redis.service';
+
+/**
+ * How long a set of plot suggestions is kept for reuse. Suggestions depend
+ * only on the text they were made from, which never changes under a key, so
+ * this is about memory, not staleness.
+ */
+const SUGGEST_TTL_SECONDS = 30 * 24 * 3600;
 
 @Injectable()
 export class LlmService {
@@ -28,6 +37,7 @@ export class LlmService {
     private readonly quota: AiQuotaService,
     private readonly rag: RagService,
     private readonly currentUser: CurrentUserService,
+    private readonly redis: RedisService,
   ) {
     // Ordered failover chain. More drivers land here as they are written; the
     // chain is what makes a rate-limited free tier survivable.
@@ -82,7 +92,7 @@ export class LlmService {
 
     // Spend the turn before a single token streams. Once the response body has
     // started the status code is already sent and a paywall is unshowable.
-    await this.quota.consume(await this.currentUser.current());
+    const { spent } = await this.quota.consume(await this.currentUser.current());
 
     const req: SeedRequest = {
       mode: 'seed',
@@ -93,7 +103,7 @@ export class LlmService {
       paragraphs: opts.paragraphs ?? 1,
     };
 
-    yield* this.streamWithFailover(req);
+    yield* this.refundingIfSilent(this.streamWithFailover(req), spent);
   }
 
   /**
@@ -119,7 +129,7 @@ export class LlmService {
       );
     }
 
-    await this.quota.consume(await this.currentUser.current());
+    const { spent } = await this.quota.consume(await this.currentUser.current());
 
     const retrieved = await this.retrieve(
       storySoFar,
@@ -136,10 +146,22 @@ export class LlmService {
       ...retrieved,
     };
 
-    yield* this.streamWithFailover(req);
+    yield* this.refundingIfSilent(this.streamWithFailover(req), spent);
   }
 
-  async suggest(branchId: string, count = 4): Promise<PlotOption[]> {
+  /**
+   * Directions the story could take from here.
+   *
+   * Shared between everyone who reaches the same text: a popular chapter is
+   * read by many people, and asking the model the same question for each of
+   * them would be most of the AI bill. The key is a hash of exactly what the
+   * model would be sent, so a reader only ever gets suggestions made from
+   * text they can read themselves - a paywalled chapter changes the text and
+   * therefore the key. A cached answer costs nothing, so it does not use up
+   * the reader's daily quota. `fresh` asks the model again (and does count),
+   * and the new answer replaces the shared one.
+   */
+  async suggest(branchId: string, count = 4, fresh = false): Promise<PlotOption[]> {
     const { branch, text } = await this.stories.readBranch(branchId);
     if (!text.trim()) {
       throw new BadRequestException(
@@ -147,20 +169,67 @@ export class LlmService {
       );
     }
 
-    await this.quota.consume(await this.currentUser.current());
+    const user = await this.currentUser.current();
+    const language = branch.story.language === 'en' ? 'en' : 'vi';
+    const driver = this.first();
+    const key = `ai:suggest:v1:${createHash('sha256')
+      .update(`${driver.name}|${driver.model}|${language}|${count}|${text}`)
+      .digest('hex')}`;
 
-    const req: SuggestRequest = {
-      mode: 'suggest',
-      language: branch.story.language === 'en' ? 'en' : 'vi',
-      storySoFar: text,
-      count,
-    };
+    if (!fresh) {
+      const hit = await this.cachedSuggestions(key);
+      if (hit) return hit;
+    }
 
-    const res = await this.first().generateJson<{ options: PlotOption[] }>(req);
+    const { spent } = await this.quota.consume(user);
 
-    // The model is not asked to invent ids - they only need to be stable for
-    // the length of one picker session.
-    return res.value.options.map((o, i) => ({ ...o, id: `opt-${i + 1}` }));
+    const req: SuggestRequest = { mode: 'suggest', language, storySoFar: text, count };
+    let options: PlotOption[];
+    try {
+      const res = await driver.generateJson<{ options: PlotOption[] }>(req);
+      // The model is not asked to invent ids - they only need to be stable
+      // for the length of one picker session.
+      options = res.value.options.map((o, i) => ({ ...o, id: `opt-${i + 1}` }));
+    } catch (err) {
+      await this.quota.refund(spent);
+      throw err;
+    }
+    if (options.length) {
+      await this.redis.client
+        .set(key, JSON.stringify(options), 'EX', SUGGEST_TTL_SECONDS)
+        .catch((err: Error) => this.logger.warn(`suggest cache write failed: ${err.message}`));
+    }
+    return options;
+  }
+
+  /**
+   * Passes a stream through, giving the turn back if it fails before a single
+   * word arrived. Once text has reached the reader the turn was used.
+   */
+  private async *refundingIfSilent(stream: AsyncIterable<string>, spent: Spend): AsyncIterable<string> {
+    let delivered = false;
+    try {
+      for await (const chunk of stream) {
+        delivered = true;
+        yield chunk;
+      }
+    } catch (err) {
+      if (!delivered) await this.quota.refund(spent);
+      throw err;
+    }
+  }
+
+  /** A stored answer, or null. Redis being down only costs a model call. */
+  private async cachedSuggestions(key: string): Promise<PlotOption[] | null> {
+    try {
+      const raw = await this.redis.client.get(key);
+      if (!raw) return null;
+      const options = JSON.parse(raw) as PlotOption[];
+      return Array.isArray(options) && options.length ? options : null;
+    } catch (err) {
+      this.logger.warn(`suggest cache read failed: ${(err as Error).message}`);
+      return null;
+    }
   }
 
   // -------------------------------------------------------------------------

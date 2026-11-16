@@ -467,10 +467,11 @@ export const api = {
       }),
     }),
 
-  suggest: (branchId: string, count = 4) =>
+  /** `fresh` skips the answer other readers already got and uses a quota turn. */
+  suggest: (branchId: string, count = 4, fresh = false) =>
     call<PlotOption[]>(`/ai/branches/${branchId}/suggest`, {
       method: 'POST',
-      body: JSON.stringify({ count }),
+      body: JSON.stringify({ count, fresh }),
     }),
 
   quota: () => call<Quota>('/ai/quota'),
