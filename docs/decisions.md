@@ -178,6 +178,9 @@ vài chương gần nhất + đoạn liên quan" sẽ rẻ hơn nhiều.
 
 Câu nên nói: biết lúc nào một kỹ thuật **chưa** đáng dùng cũng quan trọng như biết build nó.
 
+**Đã quyết (16/11):** tắt bằng `RAG_INDEX_ON_COMMIT=false` và `RAG_BACKFILL_ON_BOOT=false`.
+Code giữ nguyên. Ngay sau khi tắt, log hết hẳn lỗi 429 từ Gemini.
+
 ## 8. Hồ sơ người dùng và avatar
 
 - **Username:** 3–24 ký tự gồm chữ thường, số, `_`. Có danh sách tên bị giữ (admin,
@@ -255,6 +258,21 @@ Supabase, socket phòng viết chung (HTTP 101), edge-tts sẵn sàng trong cont
 - `.env` dev ghi `EDGE_TTS_PYTHON=python` mà image chỉ có `python3`, và biến trong env
   file luôn đè giá trị mặc định của image. Giọng đọc âm thầm bị tắt. Sửa bằng cách cho
   image có cả hai tên.
+
+## 11c. Audio vừa 9 GB: đo trước, rồi chọn
+
+- Đo trên 746 clip đã có: khoảng **501 byte audio cho mỗi ký tự** ở 64 kbps. Toàn bộ
+  catalogue (7.297 chương, 56 triệu ký tự) sẽ là **khoảng 28 GB**, gấp 3 lần mức chặn,
+  và khoảng 3 ngày tạo liên tục.
+- Gửi hai mẫu 64 kbps và 32 kbps để nghe bằng tai rồi chọn **32 kbps** (nhẹ một nửa,
+  giọng nói vẫn rõ).
+- Chỉ tạo sẵn những gì người đọc gặp đầu tiên: **toàn bộ truyện AI** và **chương đầu của
+  mỗi truyện nhập** (khoảng 1.040 chương, khoảng 1,75 GB). Chương sau tạo khi có người
+  bấm nghe, vẫn dưới mức chặn.
+- Phát hiện kèm theo: API đang chạy trên laptop là bản cũ **không có** phần chặn, và hàng
+  đợi bị bật lại với 6.015 việc (khoảng 21 GB). Tạm dừng ngay, chuyển các dòng việc sang
+  `CANCELLED` **trước** khi xoá khỏi hàng đợi (nếu làm ngược, bộ quét sẽ tự xếp lại),
+  rồi chạy lại API bản mới.
 
 ## 12. Làm việc với hai AI agent trong cùng một repo
 
