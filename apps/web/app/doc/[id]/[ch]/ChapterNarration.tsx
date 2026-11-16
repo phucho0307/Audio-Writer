@@ -67,7 +67,9 @@ export default function ChapterNarration({
   // unknown voice, and the first request races the real one.
   const [voice, setVoice] = useState('');
   const [url, setUrl] = useState<string | null>(null);
-  const [rate, setRate] = useState(1.5);
+  // 1x: the Edge voices already read at a natural pace. (1.5x was the default
+  // when Gemini narrated, which reads much slower.)
+  const [rate, setRate] = useState(1);
   /** Queued behind other work, or actually being synthesised right now. */
   const [stage, setStage] = useState<RenderStatus | null>(null);
   const [busy, setBusy] = useState(false);

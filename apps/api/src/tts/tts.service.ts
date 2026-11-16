@@ -16,6 +16,8 @@ import { StoriesService } from '../stories/stories.service';
 import { NarrationQueue } from '../queue/narration.queue';
 import { DomainEvents } from '../events/domain-events';
 import { PRIORITY, type NarrationJob } from '../queue/queue.constants';
+import ffmpegStatic from 'ffmpeg-static';
+import { EdgeTtsDriver } from './edge-tts.driver';
 import { GeminiTtsDriver } from './gemini-tts.driver';
 import type { TtsDriver } from './tts-driver';
 import { PiperTtsDriver } from './piper-tts.driver';
@@ -80,6 +82,12 @@ export class TtsService implements OnModuleInit {
         new GeminiTtsDriver(
           this.config.get<string>('GEMINI_API_KEY', ''),
           this.config.get<string>('TTS_MODEL', 'gemini-2.5-flash-preview-tts'),
+          timeout,
+        ),
+      edge: () =>
+        new EdgeTtsDriver(
+          this.config.get<string>('EDGE_TTS_PYTHON', 'python'),
+          this.config.get<string>('FFMPEG_PATH') || (ffmpegStatic as string | null) || null,
           timeout,
         ),
       piper: () =>

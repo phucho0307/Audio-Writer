@@ -50,7 +50,9 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
   const [error, setError] = useState<string | null>(null);
   /** Whole-story mode: keep going when a track ends. */
   const [continuous, setContinuous] = useState(false);
-  const [rate, setRate] = useState(1.5);
+  // 1x: the Edge voices already read at a natural pace. (1.5x was the default
+  // when Gemini narrated, which reads much slower.)
+  const [rate, setRate] = useState(1);
   const [open, setOpen] = useState(false);
   /** Something has been queued, so keep checking for it to land. */
   const [watching, setWatching] = useState(false);
