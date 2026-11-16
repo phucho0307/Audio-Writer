@@ -63,7 +63,8 @@ type ShelfEntry = { kind: 'story'; story: Story } | { kind: 'famous'; work: Famo
 export default function Explore() {
   const [stories, setStories] = useState<Story[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [genre, setGenre] = useState<string | null>(null);
+  /** Lower-cased genre keys; a work must carry every one of them. */
+  const [picked, setPicked] = useState<string[]>([]);
   const [shelf, setShelf] = useState<Shelf>('all');
   const [authorId, setAuthorId] = useState<string | null>(null);
   const [chineseSource, setChineseSource] = useState<string | null>(null);
@@ -89,13 +90,13 @@ export default function Explore() {
       .catch((e: Error) => setError(e.message));
   }, []);
 
-  useEffect(() => setPage(1), [shelf, authorId, chineseSource, genre, query, sortBy]);
+  useEffect(() => setPage(1), [shelf, authorId, chineseSource, picked, query, sortBy]);
 
   function chooseShelf(next: Shelf) {
     setShelf(next);
     setAuthorId(null);
     setChineseSource(null);
-    setGenre(null);
+    setPicked([]);
     const url = new URL(window.location.href);
     url.searchParams.delete('tacgia');
     url.searchParams.delete('nguon');
@@ -108,7 +109,7 @@ export default function Explore() {
     setAuthorId(id);
     setShelf('famous');
     setChineseSource(null);
-    setGenre(null);
+    setPicked([]);
     const url = new URL(window.location.href);
     url.searchParams.delete('ke');
     url.searchParams.delete('nguon');
@@ -119,7 +120,7 @@ export default function Explore() {
 
   function chooseChineseSource(source: string | null) {
     setChineseSource(source);
-    setGenre(null);
+    setPicked([]);
     const url = new URL(window.location.href);
     if (source) url.searchParams.set('nguon', source);
     else url.searchParams.delete('nguon');
@@ -151,27 +152,37 @@ export default function Explore() {
   // omits one a writer has just used. Multi-genre stories count under each.
   // Tags are free text, so "Gia đình" and "gia đình" are one genre: grouped
   // without case, shown under whichever spelling more stories use.
+  //
+  // Several genres narrow: a work must carry all of them ("trùng sinh" and
+  // "báo thù"), and each chip counts what would be left if it were added.
+  const lower = (list: string[]) => new Set(list.map((g) => g.toLocaleLowerCase('vi')));
+  const hasGenre = (list: string[]) => {
+    const own = lower(list);
+    return picked.every((g) => own.has(g));
+  };
   const counts = new Map<string, number>();
   const spellings = new Map<string, Map<string, number>>();
   for (const s of [...matchingStories, ...matchingFamous, ...matchingChinese]) {
-    for (const g of new Set(s.genres.map((x) => x.toLocaleLowerCase('vi')))) {
-      if (shelf === 'chinese' && g === 'truyện trung') continue;
-      counts.set(g, (counts.get(g) ?? 0) + 1);
-    }
     for (const g of s.genres) {
       const key = g.toLocaleLowerCase('vi');
       const m = spellings.get(key) ?? new Map<string, number>();
       m.set(g, (m.get(g) ?? 0) + 1);
       spellings.set(key, m);
     }
+    if (!hasGenre(s.genres)) continue;
+    for (const g of lower(s.genres)) {
+      if (shelf === 'chinese' && g === 'truyện trung') continue;
+      counts.set(g, (counts.get(g) ?? 0) + 1);
+    }
   }
   const labelOf = (key: string) =>
     [...(spellings.get(key) ?? new Map([[key, 1]])).entries()].sort((a, b) => b[1] - a[1])[0][0];
+  for (const g of picked) if (!counts.has(g)) counts.set(g, 0);
   const genres = [...counts.entries()]
     .map(([key, n]) => [key, n, labelOf(key)] as const)
     .sort((a, b) => b[1] - a[1] || a[2].localeCompare(b[2], 'vi'));
-  const hasGenre = (list: string[]) =>
-    genre === null || list.some((g) => g.toLocaleLowerCase('vi') === genre);
+  const toggleGenre = (g: string) =>
+    setPicked((cur) => (cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g]));
 
   const shown = matchingStories.filter((s) => hasGenre(s.genres));
   const shownFamous = matchingFamous.filter((work) => hasGenre(work.genres));
@@ -183,7 +194,7 @@ export default function Explore() {
   // a hero would just be one of its own results, repeated at four times the
   // size.
   const featured =
-    shelf === 'all' && sortBy === 'popular' && !authorId && !query.trim() && genre === null && stories && stories.length > 2
+    shelf === 'all' && sortBy === 'popular' && !authorId && !query.trim() && picked.length === 0 && stories && stories.length > 2
       ? [...stories].filter((story) => !nativeStory(story.id)).sort((a, b) => b.viewCount - a.viewCount)[0]
       : null;
   const grid = featured ? shown.filter((s) => s.id !== featured.id) : shown;
@@ -222,7 +233,7 @@ export default function Explore() {
       <section className="flex flex-col gap-6">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h2 className="label">
-            {mode === 'ai' ? 'Tìm truyện' : selectedAuthor ? selectedAuthor.name : genre ? `Thể loại · ${labelOf(genre)}` : shelf === 'chinese' ? 'Truyện Trung' : shelf === 'famous' ? 'Tác giả nổi tiếng' : shelf === 'library' ? `Truyện trên ${BRAND}` : 'Tất cả truyện'}
+            {mode === 'ai' ? 'Tìm truyện' : selectedAuthor ? selectedAuthor.name : picked.length ? `Thể loại · ${picked.map(labelOf).join(' + ')}` : shelf === 'chinese' ? 'Truyện Trung' : shelf === 'famous' ? 'Tác giả nổi tiếng' : shelf === 'library' ? `Truyện trên ${BRAND}` : 'Tất cả truyện'}
           </h2>
           {mode === 'plain' && (stories || shelf === 'famous') && (
             <span className="text-[12.5px] text-[var(--color-faint)]">
@@ -305,20 +316,20 @@ export default function Explore() {
             className="genre-rail -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             <button
-              onClick={() => setGenre(null)}
-              aria-pressed={genre === null}
-              className={`chip ${genre === null ? 'chip-on' : ''}`}
+              onClick={() => setPicked([])}
+              aria-pressed={picked.length === 0}
+              className={`chip ${picked.length === 0 ? 'chip-on' : ''}`}
             >
               Tất cả
             </button>
-            {/* The chosen genre moves up front, so it stays visible while the
+            {/* Chosen genres move up front, so they stay visible while the
                 rail is folded to one row. */}
-            {[...genres].sort((a, b) => Number(b[0] === genre) - Number(a[0] === genre)).map(([g, n, label]) => (
+            {[...genres].sort((a, b) => Number(picked.includes(b[0])) - Number(picked.includes(a[0]))).map(([g, n, label]) => (
               <button
                 key={g}
-                onClick={() => setGenre(genre === g ? null : g)}
-                aria-pressed={genre === g}
-                className={`chip ${genre === g ? 'chip-on' : ''}`}
+                onClick={() => toggleGenre(g)}
+                aria-pressed={picked.includes(g)}
+                className={`chip ${picked.includes(g) ? 'chip-on' : ''}`}
               >
                 {label}
                 <span className="text-[10.5px] opacity-55">{n}</span>
@@ -352,7 +363,7 @@ export default function Explore() {
             Chưa có kết quả phù hợp. Thử tên truyện, tác giả hoặc thể loại khác.
           </p>
         )}
-        {(query || genre || authorId) && <button type="button" onClick={() => { setQuery(''); setGenre(null); chooseShelf('all'); }} className="btn btn-quiet self-start">Xóa bộ lọc ×</button>}
+        {(query || picked.length > 0 || authorId) && <button type="button" onClick={() => { setQuery(''); setPicked([]); chooseShelf('all'); }} className="btn btn-quiet self-start">Xóa bộ lọc ×</button>}
         </>)}
       </section>
     </main>
