@@ -94,7 +94,24 @@ export class GeminiTtsDriver implements TtsDriver {
   }
 
   async speak(text: string, voice = DEFAULT_VOICE): Promise<SpeechResult> {
-    const res = await fetch(`${BASE}/${this.model}:generateContent`, {
+    let res: Response;
+    try {
+      res = await this.request(text, voice);
+    } catch (err) {
+      // Node reports every network failure as a bare "fetch failed" and puts
+      // the reason (DNS, refused, reset, TLS) on `cause`. Without it a failed
+      // narration says nothing about what to fix.
+      const cause = (err as { cause?: { code?: string; message?: string } }).cause;
+      const why = cause?.code ?? cause?.message;
+      throw new TtsError(
+        `gemini unreachable: ${(err as Error).message}${why ? ` (${why})` : ''}`,
+      );
+    }
+    return this.read(res, text, voice);
+  }
+
+  private request(text: string, voice: string): Promise<Response> {
+    return fetch(`${BASE}/${this.model}:generateContent`, {
       method: 'POST',
       // Without this a hung provider holds a worker slot for ever: the job
       // never fails, so it never retries, and the reader polls a status that
@@ -133,7 +150,9 @@ export class GeminiTtsDriver implements TtsDriver {
         },
       }),
     });
+  }
 
+  private async read(res: Response, text: string, voice: string): Promise<SpeechResult> {
     if (!res.ok) {
       const detail = await res.text();
       if (res.status === 429) {

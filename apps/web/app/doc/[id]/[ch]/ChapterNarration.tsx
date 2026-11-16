@@ -344,7 +344,9 @@ export default function ChapterNarration({
             />
           ) : (
             <>
-              <button onClick={narrate} className="btn btn-primary btn-sm">
+              {/* Held until the server has said which voice to use: asked
+                  for with no voice, the request fails as "Unknown voice". */}
+              <button onClick={narrate} disabled={!voice} className="btn btn-primary btn-sm">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                   <path d="M8 5.5v13l11-6.5-11-6.5Z" />
                 </svg>
