@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, type RatingSummary } from '@/lib/api';
 import { signIn } from '@/lib/auth';
 import { useAuth } from '@/lib/useAuth';
@@ -23,13 +23,30 @@ export default function RateStory({ storyId }: { storyId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Stars tapped while signed out: applied once the reader has signed in,
+  // so signing in is a detour on the way to rating, not a restart.
+  const pending = useRef(0);
+
   useEffect(() => {
     api.storyRating(storyId).then(setR).catch(() => setR(null));
   }, [storyId, user?.id]);
 
+  useEffect(() => {
+    if (!r || !pending.current || r.reason === 'SIGN_IN') return;
+    const n = pending.current;
+    pending.current = 0;
+    if (r.canRate && r.mine !== n) void rate(n);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [r]);
+
   if (!r || r.reason === 'OWN_STORY') return null;
 
   async function rate(stars: number) {
+    if (r!.reason === 'SIGN_IN') {
+      pending.current = stars;
+      signIn('Đăng nhập để chấm sao truyện này.');
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -42,7 +59,8 @@ export default function RateStory({ storyId }: { storyId: string }) {
   }
 
   const shown = hover || r.mine || 0;
-  const disabled = !r.canRate || busy;
+  // Signed out still taps through - to the sign-in dialog.
+  const disabled = (!r.canRate && r.reason !== 'SIGN_IN') || busy;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -88,14 +106,7 @@ export default function RateStory({ storyId }: { storyId: string }) {
       </div>
 
       <p className="text-[12px] text-[var(--color-faint)]">
-        {r.reason === 'SIGN_IN' ? (
-          <>
-            <button type="button" onClick={signIn} className="text-[var(--color-accent)] hover:underline">
-              Đăng nhập
-            </button>{' '}
-            để chấm sao.
-          </>
-        ) : r.reason === 'READ_FIRST' ? (
+        {r.reason === 'READ_FIRST' ? (
           'Đọc hoặc nghe ít nhất một chương rồi hãy chấm sao.'
         ) : r.average === null ? (
           r.count > 0

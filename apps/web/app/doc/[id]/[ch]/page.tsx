@@ -300,7 +300,7 @@ export default function Reader({
             thay đổi.
           </p>
           <button
-            onClick={ready && !user ? signIn : forkHere}
+            onClick={ready && !user ? () => signIn('Đăng nhập để rẽ nhánh và viết tiếp câu chuyện theo ý bạn.') : forkHere}
             disabled={forking}
             className="btn btn-ghost"
           >

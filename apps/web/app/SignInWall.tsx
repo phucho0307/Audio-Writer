@@ -3,7 +3,7 @@
 import { useAuth } from '@/lib/useAuth';
 
 /** Google's mark, so the button says which account it is about to use. */
-function GoogleMark() {
+export function GoogleMark() {
   return (
     <svg width="15" height="15" viewBox="0 0 48 48" aria-hidden>
       <path
@@ -57,9 +57,8 @@ export function SignInPrompt({
       <p className="max-w-[48ch] text-[13.5px] leading-relaxed text-[var(--color-muted)]">
         {reason}
       </p>
-      <button onClick={signIn} className="btn btn-primary mt-1">
-        <GoogleMark />
-        Đăng nhập với Google
+      <button onClick={() => signIn(reason)} className="btn btn-primary mt-1">
+        Đăng nhập hoặc đăng ký
       </button>
     </div>
   );

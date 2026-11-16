@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useAuth, useProviders } from '@/lib/useAuth';
+import { useAuth } from '@/lib/useAuth';
 import { takeReturnPath } from '@/lib/auth';
 
 /** Initials, for when Google has no avatar or the image fails to load. */
@@ -24,7 +24,6 @@ export default function Account() {
       window.location.replace(back);
     }
   }, [ready, user]);
-  const providers = useProviders();
   const [open, setOpen] = useState(false);
   const [error, setError] = useState(false);
   const [brokenAvatar, setBrokenAvatar] = useState(false);
@@ -70,10 +69,6 @@ export default function Account() {
         </button>
       );
     }
-    // No credentials configured means the button cannot work; hiding it beats
-    // offering something that dead-ends.
-    if (providers && !providers.google) return null;
-
     return (
       <button onClick={signIn} className="btn btn-ghost btn-sm rounded-full">
         Đăng nhập

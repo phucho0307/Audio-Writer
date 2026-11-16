@@ -1,5 +1,12 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  Logger,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { User } from '@prisma/client';
+import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
 
 export interface GoogleProfile {
@@ -61,6 +68,12 @@ export class AuthService {
         data: {
           googleSub: profile.googleSub,
           avatarUrl: byEmail.avatarUrl ?? profile.avatarUrl,
+          // Email sign-up does not verify the address (yet), so anyone could
+          // have registered this email with a password of their choosing and
+          // waited for the real owner to arrive through Google. Google has
+          // just proved who owns the address; a password nobody proved
+          // ownership for is dropped, so it cannot be a back door.
+          passwordHash: null,
         },
       });
     }
@@ -75,6 +88,64 @@ export class AuthService {
         locale: 'vi',
       },
     });
+  }
+
+  // -------------------------------------------------------------- password
+
+  /** New account from email and password. */
+  async register(input: { email: string; password: string; displayName: string }): Promise<User> {
+    const email = normaliseEmail(input.email);
+    const existing = await this.prisma.user.findUnique({
+      where: { email },
+      select: { passwordHash: true, googleSub: true },
+    });
+    if (existing) {
+      // Sign-up has to say the address is taken - there is nothing else it
+      // can usefully do - so it says which door to use.
+      throw new ConflictException({
+        code: existing.passwordHash ? 'EMAIL_TAKEN' : 'EMAIL_USES_GOOGLE',
+        message: existing.passwordHash
+          ? 'Email này đã có tài khoản. Hãy đăng nhập.'
+          : 'Email này đã đăng ký bằng Google. Hãy bấm "Tiếp tục với Google".',
+      });
+    }
+
+    const displayName = input.displayName.trim() || email.split('@')[0];
+    return this.prisma.user.create({
+      data: {
+        email,
+        handle: await this.freeHandle(email, displayName),
+        displayName,
+        passwordHash: await argon2.hash(input.password, { type: argon2.argon2id }),
+        locale: 'vi',
+      },
+    });
+  }
+
+  /**
+   * Email and password to an account, or one 401 for every failure.
+   *
+   * Unknown email, Google-only account and wrong password all answer the same
+   * thing, after the same work: a hash is verified even when there is no
+   * account, so the response time does not say which emails are registered.
+   */
+  async login(input: { email: string; password: string }): Promise<User> {
+    const user = await this.prisma.user.findUnique({ where: { email: normaliseEmail(input.email) } });
+    const hash = user?.passwordHash ?? (await this.dummyHash());
+    const ok = await argon2.verify(hash, input.password).catch(() => false);
+    if (!user?.passwordHash || !ok) {
+      throw new UnauthorizedException({
+        code: 'INVALID_CREDENTIALS',
+        message: 'Email hoặc mật khẩu không đúng.',
+      });
+    }
+    return user;
+  }
+
+  private dummy?: Promise<string>;
+  private dummyHash(): Promise<string> {
+    this.dummy ??= argon2.hash('not-a-real-password', { type: argon2.argon2id });
+    return this.dummy;
   }
 
   /**
@@ -99,4 +170,9 @@ export class AuthService {
 
     return `${base}_${Math.random().toString(36).slice(2, 8)}`;
   }
+}
+
+/** Emails are matched without case; Google sends them lower-cased too. */
+export function normaliseEmail(email: string): string {
+  return email.trim().toLowerCase();
 }

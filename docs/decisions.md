@@ -248,6 +248,30 @@ báo lỗi đã có ở handler `close`.
 
 Bảng `rag_chunks` cũ đã xoá bằng migration.
 
+## 7d. Đăng nhập bằng email, và popup thay cho tường chặn
+
+**Popup ở mọi chỗ cần tài khoản.** Trước đây người chưa đăng nhập thấy dòng "Đăng nhập để
+chấm sao", bấm vào thì bị đưa sang Google rồi quay về trang chủ. Giờ mọi hành động cần tài
+khoản (chấm sao, rẽ nhánh, nút Đăng nhập) đều gọi chung một hàm `signIn(lý do)`, và hàm
+đó mở popup ngay tại trang. Vì mọi chỗ đã đi qua một hàm duy nhất, đổi hành vi chỉ cần sửa
+một nơi. Sao bấm lúc chưa đăng nhập được nhớ lại và tự chấm sau khi đăng nhập xong.
+
+**Email + mật khẩu bên cạnh Google.**
+- Mật khẩu băm bằng argon2id, không bao giờ lưu hay trả về bản gốc.
+- Đăng nhập sai luôn trả cùng một câu, dù email không tồn tại, tài khoản chỉ dùng Google hay
+  sai mật khẩu, và vẫn chạy băm cả khi không có tài khoản, để thời gian phản hồi không lộ
+  email nào đã đăng ký.
+- Giới hạn sai: 10 lần mỗi tài khoản và 30 lần mỗi IP trong 15 phút. Dùng bộ đếm riêng, vì
+  dùng chung với bộ chặn refresh token thì 5 lần gõ sai sẽ làm cả mạng đó bị đăng xuất.
+
+**Lỗ hổng đã chặn trước: chiếm tài khoản bằng email chưa xác minh.** Chưa có dịch vụ gửi
+mail nên email đăng ký chưa được xác minh. Kẻ xấu có thể đăng ký trước bằng email của người
+khác với mật khẩu họ biết, chờ chủ thật đăng nhập Google và được nối vào tài khoản đó. Cách
+chặn: khi Google nối vào tài khoản có sẵn, mật khẩu chưa xác minh bị xoá, vì Google vừa
+chứng minh ai là chủ email. Có unit test cho đúng tình huống này.
+
+**Chưa làm (cần dịch vụ gửi mail):** xác minh email, quên mật khẩu.
+
 ## 8. Hồ sơ người dùng và avatar
 
 - **Username:** 3–24 ký tự gồm chữ thường, số, `_`. Có danh sách tên bị giữ (admin,

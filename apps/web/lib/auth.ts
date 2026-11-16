@@ -10,7 +10,7 @@ export type AuthUser = {
   role: 'USER' | 'ADMIN';
 };
 
-export type Providers = { google: boolean; devUser: boolean };
+export type Providers = { google: boolean; password?: boolean; devUser: boolean };
 
 /**
  * The access token lives here - a module variable, not React state and not
@@ -143,8 +143,92 @@ export async function ensureSession(): Promise<void> {
   if (!ready) await refresh();
 }
 
+// ---------------------------------------------------------------- the dialog
+
+export type DialogState = { open: boolean; mode: 'signin' | 'signup'; reason: string | null };
+let dialog: DialogState = { open: false, mode: 'signin', reason: null };
+const dialogListeners = new Set<() => void>();
+
+export function subscribeDialog(fn: () => void): () => void {
+  dialogListeners.add(fn);
+  return () => dialogListeners.delete(fn);
+}
+export function getDialog(): DialogState {
+  return dialog;
+}
+const CLOSED: DialogState = { open: false, mode: 'signin', reason: null };
+export function getServerDialog(): DialogState {
+  return CLOSED;
+}
+function setDialog(next: DialogState): void {
+  dialog = next;
+  for (const l of dialogListeners) l();
+}
+
+/**
+ * Ask the reader to sign in, in a dialog over whatever they were doing.
+ *
+ * Every action that needs an account calls this: rating, forking, the
+ * account button. `reason` says what they were trying to do ("Đăng nhập để
+ * chấm sao"), which is the difference between a prompt and a wall. Safe to
+ * pass straight to onClick - an event is not a string and is ignored.
+ */
+export function signIn(reason?: unknown, mode: 'signin' | 'signup' = 'signin'): void {
+  setDialog({ open: true, mode, reason: typeof reason === 'string' ? reason : null });
+}
+
+export function closeSignIn(): void {
+  setDialog({ ...dialog, open: false });
+}
+
+export function setSignInMode(mode: 'signin' | 'signup'): void {
+  setDialog({ ...dialog, mode });
+}
+
+/** Thrown with the API's own message, which is already in Vietnamese. */
+export class AuthError extends Error {
+  constructor(message: string, readonly code?: string) {
+    super(message);
+  }
+}
+
+async function passwordCall(path: 'login' | 'register', body: object): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch(`${API}/auth/${path}`, {
+      method: 'POST',
+      credentials: 'include', // so the refresh cookie it sets is kept
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new AuthError('Không kết nối được máy chủ. Thử lại sau.');
+  }
+  const json = (await res.json().catch(() => ({}))) as {
+    accessToken?: string;
+    expiresIn?: number;
+    user?: AuthUser;
+    message?: string | string[];
+    code?: string;
+  };
+  if (!res.ok || !json.accessToken || !json.user) {
+    const msg = Array.isArray(json.message) ? json.message[0] : json.message;
+    throw new AuthError(msg || 'Có lỗi xảy ra. Thử lại sau.', json.code);
+  }
+  setSession(json.accessToken, json.user, json.expiresIn);
+  closeSignIn();
+}
+
+export function signInWithPassword(email: string, password: string): Promise<void> {
+  return passwordCall('login', { email, password });
+}
+
+export function signUpWithPassword(email: string, password: string, displayName: string): Promise<void> {
+  return passwordCall('register', { email, password, displayName });
+}
+
 /** Full-page navigation, not fetch: the browser has to follow Google's redirects. */
-export function signIn(): void {
+export function signInWithGoogle(): void {
   // Google's round trip ends on the site's front page, wherever it started.
   // Remember where the reader was - a share link, a chapter - so they can be
   // put back there afterwards instead of losing it.

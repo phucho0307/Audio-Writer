@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Logger,
@@ -14,7 +15,9 @@ import { AuthGuard } from '@nestjs/passport';
 import type { Request, Response } from 'express';
 import type { Role } from '@prisma/client';
 import { AuthFailureLimiter, clientIp } from './auth-failure.limiter';
-import { AuthService, type GoogleProfile } from './auth.service';
+import { AuthService, normaliseEmail, type GoogleProfile } from './auth.service';
+import { LoginLimiter } from './login-limiter';
+import { LoginDto, RegisterDto } from './password.dto';
 import { CurrentUserService } from './current-user.service';
 import { OAuthFailureFilter } from './oauth-failure.filter';
 import { TokenService, type IssuedTokens } from './token.service';
@@ -40,6 +43,7 @@ export class AuthController {
     private readonly tokens: TokenService,
     private readonly currentUser: CurrentUserService,
     private readonly failures: AuthFailureLimiter,
+    private readonly logins: LoginLimiter,
     private readonly config: ConfigService,
   ) {}
 
@@ -73,6 +77,7 @@ export class AuthController {
   providers() {
     return {
       google: Boolean(this.config.get<string>('GOOGLE_CLIENT_ID')),
+      password: true,
       devUser:
         this.config.get<string>('AUTH_DEV_USER', 'false').toLowerCase() ===
         'true',
@@ -119,6 +124,36 @@ export class AuthController {
       // The user is mid-redirect in a browser; a JSON error body would be a
       // dead end. Send them back with something the UI can explain.
       return res.redirect(`${web}?auth_error=1`);
+    }
+  }
+
+  /**
+   * Email sign-up. Signs the new account straight in: same cookie and same
+   * body as a refresh, so the client handles both one way.
+   */
+  @Post('register')
+  async register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const user = await this.auth.register(dto);
+    const tokens = await this.tokens.issue(user, this.meta(req));
+    this.setRefreshCookie(res, tokens.refreshToken);
+    this.logger.log(`Registered @${user.handle}`);
+    return this.body(tokens, user);
+  }
+
+  @Post('login')
+  async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const email = normaliseEmail(dto.email);
+    const ip = clientIp(req);
+    await this.logins.assertAllowed(email, ip);
+    try {
+      const user = await this.auth.login(dto);
+      await this.logins.clear(email, ip);
+      const tokens = await this.tokens.issue(user, this.meta(req));
+      this.setRefreshCookie(res, tokens.refreshToken);
+      return this.body(tokens, user);
+    } catch (err) {
+      if (err instanceof UnauthorizedException) await this.logins.recordFailure(email, ip);
+      throw err;
     }
   }
 
