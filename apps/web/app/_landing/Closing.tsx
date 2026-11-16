@@ -18,7 +18,7 @@ const FAQ = [
   },
   {
     q: 'AI viết hết thì còn gì là truyện của mình?',
-    a: 'AI chỉ gợi ý với viết tiếp khi bà bấm. Bà hông bấm thì nó hông đụng một chữ. Chương nào AI viết cũng ghi rõ là AI viết, hông giấu.',
+    a: 'Bà chọn dùng AI tới đâu: gợi ý hướng đi, viết tiếp một đoạn, hoặc tự viết từ đầu. Bản đăng do bà đọc lại, sửa và quyết định.',
   },
   {
     q: 'Rẽ nhánh có làm hư truyện gốc hông?',
@@ -30,7 +30,7 @@ const FAQ = [
   },
   {
     q: 'Truyện trên đây có chôm từ kênh khác hông?',
-    a: 'Khum nha. Truyện do người dùng tự viết. Tủ tham khảo chỉ dẫn link mấy kênh audio để bà đi nghe học nghề, tụi tui hông copy truyện của ai.',
+    a: 'Khum nha. Nội dung trong thư viện được viết riêng cho nền tảng. Tủ tham khảo chỉ dẫn link mấy kênh audio để bà đi nghe học nghề, tụi tui hông copy truyện của ai.',
   },
   {
     q: 'Đăng nhập kiểu gì?',

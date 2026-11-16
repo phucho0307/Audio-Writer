@@ -1,0 +1,2210 @@
+{
+  "checkedAt": "2026-11-15",
+  "authors": [
+    {
+      "id": "nguyen-ngoc-ngan",
+      "name": "Nguyễn Ngọc Ngạn",
+      "sourceUrl": "https://www.youtube.com/@nguyenngocnganofficial",
+      "note": "Truyện ma, truyện ngắn và truyện dài qua giọng đọc Nguyễn Ngọc Ngạn.",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ]
+    },
+    {
+      "id": "nguyen-nhat-anh",
+      "name": "Nguyễn Nhật Ánh",
+      "sourceUrl": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "note": "Tuổi học trò, ký ức tuổi thơ và những câu chuyện tình đầu.",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ]
+    },
+    {
+      "id": "nguyen-ngoc-tu",
+      "name": "Nguyễn Ngọc Tư",
+      "sourceUrl": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "note": "Thân phận con người, đời sống miền sông nước và những biến động trong tâm hồn.",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ]
+    },
+    {
+      "id": "nguyen-huy-thiep",
+      "name": "Nguyễn Huy Thiệp",
+      "sourceUrl": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "note": "Truyện ngắn về con người và xã hội, với những góc nhìn sắc sảo.",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ]
+    },
+    {
+      "id": "vu-trong-phung",
+      "name": "Vũ Trọng Phụng",
+      "sourceUrl": "https://fonos.vn/tac-gia/422/",
+      "note": "Văn học hiện thực và trào phúng Việt Nam.",
+      "genres": [
+        "trào phúng",
+        "xã hội"
+      ]
+    },
+    {
+      "id": "thach-lam",
+      "name": "Thạch Lam",
+      "sourceUrl": "https://fonos.vn/sach-noi/viet-nam-danh-tac-ha-noi-bam-sau-pho-phuong-1682656479503/",
+      "note": "Những trang văn về đời sống, con người và Hà Nội.",
+      "genres": [
+        "đời sống",
+        "tùy bút"
+      ]
+    }
+  ],
+  "works": [
+    {
+      "id": "nguyen-ngoc-ngan-bai-dat-hoang-sau-nha",
+      "title": "Bãi Đất Hoang Sau Nhà",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=FtVrQgnu4N0",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "Nguyễn Ngọc Ngạn Truyện Ma | Bãi Đất Hoang Sau Nhà (Audio Book 52)",
+      "videoId": "FtVrQgnu4N0",
+      "imageSourceUrl": "https://i.ytimg.com/vi/FtVrQgnu4N0/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-bai-dat-hoang-sau-nha.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-ngoi-mo-ben-song",
+      "title": "Ngôi Mộ Bên Sông",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=S5uM_klPSGs",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "Nguyễn Ngọc Ngạn Truyện Ma | Ngôi Mộ Bên Sông (Audio Book 93)",
+      "videoId": "S5uM_klPSGs",
+      "imageSourceUrl": "https://i.ytimg.com/vi/S5uM_klPSGs/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-ngoi-mo-ben-song.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-tu-the-gioi-ben-kia",
+      "title": "Từ Thế Giới Bên Kia",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=ML7N3N7IrSQ",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "TRUYỆN MA - NGUYỄN NGỌC NGẠN - TỪ THẾ GIỚI BÊN KIA",
+      "videoId": "ML7N3N7IrSQ",
+      "imageSourceUrl": "https://i.ytimg.com/vi/ML7N3N7IrSQ/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-tu-the-gioi-ben-kia.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-can-nha-so-24",
+      "title": "Căn Nhà Số 24",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=1NMA3PNAjDg",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "Nguyễn Ngọc Ngạn Truyện Ma | Căn Nhà Số 24 (Audio Book 80)",
+      "videoId": "1NMA3PNAjDg",
+      "imageSourceUrl": "https://i.ytimg.com/vi/1NMA3PNAjDg/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-can-nha-so-24.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-bong-ma-ben-cua",
+      "title": "Bóng Ma Bên Cửa",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=5l1sWTLPTvQ",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "Nguyễn Ngọc Ngạn Truyện Ma | Bóng Ma Bên Cửa (Audio Book 69)",
+      "videoId": "5l1sWTLPTvQ",
+      "imageSourceUrl": "https://i.ytimg.com/vi/5l1sWTLPTvQ/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-bong-ma-ben-cua.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-hon-ve-trong-gio",
+      "title": "Hồn Về Trong Gió",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=oTE3_XJMNtM",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Hồn Về Trong Gió (Audiobook 64)",
+      "videoId": "oTE3_XJMNtM",
+      "imageSourceUrl": "https://i.ytimg.com/vi/oTE3_XJMNtM/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-hon-ve-trong-gio.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-coi-am",
+      "title": "Cõi Âm",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=KgxWziSHQP8",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "Nguyễn Ngọc Ngạn Truyện Ma | Cõi Âm (Audio Book 61)",
+      "videoId": "KgxWziSHQP8",
+      "imageSourceUrl": "https://i.ytimg.com/vi/KgxWziSHQP8/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-coi-am.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-ngoi-mo-moi-dap",
+      "title": "Ngôi Mộ Mới Đắp",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=01WRW7IV1uQ",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "Nguyễn Ngọc Ngạn Truyện Ma | Ngôi Mộ Mới Đắp (Audio Book 53)",
+      "videoId": "01WRW7IV1uQ",
+      "imageSourceUrl": "https://i.ytimg.com/vi/01WRW7IV1uQ/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-ngoi-mo-moi-dap.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-bong-nguoi-duoi-trang",
+      "title": "Bóng Người Dưới Trăng",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "kinh dị",
+        "huyền bí"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=9FXNn0p7L_I",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7efSkr5C7N1x2vyO9SARzD",
+      "sourceTitle": "Truyện ma Nguyễn Ngọc Ngạn - Bóng Người Dưới Trăng  (Audiobook 56)",
+      "videoId": "9FXNn0p7L_I",
+      "imageSourceUrl": "https://i.ytimg.com/vi/9FXNn0p7L_I/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-bong-nguoi-duoi-trang.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-noi-mong-doi-khon-cung",
+      "title": "Nỗi Mong Đợi Khốn Cùng",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=CDlujtWFuJE",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK5JoM7ZVLneKAFxGU2v6gbc",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Nỗi Mong Đợi Khốn Cùng (Audiobook 48)",
+      "videoId": "CDlujtWFuJE",
+      "imageSourceUrl": "https://i.ytimg.com/vi/CDlujtWFuJE/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-noi-mong-doi-khon-cung.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-dong-song-ho-hung",
+      "title": "Dòng Sông Hờ Hững",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=rldko7kJ_LE",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK5JoM7ZVLneKAFxGU2v6gbc",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Dòng Sông Hờ Hững (Audiobook 45)",
+      "videoId": "rldko7kJ_LE",
+      "imageSourceUrl": "https://i.ytimg.com/vi/rldko7kJ_LE/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-dong-song-ho-hung.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-mot-lan-roi-thoi",
+      "title": "Một Lần Rồi Thôi",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=STJm-glRMFc",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK5JoM7ZVLneKAFxGU2v6gbc",
+      "sourceTitle": "Truyện ngắn Nguyễn Ngọc Ngạn | Một Lần Rồi Thôi (Audio Book 4)",
+      "videoId": "STJm-glRMFc",
+      "imageSourceUrl": "https://i.ytimg.com/vi/STJm-glRMFc/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-mot-lan-roi-thoi.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-giong-doi-lang-le",
+      "title": "Giòng Đời Lặng Lẻ",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=HIx0E-_ITes",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK5JoM7ZVLneKAFxGU2v6gbc",
+      "sourceTitle": "Truyện ngắn Nguyễn Ngọc Ngạn | Giòng Đời Lặng Lẻ",
+      "videoId": "HIx0E-_ITes",
+      "imageSourceUrl": "https://i.ytimg.com/vi/HIx0E-_ITes/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-giong-doi-lang-le.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-noi-long-nguoi-me",
+      "title": "Nỗi Lòng Người Mẹ",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=Ov3o1GIImZM",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK5JoM7ZVLneKAFxGU2v6gbc",
+      "sourceTitle": "Truyện ngắn Nỗi Lòng Người Mẹ - Nguyễn Ngọc Ngạn",
+      "videoId": "Ov3o1GIImZM",
+      "imageSourceUrl": "https://i.ytimg.com/vi/Ov3o1GIImZM/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-noi-long-nguoi-me.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-thue-chong",
+      "title": "Thuê Chồng",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=di_2bXe1HBY",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK5JoM7ZVLneKAFxGU2v6gbc",
+      "sourceTitle": "THUÊ CHỒNG | Nguyễn Ngọc Ngạn",
+      "videoId": "di_2bXe1HBY",
+      "imageSourceUrl": "https://i.ytimg.com/vi/di_2bXe1HBY/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-thue-chong.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-xom-dao",
+      "title": "Xóm Đạo",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=B_gheiZkgNA",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7bGPbtPpvbQy_l2L5YQhoC",
+      "sourceTitle": "Nguyễn Ngọc Ngạn - Xóm Đạo  (Audiobook 55)",
+      "videoId": "B_gheiZkgNA",
+      "imageSourceUrl": "https://i.ytimg.com/vi/B_gheiZkgNA/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-xom-dao.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-nuoc-duc",
+      "title": "Nước Đục",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=BmW0qb30kXA",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK7bGPbtPpvbQy_l2L5YQhoC",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Nước Đục - Audiobook 59",
+      "videoId": "BmW0qb30kXA",
+      "imageSourceUrl": "https://i.ytimg.com/vi/BmW0qb30kXA/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-nuoc-duc.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-ngay-tro-lai",
+      "title": "Ngày Trở Lại",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=GUAHvqdHPj8",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Ngày Trở Lại (Audiobook 41)",
+      "videoId": "GUAHvqdHPj8",
+      "imageSourceUrl": "https://i.ytimg.com/vi/GUAHvqdHPj8/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-ngay-tro-lai.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-may-den",
+      "title": "Mây Đen",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=R323qNchmdw",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Mây Đen (Audiobook 38)",
+      "videoId": "R323qNchmdw",
+      "imageSourceUrl": "https://i.ytimg.com/vi/R323qNchmdw/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-may-den.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-tau-ve-mien-xuoi",
+      "title": "Tàu Về Miền Xuôi",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=9DuCX-1VU-4",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Tàu Về Miền Xuôi (Audiobook 37)",
+      "videoId": "9DuCX-1VU-4",
+      "imageSourceUrl": "https://i.ytimg.com/vi/9DuCX-1VU-4/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-tau-ve-mien-xuoi.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-mua-trong-bong-dem",
+      "title": "Mưa Trong Bóng Đêm",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=KrMJs8sn258",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Mưa Trong Bóng Đêm (Audiobook 32)",
+      "videoId": "KrMJs8sn258",
+      "imageSourceUrl": "https://i.ytimg.com/vi/KrMJs8sn258/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-mua-trong-bong-dem.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-ke-mot-chuyen-tinh",
+      "title": "Kể Một Chuyện Tình",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=FlJv1CI3AdY",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Kể Một Chuyện Tình (Audiobook 24)",
+      "videoId": "FlJv1CI3AdY",
+      "imageSourceUrl": "https://i.ytimg.com/vi/FlJv1CI3AdY/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-ke-mot-chuyen-tinh.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-dau-vet-an-tinh",
+      "title": "Dấu Vết Ân Tình",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=bXLSmDX7-74",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Dấu Vết Ân Tình (Audiobook 17)",
+      "videoId": "bXLSmDX7-74",
+      "imageSourceUrl": "https://i.ytimg.com/vi/bXLSmDX7-74/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-dau-vet-an-tinh.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-tam-benh",
+      "title": "Tâm Bệnh",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=ipvaPeHgXGE",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Tâm Bệnh (Audiobook 15)",
+      "videoId": "ipvaPeHgXGE",
+      "imageSourceUrl": "https://i.ytimg.com/vi/ipvaPeHgXGE/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-tam-benh.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-vach-tuong-cu",
+      "title": "Vách Tường Cũ",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=-4HG32ide9U",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Vách Tường Cũ (Audiobook 11)",
+      "videoId": "-4HG32ide9U",
+      "imageSourceUrl": "https://i.ytimg.com/vi/-4HG32ide9U/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-vach-tuong-cu.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-buoc-chan-nguoi-tinh",
+      "title": "Bước Chân Người Tình",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=sOm5MRgJuTA",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Bước Chân Người Tình (Audiobook 9)",
+      "videoId": "sOm5MRgJuTA",
+      "imageSourceUrl": "https://i.ytimg.com/vi/sOm5MRgJuTA/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-buoc-chan-nguoi-tinh.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-chung-quanh-toi",
+      "title": "Chung Quanh Tôi",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=NTryZzlSO9U",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Chung Quanh Tôi (Audiobook 8)",
+      "videoId": "NTryZzlSO9U",
+      "imageSourceUrl": "https://i.ytimg.com/vi/NTryZzlSO9U/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-chung-quanh-toi.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-nguoi-dan-ba-di-ben-toi",
+      "title": "Người Đàn Bà Đi Bên Tôi",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=iBj05UiJbIs",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Người Đàn Bà Đi Bên Tôi (Audiobook 3)",
+      "videoId": "iBj05UiJbIs",
+      "imageSourceUrl": "https://i.ytimg.com/vi/iBj05UiJbIs/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-nguoi-dan-ba-di-ben-toi.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-ai-cung-can-phai-co-mot-ba-me",
+      "title": "Ai Cũng Cần Phải Có Một Bà Mẹ",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=JJe9OswvzPk",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Thúy Nga | Ai Cũng Cần Phải Có Một Bà Mẹ (Audiobook 1)",
+      "videoId": "JJe9OswvzPk",
+      "imageSourceUrl": "https://i.ytimg.com/vi/JJe9OswvzPk/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-ai-cung-can-phai-co-mot-ba-me.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-dem-nhung-manh-tinh",
+      "title": "Đếm Những Mảnh Tình",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=2qTlq6nH6uw",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn - Đếm Những Mảnh Tình  (Audiobook 31)",
+      "videoId": "2qTlq6nH6uw",
+      "imageSourceUrl": "https://i.ytimg.com/vi/2qTlq6nH6uw/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-dem-nhung-manh-tinh.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-ngan-sau-lan-cua-khep",
+      "title": "Sau Lần Cửa Khép",
+      "authorId": "nguyen-ngoc-ngan",
+      "genres": [
+        "tâm lý",
+        "tình cảm"
+      ],
+      "format": "audio",
+      "sourceName": "Nguyễn Ngọc Ngạn Official / Thúy Nga",
+      "sourceUrl": "https://www.youtube.com/watch?v=T4LZCsDedoU",
+      "discoveredAt": "https://www.youtube.com/playlist?list=PLIOgUmbMyiK6HmR7HR_pEGwLxKe6ZUEkO",
+      "sourceTitle": "Nguyễn Ngọc Ngạn | Sau Lần Cửa Khép (Audiobook 34)",
+      "videoId": "T4LZCsDedoU",
+      "imageSourceUrl": "https://i.ytimg.com/vi/T4LZCsDedoU/hqdefault.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-ngan-sau-lan-cua-khep.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-mat-biec",
+      "title": "Mắt Biếc",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/mat-biec-159493.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "MẮT BIẾC",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_4_copy_9_nxbtre_thumb_06402022_014041.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-mat-biec.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-tinh-thi-tran",
+      "title": "Chuyện Tình Thị Trấn",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-tinh-thi-tran-bia-cung-159317.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN TÌNH THỊ TRẤN (BÌA CỨNG)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_07442026_104451.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-tinh-thi-tran.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-12-bau-vat-o-lau-dai-k-rahlan",
+      "title": "Chuyện Xứ Lang Biang 12 - Báu Vật Ở Lâu Đài K’Rahlan",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-12-bau-vat-o-lau-dai-k-rahlan-159122.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 12 - BÁU VẬT Ở LÂU ĐÀI K’RAHLAN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04162026_041606.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-12-bau-vat-o-lau-dai-k-rahlan.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-11-bau-vat-o-lau-dai-k-rahlan",
+      "title": "Chuyện Xứ Lang Biang 11 - Báu Vật Ở Lâu Đài K’Rahlan",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-11-bau-vat-o-lau-dai-k-rahlan-159121.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 11 - BÁU VẬT Ở LÂU ĐÀI K’RAHLAN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04152026_041509.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-11-bau-vat-o-lau-dai-k-rahlan.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-10-bau-vat-o-lau-dai-k-rahlan",
+      "title": "Chuyện Xứ Lang Biang 10 - Báu Vật Ở Lâu Đài K’Rahlan",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-10-bau-vat-o-lau-dai-k-rahlan-159120.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 10 - BÁU VẬT Ở LÂU ĐÀI K’RAHLAN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04132026_041338.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-10-bau-vat-o-lau-dai-k-rahlan.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-9-bau-vat-o-lau-dai-k-rahlan",
+      "title": "Chuyện Xứ Lang Biang 9 - Báu Vật Ở Lâu Đài K’Rahlan",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-9-bau-vat-o-lau-dai-k-rahlan-159119.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 9 - BÁU VẬT Ở LÂU ĐÀI K’RAHLAN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04122026_041237.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-9-bau-vat-o-lau-dai-k-rahlan.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-8-chu-nhan-nui-lung-chung",
+      "title": "Chuyện Xứ Lang Biang 8 - Chủ Nhân Núi Lưng Chừng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-8-chu-nhan-nui-lung-chung-159118.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 8 - CHỦ NHÂN NÚI LƯNG CHỪNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04102026_041028.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-8-chu-nhan-nui-lung-chung.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-7-chu-nhan-nui-lung-chung",
+      "title": "Chuyện Xứ Lang Biang 7 - Chủ Nhân Núi Lưng Chừng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-7-chu-nhan-nui-lung-chung-159117.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 7 - CHỦ NHÂN NÚI LƯNG CHỪNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04092026_040904.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-7-chu-nhan-nui-lung-chung.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-6-chu-nhan-nui-lung-chung",
+      "title": "Chuyện Xứ Lang Biang 6 - Chủ Nhân Núi Lưng Chừng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-6-chu-nhan-nui-lung-chung-159116.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 6 - CHỦ NHÂN NÚI LƯNG CHỪNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04062026_040649.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-6-chu-nhan-nui-lung-chung.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-5-bien-co-o-truong-damri",
+      "title": "Chuyện Xứ Lang Biang 5 - Biến Cố Ở Trường Đămri",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-5-bien-co-o-truong-damri-159115.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 5 - BIẾN CỐ Ở TRƯỜNG ĐĂMRI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04042026_040403.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-5-bien-co-o-truong-damri.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-4-bien-co-o-truong-damri",
+      "title": "Chuyện Xứ Lang Biang 4 - Biến Cố Ở Trường Đămri",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-4-bien-co-o-truong-damri-159114.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 4 - BIẾN CỐ Ở TRƯỜNG ĐĂMRI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04032026_040305.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-4-bien-co-o-truong-damri.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-3-bien-co-o-truong-damri",
+      "title": "Chuyện Xứ Lang Biang 3 - Biến Cố Ở Trường Đămri",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-3-bien-co-o-truong-damri-159113.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 3 - BIẾN CỐ Ở TRƯỜNG ĐĂMRI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04012026_040150.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-3-bien-co-o-truong-damri.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-2-pho-tuong-cua-baltalon",
+      "title": "Chuyện Xứ Lang Biang 2 – Pho Tượng Của Baltalon",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-2-pho-tuong-cua-baltalon-159112.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 2 –  PHO TƯỢNG CỦA BALTALON",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04542026_035428.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-2-pho-tuong-cua-baltalon.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-lang-biang-1-pho-tuong-cua-baltalon",
+      "title": "Chuyện Xứ Lang Biang 1 – Pho Tượng Của Baltalon",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "kỳ ảo",
+        "phiêu lưu"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-lang-biang-1-pho-tuong-cua-baltalon-159111.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHUYỆN XỨ LANG BIANG 1 –  PHO TƯỢNG CỦA BALTALON",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04502026_035042.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-lang-biang-1-pho-tuong-cua-baltalon.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-co-be-hang-xom-va-bon-vien-keo",
+      "title": "Cô Bé Hàng Xóm Và Bốn Viên Kẹo",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/co-be-hang-xom-va-bon-vien-keo-truyen-dai-158948.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CÔ BÉ HÀNG XÓM VÀ BỐN VIÊN KẸO - truyện dài",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_19132025_031355.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-co-be-hang-xom-va-bon-vien-keo.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-thien-than-nho-cua-toi",
+      "title": "Thiên Thần Nhỏ Của Tôi",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/thien-than-nho-cua-toi-ban-dac-biet-158887.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "THIÊN THẦN NHỎ CỦA TÔI (BẢN ĐẶC BIỆT)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_08572025_085728.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-thien-than-nho-cua-toi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-ngoi-khoc-tren-cay",
+      "title": "Ngồi Khóc Trên Cây",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ngoi-khoc-tren-cay-truyen-dai-158778.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "NGỒI KHÓC TRÊN CÂY: truyện dài",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_31252025_082543.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-ngoi-khoc-tren-cay.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-la-nam-trong-la",
+      "title": "Lá Nằm Trong Lá",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/la-nam-trong-la-158777.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "LÁ NẰM TRONG LÁ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_31242025_082424.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-la-nam-trong-la.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-toi-thay-hoa-vang-tren-co-xanh",
+      "title": "Tôi Thấy Hoa Vàng Trên Cỏ Xanh",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/toi-thay-hoa-vang-tren-co-xanh-158776.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "TÔI THẤY HOA VÀNG TRÊN CỎ XANH",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_31232025_082302.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-toi-thay-hoa-vang-tren-co-xanh.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuc-mot-ngay-tot-lanh",
+      "title": "Chúc Một Ngày Tốt Lành",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuc-mot-ngay-tot-lanh-158775.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CHÚC MỘT NGÀY TỐT LÀNH",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_31202025_082051.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuc-mot-ngay-tot-lanh.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-co-gai-den-tu-hom-qua",
+      "title": "Cô Gái Đến Từ Hôm Qua",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/co-gai-den-tu-hom-qua-truyen-dai-ban-dac-biet-158603.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-nhat-anh-3525.html",
+      "sourceTitle": "CÔ GÁI ĐẾN TỪ HÔM QUA: truyện dài (Bản đặc biệt)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_06202025_092033.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-co-gai-den-tu-hom-qua.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-ngay-xua-co-mot-chuyen-tinh",
+      "title": "Ngày Xưa Có Một Chuyện Tình",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ngay-xua-co-mot-chuyen-tinh-truyen-dai-158499.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=3",
+      "sourceTitle": "NGÀY XƯA CÓ MỘT CHUYỆN TÌNH: TRUYỆN DÀI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_26412025_084116.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-ngay-xua-co-mot-chuyen-tinh.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-tiem-sach-cua-nang",
+      "title": "Tiệm Sách Của Nàng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/tiem-sach-cua-nang-158315.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=3",
+      "sourceTitle": "TIỆM SÁCH CỦA NÀNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_25412024_024109.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-tiem-sach-cua-nang.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-langbiang-03-chu-nhan-nui-lung-chung",
+      "title": "Chuyện Xứ Langbiang 03 – Chủ Nhân Núi Lưng Chừng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-langbiang-03-chu-nhan-nui-lung-chung-158195.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=3",
+      "sourceTitle": "CHUYỆN XỨ LANGBIANG 03 – CHỦ NHÂN NÚI LƯNG CHỪNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_3_nxbtre_thumb_09352023_063518.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-langbiang-03-chu-nhan-nui-lung-chung.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-langbiang-02-bien-co-o-truong-damri",
+      "title": "Chuyện Xứ Langbiang 02 – Biến Cố Ở Trường Đămri",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-langbiang-02-bien-co-o-truong-damri-158188.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "CHUYỆN XỨ LANGBIANG 02 – BIẾN CỐ Ở TRƯỜNG ĐĂMRI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_2_nxbtre_thumb_19322023_113240.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-langbiang-02-bien-co-o-truong-damri.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-langbiang-01-pho-tuong-cua-baltalon",
+      "title": "Chuyện Xứ Langbiang 01 – Pho Tượng Của Baltalon",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-langbiang-01-pho-tuong-cua-baltalon-158184.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "CHUYỆN XỨ LANGBIANG 01 –  PHO TƯỢNG CỦA BALTALON",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_1_nxbtre_thumb_13142023_091406.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-langbiang-01-pho-tuong-cua-baltalon.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-xu-langbiang-04-bau-vat-o-lau-dai-k-rahlan",
+      "title": "Chuyện Xứ Langbiang 04 – Báu Vật Ở Lâu Đài K’Rahlan",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-xu-langbiang-04-bau-vat-o-lau-dai-k-rahlan-158185.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "CHUYỆN XỨ LANGBIANG 04 – BÁU VẬT Ở LÂU ĐÀI K’RAHLAN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_1_nxbtre_thumb_09132023_041346.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-xu-langbiang-04-bau-vat-o-lau-dai-k-rahlan.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-crying-in-trees",
+      "title": "Crying In Trees",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/crying-in-trees-158132.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "CRYING IN TREES",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_10572024_035742.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-crying-in-trees.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-have-a-good-day",
+      "title": "Have A Good Day",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/have-a-good-day-158133.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "HAVE A GOOD DAY",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_10572024_035715.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-have-a-good-day.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-toi-la-beto",
+      "title": "Tôi Là Bêtô",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/toi-la-beto-158015.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "TÔI LÀ BÊTÔ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_9_nxbtre_thumb_24352023_043531.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-toi-la-beto.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chu-be-rac-roi",
+      "title": "Chú Bé Rắc Rối",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chu-be-rac-roi-ban-dac-biet-157800.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "CHÚ BÉ RẮC RỐI (BẢN ĐẶC BIỆT)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_03262024_092644.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chu-be-rac-roi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-mua-he-khong-ten",
+      "title": "Mùa Hè Không Tên",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/mua-he-khong-ten-157431.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "MÙA HÈ KHÔNG TÊN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_18262023_102628.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-mua-he-khong-ten.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-mua-he-khong-ten-bc",
+      "title": "Mùa Hè Không Tên (Bc)",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/mua-he-khong-ten-bc-157430.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=4",
+      "sourceTitle": "MÙA HÈ KHÔNG TÊN (BC)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_18252023_102520.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-mua-he-khong-ten-bc.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-ngoi-truong-moi-khi",
+      "title": "Ngôi Trường Mọi Khi",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ngoi-truong-moi-khi-ban-dac-biet-157391.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=5",
+      "sourceTitle": "NGÔI TRƯỜNG MỌI KHI (bản đặc biệt)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_16452023_034531.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-ngoi-truong-moi-khi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-i-see-yellow-flowers-in-the-green-grass",
+      "title": "I See Yellow Flowers In The Green Grass",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/i-see-yellow-flowers-in-the-green-grass-157330.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=5",
+      "sourceTitle": "I SEE YELLOW FLOWERS IN THE GREEN GRASS",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_14302023_023055.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-i-see-yellow-flowers-in-the-green-grass.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-suong-khoi-que-nha",
+      "title": "Sương Khói Quê Nhà",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/suong-khoi-que-nha-157234.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=5",
+      "sourceTitle": "SƯƠNG KHÓI QUÊ NHÀ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_07052023_110517.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-suong-khoi-que-nha.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-cho-toi-xin-mot-ve-di-tuoi-tho",
+      "title": "Cho Tôi Xin Một Vé Đi Tuổi Thơ",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/cho-toi-xin-mot-ve-di-tuoi-tho-157165.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=5",
+      "sourceTitle": "CHO TÔI XIN MỘT VÉ ĐI TUỔI THƠ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_30522023_105200.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-cho-toi-xin-mot-ve-di-tuoi-tho.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-ha-do",
+      "title": "Hạ Đỏ",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ha-do-ban-dac-biet-157125.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=5",
+      "sourceTitle": "HẠ ĐỎ (bản đặc biệt)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_11332023_113311.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-ha-do.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-nu-sinh",
+      "title": "Nữ Sinh",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/nu-sinh-146314.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "NỮ SINH",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_28222022_022206.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-nu-sinh.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-ut-quyen-va-toi",
+      "title": "Út Quyên Và Tôi",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ut-quyen-va-toi-146325.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "ÚT QUYÊN VÀ TÔI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_05412022_084140.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-ut-quyen-va-toi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-bong-bong-len-troi",
+      "title": "Bong Bóng Lên Trời",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/bong-bong-len-troi-146315.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "BONG BÓNG LÊN TRỜI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_28242022_022400.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-bong-bong-len-troi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-co-hai-con-meo-ngoi-ben-cua-so",
+      "title": "Có Hai Con Mèo Ngồi Bên Cửa Sổ",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/co-hai-con-meo-ngoi-ben-cua-so-157099.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "CÓ HAI CON MÈO NGỒI BÊN CỬA SỔ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_25_nxbtre_thumb_16462018_114633.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-co-hai-con-meo-ngoi-ben-cua-so.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-nhung-chang-trai-xau-tinh",
+      "title": "Những Chàng Trai Xấu Tính",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/nhung-chang-trai-xau-tinh-truyen-dai-146232.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "NHỮNG CHÀNG TRAI XẤU TÍNH: truyện dài",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_25562022_025615.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-nhung-chang-trai-xau-tinh.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-nhung-nguoi-hang-xom",
+      "title": "Những Người Hàng Xóm",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/nhung-nguoi-hang-xom-156846.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "NHỮNG NGƯỜI HÀNG XÓM",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_14422022_024223.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-nhung-nguoi-hang-xom.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-con-chut-gi-de-nho",
+      "title": "Còn Chút Gì Để Nhớ",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/con-chut-gi-de-nho-phien-ban-mau-dac-biet-156741.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "CÒN CHÚT GÌ ĐỂ NHỚ (phiên bản màu đặc biệt)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_31472022_104742.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-con-chut-gi-de-nho.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-ban-co-nam-cho-ngoi",
+      "title": "Bàn Có Năm Chỗ Ngồi",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ban-co-nam-cho-ngoi-146378.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "BÀN CÓ NĂM CHỖ NGỒI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21002022_050042.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-ban-co-nam-cho-ngoi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-bay-buoc-toi-mua-he",
+      "title": "Bảy Bước Tới Mùa Hè",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/bay-buoc-toi-mua-he-truyen-dai-146375.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=6",
+      "sourceTitle": "BẢY BƯỚC TỚI MÙA HÈ: truyện dài",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21002022_050007.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-bay-buoc-toi-mua-he.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-trai-hoa-vang",
+      "title": "Trại Hoa Vàng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/trai-hoa-vang-truyen-dai-9064.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=18",
+      "sourceTitle": "TRẠI HOA VÀNG (truyện dài)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/css/skin/no-book.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-trai-hoa-vang-truyen-dai.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-bo-cau-khong-dua-thu",
+      "title": "Bồ Câu Không Đưa Thư",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/bo-cau-khong-dua-thu-truyen-dai-146377.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=7",
+      "sourceTitle": "BỒ CÂU KHÔNG ĐƯA THƯ (truyện dài)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21592022_045934.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-bo-cau-khong-dua-thu-truyen-dai.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-buoi-chieu-windows",
+      "title": "Buổi Chiều Windows",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/buoi-chieu-windows-truyen-dai-146374.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=7",
+      "sourceTitle": "BUỔI CHIỀU WINDOWS: truyện dài",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21582022_045833.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-buoi-chieu-windows.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-chuyen-co-tich-danh-cho-nguoi-lon-tap-truyen",
+      "title": "Chuyện Cổ Tích Dành Cho Người Lớn: Tập Truyện",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chuyen-co-tich-danh-cho-nguoi-lon-tap-truyen-146379.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=7",
+      "sourceTitle": "CHUYỆN CỔ TÍCH DÀNH CHO NGƯỜI LỚN: tập truyện",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21572022_045728.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-chuyen-co-tich-danh-cho-nguoi-lon-tap-truyen.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-di-qua-hoa-cuc",
+      "title": "Đi Qua Hoa Cúc",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/di-qua-hoa-cuc-146383.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=7",
+      "sourceTitle": "ĐI QUA HOA CÚC",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21542022_045457.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-di-qua-hoa-cuc.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-hoa-hong-xu-khac",
+      "title": "Hoa Hồng Xứ Khác",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/hoa-hong-xu-khac-146384.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=7",
+      "sourceTitle": "HOA HỒNG XỨ KHÁC",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21532022_045304.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-hoa-hong-xu-khac.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-nhung-co-em-gai",
+      "title": "Những Cô Em Gái",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/nhung-co-em-gai-truyen-dai-146388.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=8",
+      "sourceTitle": "NHỮNG CÔ EM GÁI: truyện dài",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21502022_045027.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-nhung-co-em-gai.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-phong-tro-ba-nguoi",
+      "title": "Phòng Trọ Ba Người",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/phong-tro-ba-nguoi-truyen-dai-146391.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=8",
+      "sourceTitle": "PHÒNG TRỌ BA NGƯỜI: truyện dài",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21492022_044918.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-phong-tro-ba-nguoi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-quan-go-di-len",
+      "title": "Quán Gò Đi Lên",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/quan-go-di-len-truyen-dai-146392.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=8",
+      "sourceTitle": "QUÁN GÒ ĐI LÊN (truyện dài)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21482022_044846.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-quan-go-di-len-truyen-dai.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-thang-quy-nho",
+      "title": "Thằng Quỷ Nhỏ",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/thang-quy-nho-truyen-dai-146395.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=8",
+      "sourceTitle": "THẰNG QUỶ NHỎ: truyện dài",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21472022_044710.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-thang-quy-nho.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-truoc-vong-chung-ket",
+      "title": "Trước Vòng Chung Kết",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/truoc-vong-chung-ket-truyen-dai-146396.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=8",
+      "sourceTitle": "TRƯỚC VÒNG CHUNG KẾT (truyện dài)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21462022_044636.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-truoc-vong-chung-ket-truyen-dai.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-thoi-tho-au-dai-lau-boxset-vang-am-ap",
+      "title": "Thời Thơ Ấu Dài Lâu - Boxset Vàng Ấm Áp",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/thoi-tho-au-dai-lau-boxset-vang-am-ap-146404.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=9",
+      "sourceTitle": "THỜI THƠ ẤU DÀI LÂU -  BOXSET VÀNG ẤM ÁP",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_07052022_110517.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-thoi-tho-au-dai-lau-boxset-vang-am-ap.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-thoi-tho-au-dai-lau-boxset-xanh-ngot-ngao",
+      "title": "Thời Thơ Ấu Dài Lâu - Boxset Xanh Ngọt Ngào",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/thoi-tho-au-dai-lau-boxset-xanh-ngot-ngao-146405.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=9",
+      "sourceTitle": "THỜI THƠ ẤU DÀI LÂU -  BOXSET XANH NGỌT NGÀO",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_07102022_111032.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-thoi-tho-au-dai-lau-boxset-xanh-ngot-ngao.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-thuong-nho-tra-long-tap-van",
+      "title": "Thương Nhớ Trà Long: Tạp Văn",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tản văn",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/thuong-nho-tra-long-tap-van-146215.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=10",
+      "sourceTitle": "THƯƠNG NHỚ TRÀ LONG: tạp văn",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_21032022_040358.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-thuong-nho-tra-long-tap-van.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-ra-bo-suoi-ngam-hoa-ken-hong",
+      "title": "Ra Bờ Suối Ngắm Hoa Kèn Hồng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ra-bo-suoi-ngam-hoa-ken-hong-146059.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=10",
+      "sourceTitle": "RA BỜ SUỐI NGẮM HOA KÈN HỒNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_10412022_114114.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-ra-bo-suoi-ngam-hoa-ken-hong.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-con-chim-xanh-biec-bay-ve",
+      "title": "Con Chim Xanh Biếc Bay Về",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/con-chim-xanh-biec-bay-ve-95618.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=11",
+      "sourceTitle": "CON CHIM XANH BIẾC BAY VỀ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_11572020_025726.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-con-chim-xanh-biec-bay-ve.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-con-chim-xanh-biec-bay-ve-ban-dac-biet",
+      "title": "Con Chim Xanh Biếc Bay Về (Bản Đăc Biệt)",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/con-chim-xanh-biec-bay-ve-ban-dac-biet-95619.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=11",
+      "sourceTitle": "CON CHIM XANH BIẾC BAY VỀ (BẢN ĐĂC BIỆT)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04562020_105608.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-con-chim-xanh-biec-bay-ve-ban-dac-biet.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-nguoi-quang-di-an-mi-quang",
+      "title": "Người Quảng Đi Ăn Mì Quảng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/nguoi-quang-di-an-mi-quang-75316.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=11",
+      "sourceTitle": "NGƯỜI QUẢNG ĐI ĂN MÌ QUẢNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_6_NXBTreStoryThumb_04092015_110912.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-nguoi-quang-di-an-mi-quang.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-con-cho-nho-mang-gio-hoa-hong",
+      "title": "Con Chó Nhỏ Mang Giỏ Hoa Hồng",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/con-cho-nho-mang-gio-hoa-hong-75236.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=11",
+      "sourceTitle": "CON CHÓ NHỎ MANG GIỎ HOA HỒNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_15362023_023623.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-con-cho-nho-mang-gio-hoa-hong.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-lam-ban-voi-bau-troi",
+      "title": "Làm Bạn Với Bầu Trời",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/lam-ban-voi-bau-troi-75034.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=11",
+      "sourceTitle": "LÀM BẠN VỚI BẦU TRỜI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_06212019_112110.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-lam-ban-voi-bau-troi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-toi-thay-hoa-vang-tren-co-xanh-ban-in-moi",
+      "title": "Tôi Thấy Hoa Vàng Trên Cỏ Xanh (Bản In Mới)",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/toi-thay-hoa-vang-tren-co-xanh-ban-in-moi-44630.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=13",
+      "sourceTitle": "TÔI THẤY HOA VÀNG TRÊN CỎ XANH (bản  in mới)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_04152018_031555.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-toi-thay-hoa-vang-tren-co-xanh-ban-in-moi.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-cam-on-nguoi-lon",
+      "title": "Cảm Ơn Người Lớn",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/cam-on-nguoi-lon-44605.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=13",
+      "sourceTitle": "CẢM ƠN NGƯỜI LỚN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_13572018_085714.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-cam-on-nguoi-lon.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-cam-on-nguoi-lon-ban-dac-biet",
+      "title": "Cảm Ơn Người Lớn (Bản Đăc Biệt)",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/cam-on-nguoi-lon-ban-dac-biet-44614.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=14",
+      "sourceTitle": "CẢM ƠN NGƯỜI LỚN (bản đăc biệt)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_16072018_090711.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-cam-on-nguoi-lon-ban-dac-biet.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-cay-chuoi-non-di-giay-xanh",
+      "title": "Cây Chuối Non Đi Giày Xanh",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/cay-chuoi-non-di-giay-xanh-44585.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=14",
+      "sourceTitle": "CÂY CHUỐI NON ĐI GIÀY XANH",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_31572018_095753.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-cay-chuoi-non-di-giay-xanh.jpg"
+    },
+    {
+      "id": "nguyen-nhat-anh-nguyen-nhat-anh-va-toi",
+      "title": "Nguyễn Nhật Ánh Và Tôi",
+      "authorId": "nguyen-nhat-anh",
+      "genres": [
+        "tuổi trẻ",
+        "tình cảm"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/nguyen-nhat-anh-va-toi-12954.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tim-kiem?q=Nguyen+Nhat+Anh&page=15",
+      "sourceTitle": "NGUYỄN NHẬT ÁNH VÀ TÔI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/NXBTreStoryThumb_24022014_110234.jpg",
+      "coverUrl": "/author-covers/nguyen-nhat-anh-nguyen-nhat-anh-va-toi.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-canh-dong-bat-tan",
+      "title": "Cánh Đồng Bất Tận",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/canh-dong-bat-tan-158920.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "CÁNH ĐỒNG BẤT TẬN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_29_nxbtre_thumb_30122019_111202.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-canh-dong-bat-tan.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-tieng-goi-chan-troi",
+      "title": "Tiếng Gọi Chân Trời",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/tieng-goi-chan-troi-158484.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "TIẾNG GỌI CHÂN TRỜI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_18322025_113241.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-tieng-goi-chan-troi.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-ngay-mai-cua-nhung-ngay-mai",
+      "title": "Ngày Mai Của Những Ngày Mai",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ngay-mai-cua-nhung-ngay-mai-158061.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "NGÀY MAI CỦA NHỮNG NGÀY MAI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_02302024_093055.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-ngay-mai-cua-nhung-ngay-mai.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-troi",
+      "title": "Trôi",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/troi-157510.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "TRÔI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_23262023_032645.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-troi.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-gay-nguoi-thi-lanh",
+      "title": "Gáy Người Thì Lạnh",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/gay-nguoi-thi-lanh-146632.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "GÁY NGƯỜI THÌ LẠNH",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/copy_12_nxbtre_thumb_14492017_024905.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-gay-nguoi-thi-lanh.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-gio-le-va-9-cau-chuyen-khac",
+      "title": "Gió Lẻ Và 9 Câu Chuyện Khác",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/gio-le-va-9-cau-chuyen-khac-146547.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "GIÓ LẺ VÀ 9 CÂU CHUYỆN KHÁC",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_03012022_030114.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-gio-le-va-9-cau-chuyen-khac.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-khong-ai-qua-song",
+      "title": "Không Ai Qua Sông",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/khong-ai-qua-song-146071.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "KHÔNG AI QUA SÔNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_12242022_042423.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-khong-ai-qua-song.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-khoi-troi-long-lay",
+      "title": "Khói Trời Lộng Lẫy",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/khoi-troi-long-lay-146070.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "KHÓI TRỜI LỘNG LẪY",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_12252022_042548.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-khoi-troi-long-lay.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-yeu-nguoi-ngong-nui",
+      "title": "Yêu Người Ngóng Núi",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tản văn",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/yeu-nguoi-ngong-nui-tan-van-146069.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "YÊU NGƯỜI NGÓNG NÚI (tản văn)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_12172022_041727.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-yeu-nguoi-ngong-nui-tan-van.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-hong-tay-khoi-lanh",
+      "title": "Hong Tay Khói Lạnh",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/hong-tay-khoi-lanh-146042.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "HONG TAY KHÓI LẠNH",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_24352021_113544.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-hong-tay-khoi-lanh.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-ngon-den-khong-tat",
+      "title": "Ngọn Đèn Không Tắt",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/ngon-den-khong-tat-tap-truyen-ngan-105684.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "NGỌN ĐÈN KHÔNG TẮT: tập truyện ngắn",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_15212021_112150.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-ngon-den-khong-tat.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-dao",
+      "title": "Đảo",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/dao-tap-truyen-ngan-105683.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "ĐẢO: tập truyện ngắn",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_15222021_092212.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-dao.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-tap-van-nguyen-ngoc-tu",
+      "title": "Tạp Văn Nguyễn Ngọc Tư",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tản văn",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/tap-van-nguyen-ngoc-tu-75482.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "TẠP VĂN NGUYỄN NGỌC TƯ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_28072020_030725.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-tap-van-nguyen-ngoc-tu.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-song",
+      "title": "Sông",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/song-75445.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "SÔNG",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_24502020_095025.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-song.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-giao-thua",
+      "title": "Giao Thừa",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/giao-thua-tap-truyen-ngan-75085.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "GIAO THỪA (tập truyện ngắn)",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_15562019_015651.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-giao-thua-tap-truyen-ngan.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-hanh-ly-hu-vo",
+      "title": "Hành Lý Hư Vô",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/hanh-ly-hu-vo-54901.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "HÀNH LÝ HƯ VÔ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_28242019_032459.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-hanh-ly-hu-vo.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-dong-tam-long",
+      "title": "Đong Tấm Lòng",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tản văn",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/dong-tam-long-tan-van-54887.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "ĐONG TẤM LÒNG: tản văn",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_20472019_024733.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-dong-tam-long.jpg"
+    },
+    {
+      "id": "nguyen-ngoc-tu-tram-tich",
+      "title": "Trầm Tích",
+      "authorId": "nguyen-ngoc-tu",
+      "genres": [
+        "tâm lý",
+        "đời sống"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/tram-tich-12737.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-ngoc-tu-3524.html",
+      "sourceTitle": "TRẦM TÍCH",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/NXBTreStoryThumb_21342014_043411.jpg",
+      "coverUrl": "/author-covers/nguyen-ngoc-tu-tram-tich.jpg"
+    },
+    {
+      "id": "nguyen-huy-thiep-tro-chuyen-voi-hoa-thuy-tien-va",
+      "title": "Trò Chuyện Với Hoa Thủy Tiên Và",
+      "authorId": "nguyen-huy-thiep",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/tro-chuyen-voi-hoa-thuy-tien-va-158537.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "sourceTitle": "TRÒ CHUYỆN VỚI HOA THỦY TIÊN VÀ",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_24132025_031337.jpg",
+      "coverUrl": "/author-covers/nguyen-huy-thiep-tro-chuyen-voi-hoa-thuy-tien-va.jpg"
+    },
+    {
+      "id": "nguyen-huy-thiep-tuong-ve-huu-nhung-truyen-khac",
+      "title": "Tướng Về Hưu Những Truyện Khác",
+      "authorId": "nguyen-huy-thiep",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/tuong-ve-huu-nhung-truyen-khac-146434.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "sourceTitle": "TƯỚNG VỀ HƯU  NHỮNG TRUYỆN KHÁC",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_17102022_021005.jpg",
+      "coverUrl": "/author-covers/nguyen-huy-thiep-tuong-ve-huu-nhung-truyen-khac.jpg"
+    },
+    {
+      "id": "nguyen-huy-thiep-nhung-ngon-gio-hua-tat",
+      "title": "Những Ngọn Gió Hua Tát",
+      "authorId": "nguyen-huy-thiep",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/nhung-ngon-gio-hua-tat-13938.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "sourceTitle": "NHỮNG NGỌN GIÓ HUA TÁT",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/nxbtre_thumb_23412017_104127.jpg",
+      "coverUrl": "/author-covers/nguyen-huy-thiep-nhung-ngon-gio-hua-tat.jpg"
+    },
+    {
+      "id": "nguyen-huy-thiep-giang-luoi-bat-chim",
+      "title": "Giăng Lưới Bắt Chim",
+      "authorId": "nguyen-huy-thiep",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/giang-luoi-bat-chim-13637.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "sourceTitle": "GIĂNG LƯỚI BẮT CHIM",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/NXBTreStoryThumb_11162016_021604.jpg",
+      "coverUrl": "/author-covers/nguyen-huy-thiep-giang-luoi-bat-chim.jpg"
+    },
+    {
+      "id": "nguyen-huy-thiep-chay-di-song-oi",
+      "title": "Chảy Đi Sông Ơi",
+      "authorId": "nguyen-huy-thiep",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/chay-di-song-oi-13450.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "sourceTitle": "CHẢY ĐI SÔNG ƠI",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/NXBTreStoryThumb_01572016_095749.jpg",
+      "coverUrl": "/author-covers/nguyen-huy-thiep-chay-di-song-oi.jpg"
+    },
+    {
+      "id": "nguyen-huy-thiep-hac-vua-bay-vua-bay-vua-keu-thang-thot-tuyen-truyen-ngan",
+      "title": "Hạc Vừa Bay Vừa Bay Vừa Kêu Thảng Thốt: Tuyển Truyện Ngắn",
+      "authorId": "nguyen-huy-thiep",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/hac-vua-bay-vua-bay-vua-keu-thang-thot-tuyen-truyen-ngan-12175.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "sourceTitle": "HẠC VỪA BAY VỪA BAY VỪA KÊU THẢNG THỐT: tuyển truyện ngắn",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/NXBTreStoryThumb_28512012_035138.jpg",
+      "coverUrl": "/author-covers/nguyen-huy-thiep-hac-vua-bay-vua-bay-vua-keu-thang-thot-tuyen-truyen-ngan.jpg"
+    },
+    {
+      "id": "nguyen-huy-thiep-tuyen-tap-kich-hoa-sen-no-ngay-29-thang-4-con-lai-tinh-yeu-cai-chet-duoc-che-day-nha-osin",
+      "title": "Tuyển Tập Kịch: Hoa Sen Nở Ngày 29 Tháng 4 - Còn Lại Tình Yêu - Cái Chết Được Che Đậy - Nhà Osin",
+      "authorId": "nguyen-huy-thiep",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/tuyen-tap-kich-hoa-sen-no-ngay-29-thang-4-con-lai-tinh-yeu-cai-chet-duoc-che-day-nha-osin-12083.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "sourceTitle": "TUYỂN TẬP KỊCH: HOA SEN NỞ NGÀY 29 THÁNG 4 - CÒN LẠI TÌNH YÊU -  CÁI CHẾT ĐƯỢC CHE ĐẬY - NHÀ OSIN",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/NXBTreStoryThumb_07472012_034720.jpg",
+      "coverUrl": "/author-covers/nguyen-huy-thiep-tuyen-tap-kich-hoa-sen-no-ngay-29-thang-4-con-lai-tinh-yeu-cai-chet-duoc-che-day-nha-osin.jpg"
+    },
+    {
+      "id": "nguyen-huy-thiep-moi-nha-van-mot-tac-pham-tinh-yeu-toi-ac-trung-phat",
+      "title": "Mỗi Nhà Văn Một Tác Phẩm – Tình Yêu Tội Ác Trừng Phạt",
+      "authorId": "nguyen-huy-thiep",
+      "genres": [
+        "tâm lý",
+        "xã hội"
+      ],
+      "format": "book",
+      "sourceName": "NXB Trẻ",
+      "sourceUrl": "https://www.nxbtre.com.vn/sach/moi-nha-van-mot-tac-pham-tinh-yeu-toi-ac-trung-phat-11965.html",
+      "discoveredAt": "https://www.nxbtre.com.vn/tac-gia/nguyen-huy-thiep-4806.html",
+      "sourceTitle": "MỖI NHÀ VĂN MỘT TÁC PHẨM – TÌNH YÊU TỘI ÁC  TRỪNG PHẠT",
+      "imageSourceUrl": "https://www.nxbtre.com.vn/Images/Book/NXBTreStoryThumb_16062012_040638.jpg",
+      "coverUrl": "/author-covers/nguyen-huy-thiep-moi-nha-van-mot-tac-pham-tinh-yeu-toi-ac-trung-phat.jpg"
+    },
+    {
+      "id": "vu-trong-phung-giong-to",
+      "title": "Giông Tố",
+      "authorId": "vu-trong-phung",
+      "genres": [
+        "trào phúng",
+        "xã hội"
+      ],
+      "format": "audio",
+      "sourceName": "Fonos",
+      "sourceUrl": "https://fonos.vn/sach-noi/viet-nam-danh-tac-giong-to-1682045603309/?expandDescription=1#audiobook-description-divider",
+      "discoveredAt": "https://fonos.vn/tac-gia/422/",
+      "sourceTitle": "Giông Tố",
+      "imageSourceUrl": "https://public-cdn-production.fonos.app/books/accae7f0-dfef-11ed-b995-df4f338dd3b7/coverImage/1682395544491_1x.webp",
+      "coverUrl": "/author-covers/vu-trong-phung-giong-to.webp"
+    },
+    {
+      "id": "vu-trong-phung-so-do",
+      "title": "Số Đỏ",
+      "authorId": "vu-trong-phung",
+      "genres": [
+        "trào phúng",
+        "xã hội"
+      ],
+      "format": "audio",
+      "sourceName": "Fonos",
+      "sourceUrl": "https://fonos.vn/sach-noi/viet-nam-danh-tac-so-do-1686207563018/?expandDescription=1#audiobook-description-divider",
+      "discoveredAt": "https://fonos.vn/tac-gia/422/",
+      "sourceTitle": "Số Đỏ",
+      "imageSourceUrl": "https://public-cdn-production.fonos.app/books/008e9120-05ca-11ee-a401-ff9939c739b3/coverImage/1686395596908_1x.webp",
+      "coverUrl": "/author-covers/vu-trong-phung-so-do.webp"
+    },
+    {
+      "id": "thach-lam-ha-noi-bam-sau-pho-phuong",
+      "title": "Hà Nội Băm Sáu Phố Phường",
+      "authorId": "thach-lam",
+      "genres": [
+        "đời sống",
+        "tùy bút"
+      ],
+      "format": "audio",
+      "sourceName": "Fonos",
+      "sourceUrl": "https://fonos.vn/sach-noi/viet-nam-danh-tac-ha-noi-bam-sau-pho-phuong-1682656479503/",
+      "discoveredAt": "https://fonos.vn/sach-noi/viet-nam-danh-tac-ha-noi-bam-sau-pho-phuong-1682656479503/",
+      "sourceTitle": "Hà Nội Băm Sáu Phố Phường",
+      "imageSourceUrl": "https://public-cdn-production.fonos.app/books/fc5e61f0-e57d-11ed-9de5-d371f6b0b2a6/coverImage/1682656478613_1x.webp",
+      "coverUrl": "/author-covers/thach-lam-ha-noi-bam-sau-pho-phuong.webp"
+    }
+  ]
+}

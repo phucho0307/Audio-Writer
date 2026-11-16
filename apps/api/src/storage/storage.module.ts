@@ -2,7 +2,7 @@ import { Global, Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LocalDiskStorage } from './local-disk.storage';
 import { R2Storage } from './r2.storage';
-import { AUDIO_STORAGE, type StorageDriver } from './storage-driver';
+import { AUDIO_STORAGE, COVER_STORAGE, type StorageDriver } from './storage-driver';
 
 /**
  * Object storage when it is configured, the local disk when it is not.
@@ -49,7 +49,18 @@ const DRIVER = {
 @Global()
 @Module({
   imports: [ConfigModule],
-  providers: [DRIVER],
-  exports: [AUDIO_STORAGE],
+  providers: [DRIVER, {
+    provide: COVER_STORAGE,
+    inject: [ConfigService],
+    useFactory: (config: ConfigService): StorageDriver => {
+      if (['R2_BUCKET', 'R2_ACCOUNT_ID', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_PUBLIC_BASE']
+        .every((key) => config.get<string>(key))) {
+        const r2 = new R2Storage(config);
+        return { name: r2.name, put: (key, body, type) => r2.put(`covers/${key}`, body, type) };
+      }
+      return new LocalDiskStorage('uploads/covers');
+    },
+  }],
+  exports: [AUDIO_STORAGE, COVER_STORAGE],
 })
 export class StorageModule {}

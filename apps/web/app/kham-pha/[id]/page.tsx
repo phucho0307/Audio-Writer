@@ -1,5 +1,6 @@
 'use client';
 
+import { thumbUrl } from '@/lib/thumb';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -13,6 +14,9 @@ import { SignInPrompt } from '@/app/SignInWall';
 import { useAuth } from '@/lib/useAuth';
 import Reveal from '@/app/Reveal';
 import SpiritText from '@/app/SpiritText';
+import { chapterAuthorHandle, storyAuthorHandle } from '@/lib/chapter-author';
+import AuthorByline from '@/app/AuthorByline';
+import { nativeStory } from '@/lib/native-catalog';
 
 /**
  * Choosing where to diverge.
@@ -123,7 +127,7 @@ export default function ForkPicker({
           <div className="cover aspect-[3/4] w-[112px] flex-none self-start sm:w-[132px]">
             {story.coverUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={story.coverUrl} alt="" />
+              <img src={thumbUrl(story.coverUrl)} alt="" />
             )}
           </div>
           <div className="flex flex-col items-start gap-2.5">
@@ -143,6 +147,8 @@ export default function ForkPicker({
             </div>
           </div>
         </Reveal>
+
+        {story.coverCredit && <p className="text-[11px] text-[var(--color-muted)]">Ảnh bìa: <a href={story.coverCredit.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{story.coverCredit.photographer || 'Pexels'}{story.coverCredit.photographer ? ' / Pexels' : ''} ↗</a></p>}
 
         <div className="flex flex-col gap-1.5 border-l-2 border-[var(--color-accent)] pl-4">
           <h2 className="display text-xl">Chương nào nên rẽ hướng khác?</h2>
@@ -211,6 +217,7 @@ export default function ForkPicker({
                     <span className="line-clamp-2 font-serif text-[15.5px] leading-relaxed">
                       {c.title ?? c.textPlain.split('\n')[0]}
                     </span>
+                    <span className="text-[11px] text-[var(--color-faint)]"><AuthorByline branchId={c.branchId} handle={chapterAuthorHandle(c, story.owner)} nested /></span>
                     {isPick && (
                       <span className="text-[12px] text-[var(--color-accent)]">
                         Nhánh của bạn bắt đầu ngay sau chương này
@@ -245,7 +252,7 @@ export default function ForkPicker({
               <strong className="font-medium text-[var(--color-ink)]">
                 chương {picked + 2}
               </strong>
-              . Bản gốc của {story.owner?.displayName ?? 'tác giả'} không thay
+              . Bản gốc của {nativeStory(story.id)?.textSource.authorName ?? (storyAuthorHandle(story) ? `@${storyAuthorHandle(story)}` : 'tác giả')} không thay
               đổi.
             </p>
           )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { thumbUrl } from '@/lib/thumb';
 import { Fragment, use, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
@@ -7,7 +8,10 @@ import Reveal from '@/app/Reveal';
 import SpiritText from '@/app/SpiritText';
 import RatingBadge from '@/app/Rating';
 import { chapterRating, storyRating } from '@/lib/ratings';
+import { chapterAuthorHandle, storyAuthorHandle } from '@/lib/chapter-author';
 import { BranchBanner, BranchLink, forksAt, readableForks } from '../Branches';
+import AuthorByline from '@/app/AuthorByline';
+import TextAttribution from '@/app/TextAttribution';
 import {
   mainBranch,
   api,
@@ -137,7 +141,7 @@ export default function Contents({
           <div className="cover aspect-[3/4] w-[150px] flex-none self-start sm:w-[176px]">
             {story.coverUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={story.coverUrl} alt="" />
+              <img src={thumbUrl(story.coverUrl)} alt="" />
             )}
           </div>
 
@@ -154,7 +158,7 @@ export default function Contents({
               className="display text-[2.1rem] leading-[1.06] sm:text-[2.5rem]"
             />
 
-            <RatingBadge rating={storyRating(story.id)} variant="full" />
+            {!story.textSource && <RatingBadge rating={storyRating(story.id)} variant="full" />}
 
             <p className="max-w-[52ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
               {story.synopsis}
@@ -172,12 +176,10 @@ export default function Contents({
               )}
               <Sep />
               <span>{story.viewCount.toLocaleString('vi-VN')} lượt xem</span>
-              {story.owner && (
+              {storyAuthorHandle(story) && (
                 <>
                   <Sep />
-                  <span className="text-[var(--color-muted)]">
-                    @{story.owner.handle}
-                  </span>
+                  <AuthorByline storyId={story.id} handle={storyAuthorHandle(story)} className="text-[var(--color-muted)]" />
                 </>
               )}
             </div>
@@ -194,6 +196,10 @@ export default function Contents({
           </div>
         </Reveal>
 
+        {story.coverCredit && <p className="text-[11px] text-[var(--color-muted)]">Ảnh bìa: <a href={story.coverCredit.sourceUrl} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">{story.coverCredit.photographer || 'Pexels'}{story.coverCredit.photographer ? ' / Pexels' : ''} ↗</a></p>}
+
+        <TextAttribution source={story.textSource} />
+
         <section className="flex flex-col gap-1">
           <div className="flex items-baseline justify-between border-b border-[var(--color-line)] pb-2.5">
             <h2 className="label">Mục lục</h2>
@@ -207,6 +213,7 @@ export default function Contents({
             {read.contributions.map((c) => {
               const clip = narrated.get(c.depth);
               const split = forksAt(story, read.branch.id, c.depth);
+              const authorHandle = chapterAuthorHandle(c, story.owner);
               return (
                 <Fragment key={c.id}>
                 <li>
@@ -218,13 +225,14 @@ export default function Contents({
                       {c.depth + 1}
                     </span>
                     <span className="min-w-0 flex-1 text-[15px] leading-snug transition-colors group-hover:text-[var(--color-accent)]">
-                      {c.title ?? c.textPlain.split('\n')[0].slice(0, 60)}
+                      <span className="block">{c.title ?? c.textPlain.split('\n')[0].slice(0, 60)}</span>
+                      {(authorHandle || story.textSource) && <span className="mt-1 block text-[11px] text-[var(--color-faint)]"><AuthorByline branchId={c.branchId} handle={authorHandle} nested /></span>}
                     </span>
 
-                    <RatingBadge
+                    {!story.textSource && <RatingBadge
                       rating={chapterRating(story.id, c.id, c.depth)}
                       className="flex-none text-[11.5px]"
-                    />
+                    />}
 
                     {/* A narrated chapter says so with its running time - the
                         one fact that tells a listener whether they have time

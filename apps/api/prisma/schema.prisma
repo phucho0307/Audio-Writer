@@ -100,6 +100,11 @@ model Story {
   synopsis   String?
   /// Cover art. Local path in dev, object-store URL in production.
   coverUrl   String?
+  /// Source and photographer for a cover selected from a stock library.
+  coverCredit Json?
+  /// Attribution for a full-text work imported with republication rights.
+  /// Ownership of the library record is separate from the literary author.
+  textSource Json?
   genres     String[]
   language   String      @default("vi")
   status     StoryStatus @default(DRAFTING)

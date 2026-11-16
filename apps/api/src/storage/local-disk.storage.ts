@@ -18,7 +18,11 @@ import type { StorageDriver, StoredObject } from './storage-driver';
 export class LocalDiskStorage implements StorageDriver {
   readonly name = 'local-disk';
   private readonly logger = new Logger(LocalDiskStorage.name);
-  private readonly dir = join(__dirname, '../../../web/public/audio');
+  constructor(private readonly namespace = 'audio') {}
+
+  private get dir() {
+    return join(__dirname, '../../../web/public', this.namespace);
+  }
 
   async put(key: string, body: Buffer): Promise<StoredObject> {
     await mkdir(this.dir, { recursive: true });
@@ -26,6 +30,6 @@ export class LocalDiskStorage implements StorageDriver {
     // No cache header to set here - Next serves `public/` with its own
     // defaults. Immutability only becomes worth expressing once a CDN is in
     // front, which is the point at which this driver is no longer in use.
-    return { url: `/audio/${key}`, bytes: body.length };
+    return { url: `/${this.namespace}/${key}`, bytes: body.length };
   }
 }

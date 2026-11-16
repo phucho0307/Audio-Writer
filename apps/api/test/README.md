@@ -1,28 +1,35 @@
-# Runnable checks
+# Story cover checks
 
-Plain Node scripts, not a framework. They talk to a running API and a real
-database, because what they check only exists when both are up: a CRDT room
-converging between two sockets, a token being refused, the model typing into a
-document somebody else is holding open.
+Run `npm run test:covers -w @aw/api` for image validation, ownership, search caching,
+candidate binding, Pexels integration and remote URL validation tests. Provider
+requests in this suite are mocked.
 
-Run the API first (`npm run dev` in `apps/api`), then:
+With the API and web app running locally and migrations applied, run
+`npm run test:covers:smoke -w @aw/api` for HTTP checks including one real Gemini
+request. The script creates and removes its own two users and private story;
+it does not edit existing stories. It requires the local `.env` credentials.
 
-    node test/collab-room.js    # auth, convergence, persistence, read-only
-    node test/draft-commit.js   # commit, the ghost-row race, invite edges
-    node test/collab-branching.js  # who may append where; a guest's chapter becomes their own branch
-    node test/rag-access.js        # search never returns text the asker could not read
-    node test/ai-in-room.js     # the model writing into a live room (spends AI quota)
-    node test/rag-search.js     # indexes the craft corpus, then queries it
-    node test/rag-pipeline.js   # a committed chapter indexes itself and is retrievable
+Writers open the cover frame on `/cua-toi` or `/stories/:id`. They can upload
+JPG/PNG/WebP (up to 8 MB, minimum 256 px in each dimension), preview the 3:4 crop,
+choose an AI suggestion, replace the cover, or remove it. Uploads are re-encoded
+as 900 × 1200 JPEGs without EXIF and stored through the existing local/R2 setup.
 
-Running them back to back can trip the rate limiter, which is the limiter
-working. `rag-search.js` reports that as SKIPPED rather than as a failure - an
-earlier version called it a retrieval bug and sent me looking for one that was
-never there. To clear the counters between runs:
+`GEMINI_API_KEY` enables AI recommendations. `COVER_AI_MODEL` defaults to
+`gemini-3.1-flash-lite`. The AI ranks the licensed photos recorded in
+`apps/web/public/covers/sources.json`. Adding `PEXELS_API_KEY` also enables new
+Pexels searches; the existing library remains the fallback during an outage.
+Source and photographer credit are retained with the selected cover and linked
+from the reading and story pages. This is photo search, not image generation.
 
-    docker exec aw-redis sh -c 'redis-cli --scan --pattern "throttle:*" | xargs -r redis-cli DEL'
+`COVER_AI_DAILY_LIMIT` defaults to 20 fresh requests per user per UTC day.
+Recommendations and their search plans are cached for an hour; pagination and
+reopening the same search reuse the plan. These turns are separate from prose
+generation credits. Uploading and publishing never automatically trigger AI.
+# Narration priority
 
-Both create what they need, assert, and clean up after themselves - including
-the test user. If one crashes midway it can leave a collaborator row behind,
-which will make the next run's "user with no seat" check pass for the wrong
-reason; `node -e` the `branchCollaborator` table if a result looks odd.
+After building the API, run `node --test test/narration-priority.test.cjs` from
+`apps/api`. It uses Redis queues with unique `test-narration-priority-*` names
+and removes only those test queues. It verifies that pressing play promotes an
+already queued background chapter, prefetch cannot demote it, and an active
+synthesis is retained without restarting. No production narration is consumed.
+

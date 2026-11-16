@@ -6,11 +6,14 @@ import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/useAuth";
 import AudioPlayer from "./AudioPlayer";
 import PublishPanel from "./PublishPanel";
+import StoryCover from "../../StoryCover";
 import Chapter from "./Chapter";
 import RichEditor, { type RichEditorHandle } from "../../RichEditor";
 import { concatDocs, docOf, textToDoc, type PMDoc } from "@/lib/prose";
+import { storyAuthorHandle } from "@/lib/chapter-author";
 import RevisePanel from "./RevisePanel";
 import Contents from "./Contents";
+import AuthorByline from '@/app/AuthorByline';
 import {
   mainBranchId,
   ApiError,
@@ -441,7 +444,21 @@ export default function StoryPage({
 
       <main className="flex min-w-0 max-w-3xl flex-1 flex-col gap-8">
         {/* ---- header ---- */}
-        <div className="flex flex-col gap-2">
+        <div className="flex items-start gap-4 sm:gap-5">
+          {(ownsStory || story.coverUrl) && (
+            <div className="w-[90px] shrink-0 sm:w-[120px]">
+              {ownsStory ? (
+                <StoryCover story={story} onChange={(cover) => setStory((s) => s ? { ...s, ...cover } : s)} />
+              ) : (
+                <div className="cover aspect-[3/4]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={story.coverUrl!} alt={`Ảnh bìa ${story.title}`} />
+                </div>
+              )}
+              {story.coverCredit && <a href={story.coverCredit.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block text-[10px] text-[var(--color-muted)] underline">{story.coverCredit.photographer || 'Ảnh'} / Pexels ↗</a>}
+            </div>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div className="flex flex-wrap items-center gap-4">
             <Link
               href="/cua-toi"
@@ -540,6 +557,7 @@ export default function StoryPage({
           )}
         </div>
 
+        </div>
         {/* ---- branch switcher ---- */}
         {story.branches.length > 1 && (
           <div className="flex flex-col gap-2">
@@ -881,7 +899,6 @@ export default function StoryPage({
                 c.branchId === branchId
               }
               canEdit={chaptersEditable}
-              viewerHandle={user?.handle ?? null}
               editing={editingId === c.id}
               onOpen={() => setEditingId(c.id)}
               onClose={() => setEditingId(null)}
@@ -1164,7 +1181,7 @@ export default function StoryPage({
             <span className="label">⑂ Viết theo hướng của bạn</span>
             <p className="max-w-[56ch] text-[14px] leading-relaxed text-[var(--color-muted)]">
               {currentBranch?.owner
-                ? <>Đây là {currentBranch.isRoot ? "truyện" : "nhánh"} của <span className="text-[var(--color-ink)]">@{currentBranch.owner.handle}</span>, nên bạn không viết thêm vào đây được. </>
+                ? <>Đây là {currentBranch.isRoot ? "truyện" : "nhánh"} của <AuthorByline storyId={currentBranch.isRoot ? story.id : undefined} handle={(currentBranch.isRoot ? storyAuthorHandle(story) : currentBranch.owner.handle) ?? currentBranch.owner.handle} className="text-[var(--color-ink)]" />, nên bạn không viết thêm vào đây được. </>
                 : null}
               Rẽ nhánh từ chương cuối để viết tiếp theo cách của bạn. Bản này giữ nguyên.
             </p>

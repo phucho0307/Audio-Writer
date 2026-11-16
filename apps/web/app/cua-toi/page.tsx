@@ -1,13 +1,17 @@
 'use client';
 
+import { thumbUrl } from '@/lib/thumb';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, type MyBranch, type Story } from '@/lib/api';
 import SignInWall from '../SignInWall';
 import Reveal from '../Reveal';
 import SpiritText from '../SpiritText';
+import StoryCover from '../StoryCover';
 import RatingBadge from '../Rating';
 import { storyRating } from '@/lib/ratings';
+import { storyAuthorHandle } from '@/lib/chapter-author';
+import AuthorByline from '@/app/AuthorByline';
 
 /**
  * The writer's shelf.
@@ -173,35 +177,27 @@ function MyStories() {
           className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4"
         >
           {stories.map((s) => (
-            <Link
+            <article
               key={s.id}
-              href={`/stories/${s.id}`}
               className="group flex flex-col gap-3"
             >
-              <div className="cover aspect-[3/4]">
-                {s.coverUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s.coverUrl} alt="" />
-                ) : (
-                  <span className="display flex h-full w-full items-center justify-center text-6xl text-[var(--color-line-strong)]">
-                    {s.title.slice(0, 1)}
-                  </span>
-                )}
+              <div className="relative">
+                <StoryCover story={s} onChange={(cover) => setStories((items) => items?.map((item) => item.id === s.id ? { ...item, ...cover } : item) ?? null)} />
 
                 {s.visibility !== 'PUBLIC' && (
-                  <span className="label absolute right-2 top-2 rounded-[3px] bg-black/55 px-1.5 py-1 text-[9px] text-white/85 backdrop-blur-sm">
+                  <span className="label pointer-events-none absolute right-2 top-2 rounded-[3px] bg-black/55 px-1.5 py-1 text-[9px] text-white/85 backdrop-blur-sm">
                     riêng tư
                   </span>
                 )}
 
                 {s.contributionCount === 0 && (
-                  <span className="scrim label text-white/80">
+                  <span className="scrim label pointer-events-none text-white/80">
                     chưa có chương nào
                   </span>
                 )}
               </div>
 
-              <div className="flex flex-col gap-1">
+              <Link href={`/stories/${s.id}`} className="flex flex-col gap-1">
                 <h2 className="display line-clamp-2 min-h-[2.4em] text-[17px] leading-[1.2] transition-colors group-hover:text-[var(--color-accent)]">
                   {s.title}
                 </h2>
@@ -212,8 +208,8 @@ function MyStories() {
                   {s.contributionCount} chương · {s.wordCount.toLocaleString('vi-VN')} từ
                   {s.branchCount > 1 && ` · ⑂ ${s.branchCount - 1} nhánh rẽ`}
                 </p>
-              </div>
-            </Link>
+              </Link>
+            </article>
           ))}
         </Reveal>
       )}
@@ -252,7 +248,7 @@ function MyBranches({ branches }: { branches: MyBranch[] }) {
               >
                 {b.story.coverUrl && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={b.story.coverUrl} alt="" />
+                  <img src={thumbUrl(b.story.coverUrl)} alt="" />
                 )}
               </Link>
               <div className="flex min-w-0 flex-1 flex-col gap-1">
@@ -263,8 +259,8 @@ function MyBranches({ branches }: { branches: MyBranch[] }) {
                   {b.name}
                 </Link>
                 <span className="truncate text-[12.5px] text-[var(--color-muted)]">
-                  từ <span className="text-[var(--color-ink)]">{b.story.title}</span> của @
-                  {b.story.owner.handle}
+                  từ <span className="text-[var(--color-ink)]">{b.story.title}</span> của{' '}
+                  <AuthorByline storyId={b.story.id} handle={storyAuthorHandle(b.story)} />
                 </span>
                 <span className="text-[11.5px] text-[var(--color-faint)]">
                   rẽ sau chương {from} · {b._count.contributions} chương của bạn

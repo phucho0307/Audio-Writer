@@ -437,6 +437,28 @@ body {
 
 /* ------------------------------------------------------------------- covers */
 
+.cover-picker:not(:has(img)) {
+  border: 1px dashed var(--color-line-strong);
+  box-shadow: none;
+}
+
+.cover-dialog {
+  margin: auto;
+  padding: 0;
+  width: min(760px, calc(100vw - 24px));
+  max-height: 90dvh;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: 0 24px 100px rgb(0 0 0 / .45);
+}
+
+.cover-dialog::backdrop {
+  background: rgb(0 0 0 / .65);
+  backdrop-filter: blur(5px);
+}
+
 /*
  * Cover art is the only real image on most pages, so it gets the frame it
  * deserves: a hairline that warms to gold on hover, and a lift small enough to
@@ -559,6 +581,24 @@ body {
     opacity: 1;
     transform: none;
   }
+}
+
+/*
+ * Grid cards fading in. CSS rather than a scroll-triggered GSAP tween: the
+ * grid fills in several passes (stories, then the Chinese and famous
+ * shelves), and a tween rebuilt mid-way left cards stuck at opacity 0. An
+ * animation with `both` always ends visible, whatever arrives when. The
+ * delay staggers one screenful; cards further down simply start together.
+ */
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+.card-in {
+  animation: card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 /* Stillness, in the same three states as the theme: the system setting is

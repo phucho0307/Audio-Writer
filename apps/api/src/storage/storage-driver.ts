@@ -1,5 +1,6 @@
 /** Injection token for whichever driver is configured. */
 export const AUDIO_STORAGE = Symbol('AUDIO_STORAGE');
+export const COVER_STORAGE = Symbol('COVER_STORAGE');
 
 export interface StoredObject {
   /**

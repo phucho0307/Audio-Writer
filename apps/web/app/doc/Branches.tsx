@@ -4,6 +4,8 @@ import Link from 'next/link';
 import type { BranchSummary, Story } from '@/lib/api';
 import RatingBadge from '@/app/Rating';
 import { branchRating } from '@/lib/ratings';
+import { storyAuthorHandle } from '@/lib/chapter-author';
+import { nativeStory } from '@/lib/native-catalog';
 
 /**
  * Branches as readers meet them: at the chapter where they split off.
@@ -41,6 +43,12 @@ export function readableForks(story: Story): BranchSummary[] {
 
 /** "@handle", or nothing when the branch is the story owner's own. */
 function authorOf(story: Story, b: BranchSummary): string | null {
+  if (b.owner?.handle === story.owner?.handle) {
+    const native = nativeStory(story.id);
+    if (native) return native.textSource.authorName;
+    const author = storyAuthorHandle(story);
+    return author ? `@${author}` : null;
+  }
   return b.owner ? `@${b.owner.handle}` : null;
 }
 

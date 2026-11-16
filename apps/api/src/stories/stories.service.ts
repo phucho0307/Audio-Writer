@@ -53,7 +53,7 @@ export class StoriesService {
    * permanently unmanageable. The role is set by hand in the database; there
    * is no endpoint that grants it.
    */
-  private async ownedStory(id: string): Promise<{ story: Story; user: User }> {
+  async ownedStory(id: string): Promise<{ story: Story; user: User }> {
     const user = await this.currentUser.current();
     const story = await this.prisma.story.findUnique({ where: { id } });
     if (!story) throw new NotFoundException(`Story ${id} not found`);
@@ -175,7 +175,6 @@ export class StoriesService {
           take: 1,
         },
       },
-      take: 50,
     });
   }
 

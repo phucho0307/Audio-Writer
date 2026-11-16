@@ -9,6 +9,9 @@ import { signIn } from '@/lib/auth';
 import ChapterNarration from './ChapterNarration';
 import RichText from '@/app/RichText';
 import { docOf } from '@/lib/prose';
+import { chapterAuthorHandle } from '@/lib/chapter-author';
+import AuthorByline from '@/app/AuthorByline';
+import TextAttribution from '@/app/TextAttribution';
 import { BranchBanner, BranchLink, forksAt } from '../../Branches';
 
 /**
@@ -194,6 +197,7 @@ export default function Reader({
 
   const current = story.branches.find((b) => b.id === read.branch.id);
   const split = forksAt(story, read.branch.id, depth);
+  const authorHandle = chapterAuthorHandle(chapter, story.owner);
 
   return (
     <>
@@ -229,28 +233,10 @@ export default function Reader({
 
           <p className="flex flex-wrap items-center gap-x-2.5 text-[12px] text-[var(--color-faint)]">
             <span>{chapter.wordCount} từ</span>
-            {/* Who wrote this chapter - not who owns the story. On a branch
-                they are different people, and crediting the story's author
-                with a stranger's chapter is the exact mix-up branches exist
-                to prevent. */}
-            {(chapter.author ?? story.owner) && (
+            {(authorHandle || story.textSource) && (
               <>
                 <span aria-hidden>·</span>
-                <span
-                  className={
-                    chapter.author && chapter.author.handle !== story.owner?.handle
-                      ? 'text-[var(--color-accent)]'
-                      : undefined
-                  }
-                >
-                  @{(chapter.author ?? story.owner)!.handle}
-                </span>
-              </>
-            )}
-            {chapter.authorType === 'AI' && (
-              <>
-                <span aria-hidden>·</span>
-                <span className="text-[var(--color-accent)]">AI viết</span>
+                <AuthorByline branchId={chapter.branchId} handle={authorHandle} />
               </>
             )}
           </p>
@@ -281,6 +267,8 @@ export default function Reader({
           <RichText doc={docOf(chapter)} />
         </article>
 
+        <TextAttribution source={story.textSource} />
+
         {/* Where the story already splits. Shown before the offer to write
             one's own: the ending a reader wants may already exist, written by
             someone else. */}
@@ -303,7 +291,7 @@ export default function Reader({
 
         {/* The offer, kept quiet. A filled panel here reads as an advert
             interrupting the story; a rule and a question reads as an aside. */}
-        <section className="flex flex-col items-start gap-3 border-l-2 border-[var(--color-accent)] py-1 pl-5">
+        {story.allowForks && <section className="flex flex-col items-start gap-3 border-l-2 border-[var(--color-accent)] py-1 pl-5">
           <h2 className="display text-[19px] leading-snug">
             Bạn muốn chương này kết thúc khác đi?
           </h2>
@@ -327,7 +315,7 @@ export default function Reader({
                 : 'Viết một kết cục khác'}
             <span aria-hidden>→</span>
           </button>
-        </section>
+        </section>}
 
         <nav className="flex items-stretch justify-between gap-3 border-t border-[var(--color-line)] pt-5">
           {prev !== null ? (

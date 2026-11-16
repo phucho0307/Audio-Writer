@@ -80,7 +80,17 @@ export class NarrationQueue implements OnModuleInit, OnModuleDestroy {
         await previous.remove();
       } else {
         // Still waiting, delayed or running. Two callers watching one piece of
-        // work is the intended behaviour.
+        // work is the intended behaviour. A reader pressing play must still
+        // move an already-queued bulk chapter ahead of the background library.
+        // Keep the same job/id and never interrupt an active synthesis or
+        // demote an interactive request when a later prefetch finds it.
+        if (
+          priority < previous.priority &&
+          (state === 'waiting' || state === 'prioritized' || state === 'delayed')
+        ) {
+          await previous.changePriority({ priority });
+          this.logger.log(`${jobId} promoted to reader priority`);
+        }
         this.logger.log(`${jobId} already ${state} - not queued again`);
         return jobId;
       }

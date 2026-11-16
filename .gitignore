@@ -33,6 +33,7 @@ venv/
 # all lands in is ignored outright.
 /media/
 /apps/web/public/audio/
+/apps/web/public/uploads/
 *.mp3
 *.mp4
 *.wav
@@ -44,3 +45,12 @@ venv/
 # typescript incremental build cache
 *.tsbuildinfo
 /.piper/
+
+__pycache__/
+
+# Cover art for the imported catalogues (~350 MB) and generated thumbnails.
+# Served from R2 in production; too large to keep in git history.
+# Regenerate thumbnails with: node apps/web/scripts/make-thumbs.mjs
+/apps/web/public/author-covers/
+/apps/web/public/chinese-covers/
+/apps/web/public/*/thumbs/

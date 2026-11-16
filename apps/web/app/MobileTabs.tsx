@@ -23,7 +23,7 @@ const TABS = [
   {
     href: '/kham-pha',
     label: 'Khám phá',
-    match: (p: string) => p.startsWith('/kham-pha') || p.startsWith('/doc'),
+    match: (p: string) => p.startsWith('/kham-pha') || p.startsWith('/doc') || p.startsWith('/tac-pham'),
     icon: (
       <>
         <circle cx="12" cy="12" r="8.5" />

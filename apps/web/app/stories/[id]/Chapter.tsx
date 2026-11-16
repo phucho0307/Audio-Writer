@@ -5,6 +5,8 @@ import { ApiError, api, type Contribution } from '@/lib/api';
 import RichEditor, { type RichEditorHandle } from '@/app/RichEditor';
 import RichText from '@/app/RichText';
 import { docOf, type PMDoc } from '@/lib/prose';
+import { chapterAuthorHandle } from '@/lib/chapter-author';
+import AuthorByline from '@/app/AuthorByline';
 
 /**
  * One chapter, and its editor.
@@ -19,7 +21,6 @@ export default function Chapter({
   isLast,
   onlyOfBranch = false,
   canEdit,
-  viewerHandle = null,
   editing,
   onOpen,
   onClose,
@@ -31,8 +32,6 @@ export default function Chapter({
   /** Its branch's only chapter of its own - deleting it deletes the branch. */
   onlyOfBranch?: boolean;
   canEdit: boolean;
-  /** Who is looking, so "bạn" is said only to the person who wrote it. */
-  viewerHandle?: string | null;
   editing: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -65,6 +64,7 @@ export default function Chapter({
   const dirty =
     (docJson !== null && docJson !== baseline.current) ||
     titleDraft !== (chapter.title ?? '');
+  const authorHandle = chapterAuthorHandle(chapter);
 
   async function save() {
     setBusy(true);
@@ -114,22 +114,7 @@ export default function Chapter({
         {/* `depth` is 0-based - it is a position in the chain, not a
             chapter number. Everywhere it is shown to a reader it gets +1. */}
         <span>Chương {chapter.depth + 1}</span>
-        <span
-          className={
-            chapter.authorType === 'AI'
-              ? 'text-[var(--color-accent)]'
-              : undefined
-          }
-        >
-          {/* Every human chapter used to be labelled "bạn" - so on a fork,
-              the seven chapters inherited from the original author were
-              credited to whoever had forked it. */}
-          {chapter.authorType === 'AI'
-            ? `AI · ${chapter.modelName ?? ''}`
-            : chapter.author && chapter.author.handle !== viewerHandle
-              ? `@${chapter.author.handle}`
-              : 'bạn'}
-        </span>
+        <AuthorByline branchId={chapter.branchId} handle={authorHandle} className="normal-case tracking-normal" />
         {inherited && <span className="opacity-60">· kế thừa</span>}
 
         {/* Inherited chapters belong to the branch they came from; editing one

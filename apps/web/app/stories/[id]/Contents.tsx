@@ -1,6 +1,8 @@
 'use client';
 
 import type { Contribution } from '@/lib/api';
+import { chapterAuthorHandle } from '@/lib/chapter-author';
+import AuthorByline from '@/app/AuthorByline';
 
 /**
  * The chapter list.
@@ -43,6 +45,7 @@ export default function Contents({
         {chapters.map((c) => {
           const own = c.branchId === branchId;
           const open = editingId === c.id;
+          const authorHandle = chapterAuthorHandle(c);
           return (
             <li key={c.id}>
               {/* An anchor, not a route: the chapters are already on the page,
@@ -66,23 +69,16 @@ export default function Contents({
                     rail ? 'text-[13px]' : 'text-[14px]'
                   }`}
                 >
-                  {c.title ?? c.textPlain.split('\n')[0].slice(0, 60)}
+                  <span className="block truncate">{c.title ?? c.textPlain.split('\n')[0].slice(0, 60)}</span>
+                  <span className="block truncate pt-0.5 text-[11px] text-[var(--color-faint)]"><AuthorByline branchId={c.branchId} handle={authorHandle} nested /></span>
                 </span>
 
                 {/* The rail is narrow enough that word counts crowd out the
                     titles, which are the thing being scanned for. */}
                 {!rail && (
                   <span className="flex flex-none items-baseline gap-3 font-mono text-[12px] text-[var(--color-muted)]">
-                    {c.authorType === 'AI' && (
-                      <span className="text-[var(--color-accent)]">AI</span>
-                    )}
                     {!own && <span className="opacity-60">kế thừa</span>}
                     <span className="opacity-60">{c.wordCount} từ</span>
-                  </span>
-                )}
-                {rail && c.authorType === 'AI' && (
-                  <span className="flex-none font-mono text-[12px] text-[var(--color-accent)]">
-                    AI
                   </span>
                 )}
               </a>

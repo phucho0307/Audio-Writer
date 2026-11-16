@@ -8,6 +8,8 @@ export type Story = {
   title: string;
   synopsis: string | null;
   coverUrl: string | null;
+  coverCredit?: CoverCredit | null;
+  textSource?: TextSource | null;
   genres: string[];
   language: string;
   status: string;
@@ -38,6 +40,43 @@ export type BranchSummary = {
   owner?: { handle: string; displayName: string };
   _count?: { contributions: number };
 };
+
+export type CoverCredit = {
+  provider: 'Pexels';
+  sourceUrl: string;
+  photographer?: string;
+  photographerUrl?: string;
+  licenseUrl: string;
+};
+
+export type TextSource = {
+  authorId: string;
+  authorName: string;
+  name: string;
+  url: string;
+  importedAt: string;
+  license?: { name: string; url: string };
+  changes?: string;
+  collectionId?: 'chinese-drama';
+  translator?: string | null;
+};
+
+export type CoverCandidate = {
+  id: string;
+  previewUrl: string;
+  description: string;
+  credit: CoverCredit;
+  recommended: boolean;
+};
+
+export type CoverSuggestions = {
+  searchId: string;
+  source: 'library' | 'pexels';
+  candidates: CoverCandidate[];
+  hasMore: boolean;
+};
+
+export type CoverUpdate = Pick<Story, 'coverUrl' | 'coverCredit'>;
 
 export type MyBranch = {
   id: string;
@@ -257,10 +296,10 @@ export class ApiError extends Error {
   }
 }
 
-function authHeaders(extra?: HeadersInit): HeadersInit {
+function authHeaders(extra?: HeadersInit, multipart = false): HeadersInit {
   const token = getToken();
   return {
-    'content-type': 'application/json',
+    ...(!multipart ? { 'content-type': 'application/json' } : {}),
     ...(token ? { authorization: `Bearer ${token}` } : {}),
     ...extra,
   };
@@ -278,7 +317,7 @@ async function call<T>(
   await ensureSession();
   const res = await fetch(API + path, {
     ...init,
-    headers: authHeaders(init?.headers),
+    headers: authHeaders(init?.headers, init?.body instanceof FormData),
     credentials: 'include',
     cache: 'no-store',
   });
@@ -344,6 +383,25 @@ export const api = {
   myBranches: () => call<MyBranch[]>('/me/branches'),
 
   getStory: (id: string) => call<Story>(`/stories/${id}`),
+
+  uploadCover: (id: string, file: File) => {
+    const body = new FormData();
+    body.append('file', file);
+    return call<CoverUpdate>(`/stories/${id}/cover/upload`, { method: 'POST', body });
+  },
+
+  suggestCovers: (id: string, hint = '', page = 1) =>
+    call<CoverSuggestions>(`/stories/${id}/cover/suggest`, {
+      method: 'POST', body: JSON.stringify({ hint, page }),
+    }),
+
+  selectCover: (id: string, searchId: string, candidateId: string) =>
+    call<CoverUpdate>(`/stories/${id}/cover/select`, {
+      method: 'POST', body: JSON.stringify({ searchId, candidateId }),
+    }),
+
+  removeCover: (id: string) =>
+    call<CoverUpdate>(`/stories/${id}/cover`, { method: 'DELETE' }),
 
   createStory: (body: {
     title: string;

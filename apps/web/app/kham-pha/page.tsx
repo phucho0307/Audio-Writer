@@ -1,14 +1,36 @@
 'use client';
 
+import { thumbUrl } from '@/lib/thumb';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api, type Story } from '@/lib/api';
 import Reveal from '../Reveal';
+import CoverThumb from '../CoverThumb';
 import SpiritText from '../SpiritText';
 import Tilt, { Sheen } from '../Tilt';
 import RatingBadge from '../Rating';
 import { storyRating } from '@/lib/ratings';
+import { storyAuthorHandle } from '@/lib/chapter-author';
 import { calm, gsap, useGSAP } from '@/lib/motion';
+import AuthorByline from '@/app/AuthorByline';
+import { nativeStory } from '@/lib/native-catalog';
+import FamousWorkCard from './FamousWorkCard';
+import ChineseWorkCard from './ChineseWorkCard';
+import { CHINESE_SHELF_NAME, CHINESE_WORKS, matchesChineseSearch, type ChineseWork } from '@/lib/chinese-catalog';
+import { FAMOUS_AUTHORS, FAMOUS_WORKS, foldSearch, matchesCatalogSearch, type FamousWork } from '@/lib/famous-catalog';
+import { BRAND } from '@/lib/brand';
+
+type Shelf = 'all' | 'library' | 'famous' | 'chinese';
+
+/**
+ * Written here - by the AI or by people on the site - rather than imported.
+ * Imported texts (the Chinese shelf, famous authors) carry a `textSource`
+ * and have their own shelves, so "Truyện trên Nhịp Bút" leaves them out.
+ */
+function isOwnStory(story: Story): boolean {
+  return !story.textSource && !nativeStory(story.id);
+}
+type ShelfEntry = { kind: 'story'; story: Story } | { kind: 'famous'; work: FamousWork } | { kind: 'chinese'; work: ChineseWork };
 
 /**
  * The library.
@@ -22,37 +44,128 @@ export default function Explore() {
   const [stories, setStories] = useState<Story[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [genre, setGenre] = useState<string | null>(null);
+  const [shelf, setShelf] = useState<Shelf>('all');
+  const [authorId, setAuthorId] = useState<string | null>(null);
+  const [chineseSource, setChineseSource] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
+    const search = new URLSearchParams(window.location.search);
+    const requested = search.get('tacgia');
+    if (search.get('ke') === 'truyen-trung') {
+      setShelf('chinese');
+      const source = search.get('nguon');
+      if (source === 'monkeyd' || source === 'metruyen') setChineseSource(source);
+    } else if (requested && FAMOUS_AUTHORS.some((author) => author.id === requested)) {
+      setShelf('famous');
+      setAuthorId(requested);
+    }
     api
       .listStories()
       .then((all) => setStories(all.filter((s) => s.contributionCount > 0)))
       .catch((e: Error) => setError(e.message));
   }, []);
 
+  useEffect(() => setPage(1), [shelf, authorId, chineseSource, genre, query]);
+
+  function chooseShelf(next: Shelf) {
+    setShelf(next);
+    setAuthorId(null);
+    setChineseSource(null);
+    setGenre(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('tacgia');
+    url.searchParams.delete('nguon');
+    if (next === 'chinese') url.searchParams.set('ke', 'truyen-trung');
+    else url.searchParams.delete('ke');
+    window.history.replaceState(null, '', url);
+  }
+
+  function chooseAuthor(id: string | null) {
+    setAuthorId(id);
+    setShelf('famous');
+    setChineseSource(null);
+    setGenre(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('ke');
+    url.searchParams.delete('nguon');
+    if (id) url.searchParams.set('tacgia', id);
+    else url.searchParams.delete('tacgia');
+    window.history.replaceState(null, '', url);
+  }
+
+  function chooseChineseSource(source: string | null) {
+    setChineseSource(source);
+    setGenre(null);
+    const url = new URL(window.location.href);
+    if (source) url.searchParams.set('nguon', source);
+    else url.searchParams.delete('nguon');
+    window.history.replaceState(null, '', url);
+  }
+
+  const publicStories = new Map((stories ?? []).map((story) => [story.id, story]));
+  const publicIds = new Set(publicStories.keys());
+  const availableFamous = FAMOUS_WORKS.filter((work) => !work.nativeStoryId || publicIds.has(work.nativeStoryId))
+    .map((work) => work.nativeStoryId ? { ...work, coverUrl: publicStories.get(work.nativeStoryId)!.coverUrl } : work);
+  const availableAuthors = FAMOUS_AUTHORS.filter((author) => availableFamous.some((work) => work.authorId === author.id));
+  const availableChinese = CHINESE_WORKS.filter((work) => publicIds.has(work.nativeStoryId))
+    .map((work) => ({ ...work, coverUrl: publicStories.get(work.nativeStoryId)!.coverUrl }));
+  const searchWords = foldSearch(query).split(/\s+/).filter(Boolean);
+  const matchingStories = shelf === 'famous' || shelf === 'chinese' ? [] : (stories ?? []).filter((story) => {
+    if (shelf === 'all' && nativeStory(story.id)) return false;
+    if (shelf === 'library' && !isOwnStory(story)) return false;
+    const text = foldSearch(`${story.title} ${story.synopsis ?? ''} ${story.textSource?.authorName ?? storyAuthorHandle(story) ?? ''} ${story.genres.join(' ')} ${(nativeStory(story.id)?.containedTitles ?? []).join(' ')}`);
+    return searchWords.every((word) => text.includes(word));
+  });
+  const matchingFamous = shelf === 'library' || shelf === 'chinese' ? [] : availableFamous.filter((work) =>
+    (!authorId || work.authorId === authorId) && matchesCatalogSearch(work, query),
+  );
+  const matchingChinese = shelf === 'library' || shelf === 'famous' ? [] : availableChinese.filter((work) =>
+    (!chineseSource || work.sourceId === chineseSource) && matchesChineseSearch(work, query),
+  );
+
   // Derived from the content, so the filter never offers an empty genre or
   // omits one a writer has just used. Multi-genre stories count under each.
   const counts = new Map<string, number>();
-  for (const s of stories ?? []) {
-    for (const g of s.genres) counts.set(g, (counts.get(g) ?? 0) + 1);
+  for (const s of [...matchingStories, ...matchingFamous, ...matchingChinese]) {
+    for (const g of s.genres) {
+      if (shelf === 'chinese' && g === 'Truyện Trung') continue;
+      counts.set(g, (counts.get(g) ?? 0) + 1);
+    }
   }
   const genres = [...counts.entries()].sort(
     (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi'),
   );
 
-  const shown = (stories ?? []).filter(
+  const shown = matchingStories.filter(
     (s) => genre === null || s.genres.includes(genre),
   );
+  const shownFamous = matchingFamous.filter((work) => genre === null || work.genres.includes(genre));
+  const shownChinese = matchingChinese.filter((work) => genre === null || work.genres.includes(genre));
+  const selectedAuthor = FAMOUS_AUTHORS.find((author) => author.id === authorId);
 
   // The most-read story leads the page, and only while nothing is filtered -
   // under a genre the grid is the answer to the question that was asked, and
   // a hero would just be one of its own results, repeated at four times the
   // size.
   const featured =
-    genre === null && stories && stories.length > 2
-      ? [...stories].sort((a, b) => b.viewCount - a.viewCount)[0]
+    shelf === 'all' && !authorId && !query.trim() && genre === null && stories && stories.length > 2
+      ? [...stories].filter((story) => !nativeStory(story.id)).sort((a, b) => b.viewCount - a.viewCount)[0]
       : null;
   const grid = featured ? shown.filter((s) => s.id !== featured.id) : shown;
+  const entries: ShelfEntry[] = [];
+  let storyIndex = 0;
+  let famousIndex = 0;
+  let chineseIndex = 0;
+  while (storyIndex < grid.length || famousIndex < shownFamous.length || chineseIndex < shownChinese.length) {
+    if (chineseIndex < shownChinese.length) entries.push({ kind: 'chinese', work: shownChinese[chineseIndex++] });
+    if (famousIndex < shownFamous.length) entries.push({ kind: 'famous', work: shownFamous[famousIndex++] });
+    if (storyIndex < grid.length) entries.push({ kind: 'story', story: grid[storyIndex++] });
+    if (famousIndex < shownFamous.length) entries.push({ kind: 'famous', work: shownFamous[famousIndex++] });
+  }
+  const visible = entries.slice(0, page * 24);
+  const totalShown = shown.length + shownFamous.length + shownChinese.length;
 
   return (
     <main className="mx-auto flex max-w-[1180px] flex-col gap-12 px-5 py-10 sm:px-8 sm:py-14">
@@ -65,12 +178,11 @@ export default function Explore() {
       {!featured && (
         <Reveal as="header" className="flex max-w-[48ch] flex-col gap-3">
           <SpiritText
-            text="Đọc, rồi viết tiếp theo cách của bạn."
+            text={shelf === 'chinese' ? CHINESE_SHELF_NAME : shelf === 'famous' ? 'Truyện của những tác giả bạn yêu thích.' : 'Tìm câu chuyện tiếp theo của bạn.'}
             className="display text-[2.4rem] leading-[1.05] sm:text-[2.9rem]"
           />
           <p className="text-[15px] leading-relaxed text-[var(--color-muted)]">
-            Mỗi truyện đều có thể rẽ nhánh từ bất kỳ chương nào. Bản gốc giữ
-            nguyên, nhánh của bạn là của bạn.
+            {shelf === 'chinese' ? 'Trà xanh, hào môn, báo thù và những lần làm lại cuộc đời. Đọc và nghe trọn bộ ngay tại đây.' : <>Khám phá truyện trên {BRAND}, cùng tác phẩm và bản kể từ những tác giả bạn yêu thích.</>}
           </p>
         </Reveal>
       )}
@@ -78,19 +190,56 @@ export default function Explore() {
       <section className="flex flex-col gap-6">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h2 className="label">
-            {genre ? `Thể loại · ${genre}` : 'Tất cả truyện'}
+            {selectedAuthor ? selectedAuthor.name : genre ? `Thể loại · ${genre}` : shelf === 'chinese' ? 'Truyện Trung' : shelf === 'famous' ? 'Tác giả nổi tiếng' : shelf === 'library' ? `Truyện trên ${BRAND}` : 'Tất cả truyện'}
           </h2>
-          {stories && (
+          {(stories || shelf === 'famous') && (
             <span className="text-[12.5px] text-[var(--color-faint)]">
-              {shown.length} truyện
+              {totalShown} truyện / tác phẩm
             </span>
           )}
         </div>
 
+        <div className="flex flex-col gap-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 sm:p-5">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc thư viện">
+            {([{ id: 'all', label: 'Tất cả', count: (stories?.filter((story) => !nativeStory(story.id)).length ?? 0) + availableFamous.length + availableChinese.length },
+              { id: 'library', label: `Truyện trên ${BRAND}`, count: stories?.filter(isOwnStory).length ?? 0 },
+              { id: 'chinese', label: 'Truyện Trung', count: availableChinese.length },
+              { id: 'famous', label: 'Tác giả nổi tiếng', count: availableFamous.length }] as const).map((option) => (
+              <button key={option.id} type="button" onClick={() => chooseShelf(option.id)} aria-pressed={shelf === option.id} className={`chip ${shelf === option.id ? 'chip-on' : ''}`}>
+                {option.label}<span className="text-[10.5px] opacity-60">{option.count}</span>
+              </button>
+            ))}
+          </div>
+          <label className="flex flex-col gap-2">
+            <span className="sr-only">Tìm truyện hoặc tác giả</span>
+            <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tên truyện, tác giả…" className="field" />
+          </label>
+          {shelf === 'chinese' && <div className="flex flex-col gap-2.5">
+            <span className="label text-[10px]">Nguồn tuyển truyện</span>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc nguồn truyện Trung">
+              <button type="button" onClick={() => chooseChineseSource(null)} aria-pressed={chineseSource === null} className={`chip ${chineseSource === null ? 'chip-on' : ''}`}>Tất cả nguồn</button>
+              {([{ id: 'monkeyd', name: 'MonkeyD' }, { id: 'metruyen', name: 'Mê Truyện' }] as const).map((source) => <button key={source.id} type="button" onClick={() => chooseChineseSource(source.id)} aria-pressed={chineseSource === source.id} className={`chip ${chineseSource === source.id ? 'chip-on' : ''}`}>
+                {source.name}<span className="text-[10.5px] opacity-60">{availableChinese.filter((work) => work.sourceId === source.id).length}</span>
+              </button>)}
+            </div>
+          </div>}
+          {shelf !== 'library' && shelf !== 'chinese' && <div className="flex flex-col gap-2.5">
+            <span className="label text-[10px]">Tác giả</span>
+            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="Lọc tác giả nổi tiếng">
+              <button type="button" onClick={() => chooseAuthor(null)} aria-pressed={shelf === 'famous' && authorId === null} className={`chip shrink-0 ${shelf === 'famous' && authorId === null ? 'chip-on' : ''}`}>Tất cả tác giả</button>
+              {availableAuthors.map((author) => <button key={author.id} type="button" onClick={() => chooseAuthor(author.id)} aria-pressed={authorId === author.id} className={`chip shrink-0 ${authorId === author.id ? 'chip-on' : ''}`}>
+                {author.name}<span className="text-[10.5px] opacity-60">{availableFamous.filter((work) => work.authorId === author.id).length}</span>
+              </button>)}
+            </div>
+          </div>}
+        </div>
+
+        {selectedAuthor && <p className="max-w-[70ch] border-l-2 border-[var(--color-accent)] pl-4 text-[14px] leading-relaxed text-[var(--color-muted)]">{selectedAuthor.note}</p>}
+
         {/* Scrollable on a phone rather than wrapped to four lines, which
             pushed the covers below the fold before anyone had chosen
             anything. */}
-        {stories && genres.length > 0 && (
+        {genres.length > 0 && (
           <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             <button
               onClick={() => setGenre(null)}
@@ -113,26 +262,32 @@ export default function Explore() {
           </div>
         )}
 
-        {!stories && <CoverSkeletons />}
+        {!stories && shelf !== 'famous' && <CoverSkeletons />}
 
-        <Reveal
-          childrenStagger
-          stagger={0.05}
-          deps={[grid.length, genre]}
-          className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4"
-        >
-          {grid.map((s) => (
-            <StoryCard key={s.id} story={s} />
+        <div className="grid grid-cols-2 gap-x-5 gap-y-9 sm:grid-cols-3 lg:grid-cols-4">
+          {visible.map((entry, i) => (
+            <div
+              key={entry.kind === 'story' ? entry.story.id : entry.work.id}
+              className="card-in flex flex-col [&>*]:flex-1"
+              // Staggered within each page of 24, capped so a long page
+              // does not keep the last cards waiting.
+              style={{ animationDelay: `${Math.min(i % 24, 11) * 45}ms` }}
+            >
+              {entry.kind === 'story' ? <StoryCard story={entry.story} />
+                : entry.kind === 'chinese' ? <ChineseWorkCard work={entry.work} />
+                : <FamousWorkCard work={entry.work} />}
+            </div>
           ))}
-        </Reveal>
+        </div>
 
-        {stories && shown.length === 0 && (
+        {visible.length < entries.length && <button type="button" onClick={() => setPage((current) => current + 1)} className="btn btn-ghost self-center">Xem thêm {Math.min(24, entries.length - visible.length)} tác phẩm <span aria-hidden>↓</span></button>}
+
+        {(stories || shelf === 'famous') && totalShown === 0 && (
           <p className="py-10 text-center text-sm text-[var(--color-muted)]">
-            {genre
-              ? `Chưa có truyện nào thuộc thể loại "${genre}".`
-              : 'Chưa có truyện nào.'}
+            Chưa có kết quả phù hợp. Thử tên truyện, tác giả hoặc thể loại khác.
           </p>
         )}
+        {(query || genre || authorId) && <button type="button" onClick={() => { setQuery(''); setGenre(null); chooseShelf('all'); }} className="btn btn-quiet self-start">Xóa bộ lọc ×</button>}
       </section>
     </main>
   );
@@ -201,7 +356,7 @@ function Featured({ story }: { story: Story }) {
             <div className="cover aspect-[3/4]">
               {story.coverUrl && (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={story.coverUrl} alt="" />
+                <img src={thumbUrl(story.coverUrl)} alt="" />
               )}
               <Sheen />
             </div>
@@ -225,9 +380,9 @@ function Featured({ story }: { story: Story }) {
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
             <RatingBadge rating={storyRating(story.id)} variant="full" />
-            {story.owner && (
+            {storyAuthorHandle(story) && (
               <span className="text-[13px] text-[var(--color-muted)]">
-                · @{story.owner.handle}
+                · <AuthorByline storyId={story.id} handle={storyAuthorHandle(story)} />
               </span>
             )}
           </div>
@@ -282,10 +437,7 @@ function StoryCard({ story: s }: { story: Story }) {
   return (
     <Link href={`/doc/${s.id}`} className="group flex flex-col gap-3">
       <div className="cover aspect-[3/4]">
-        {s.coverUrl && (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={s.coverUrl} alt="" />
-        )}
+        {s.coverUrl && <CoverThumb src={s.coverUrl} alt="" />}
         <span className="scrim label flex items-center gap-2 text-white/85">
           {s.contributionCount} chương
           {/* `branchCount` includes the story itself, so the forks are one
@@ -318,9 +470,9 @@ function StoryCard({ story: s }: { story: Story }) {
             card, so a row of covers can be scanned for both at a glance. */}
         <div className="flex items-center justify-between gap-2 border-t border-[var(--color-line)] pt-2 text-[12px]">
           <span className="truncate text-[var(--color-muted)]">
-            {s.owner ? `@${s.owner.handle}` : ''}
+            <AuthorByline storyId={s.id} handle={storyAuthorHandle(s)} nested />
           </span>
-          <RatingBadge rating={storyRating(s.id)} className="flex-none text-[12px]" />
+          {!s.textSource && <RatingBadge rating={storyRating(s.id)} className="flex-none text-[12px]" />}
         </div>
       </div>
     </Link>
