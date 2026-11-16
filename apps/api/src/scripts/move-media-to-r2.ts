@@ -17,6 +17,9 @@
 process.env.RUN_WORKER = 'false';
 process.env.COLLAB_ENABLED = 'false';
 process.env.PRERENDER_ON_PUBLISH = 'false';
+// Indexing would start embedding calls the script then has to wait out.
+process.env.RAG_BACKFILL_ON_BOOT = 'false';
+process.env.RAG_INDEX_ON_COMMIT = 'false';
 
 import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
