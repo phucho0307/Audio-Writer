@@ -4,8 +4,8 @@ import { useRef } from 'react';
 import { calm, gsap, ScrollTrigger, useGSAP } from '@/lib/motion';
 import { BRAND } from '@/lib/brand';
 
-const ROW_A = ['kinh dị', 'ngoại tình', 'tâm linh', 'bùa ngải', 'giật gân', 'trinh thám'];
-const ROW_B = ['báo thù', 'trọng sinh', 'nhà có ma', 'mạt thế', 'tiểu tam', 'ngôn tình ngược'];
+const ROW_A = ['ngôn tình', 'tuổi học trò', 'trọng sinh', 'trinh thám', 'trà xanh', 'kinh dị', 'gia đình', 'hài hước'];
+const ROW_B = ['truyện ngắn', 'hào môn', 'ngoại tình', 'cổ đại', 'tâm lý', 'xuyên không', 'thiếu nhi', 'báo thù'];
 
 /**
  * The genres, as a wall.

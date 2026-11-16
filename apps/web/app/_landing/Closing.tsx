@@ -138,7 +138,7 @@ export function FinalCta() {
           Đêm nay <span className="italic text-[var(--color-accent)]">nghe gì?</span>
         </h2>
         <p className="max-w-[46ch] text-[16px] leading-relaxed text-[var(--color-muted)]">
-          Tắt đèn, đeo tai nghe, chọn một bộ. Kết mà dở thì… bà biết phải làm gì rồi đó.
+          Đeo tai nghe, chọn một bộ hợp gu. Kết mà dở thì… bà biết phải làm gì rồi đó.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Magnetic>

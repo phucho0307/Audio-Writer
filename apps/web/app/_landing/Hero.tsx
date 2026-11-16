@@ -147,11 +147,11 @@ export default function Hero({ stories }: { stories: Story[] }) {
       <div data-hero-copy className="relative flex flex-col items-start gap-7">
         <span className="label label-accent flex items-center gap-2">
           <span className="dot dot-live" aria-hidden />
-          dành cho hội mọt truyện ma thức khuya
+          dành cho hội mọt truyện đủ mọi gu
         </span>
 
         <h1 className="display flex flex-col text-[clamp(2.6rem,6.4vw,5.4rem)] leading-[0.98]">
-          <SpiritText as="span" text="Nghe truyện ma lúc 2h sáng." className="block" />
+          <SpiritText as="span" text="Nghe truyện theo nhịp của bạn." className="block" />
           <SpiritText
             as="span"
             text="Kết toang thì tự viết lại."
@@ -161,9 +161,10 @@ export default function Hero({ stories }: { stories: Story[] }) {
         </h1>
 
         <p className="max-w-[50ch] text-[16px] leading-[1.7] text-[var(--color-muted)]">
-          {BRAND} là chỗ tụ tập của hội mê{' '}
-          <span className="text-[var(--color-ink)]">kinh dị, mystery với drama ngoại tình</span>
-          : nghe truyện bằng giọng đọc AI, thấy cái kết làm mình tức thì rẽ nhánh viết kết mới,
+          {BRAND} là chỗ tụ tập của hội mê truyện, từ{' '}
+          <span className="text-[var(--color-ink)]">ngôn tình, trinh thám, kinh dị, tuổi học trò</span>{' '}
+          tới truyện Trung trà xanh, trọng sinh. Nghe bằng giọng đọc AI, gặp cái kết làm mình tức thì
+          rẽ nhánh viết kết mới,
           rủ bạn thân viết chung một trang y như Google Docs. Hông cần văn hay, chỉ cần lắm
           chuyện.
         </p>

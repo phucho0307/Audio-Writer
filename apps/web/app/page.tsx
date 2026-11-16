@@ -12,7 +12,7 @@ import { Faq, FinalCta } from './_landing/Closing';
 /**
  * The front door.
  *
- * What Rợn Bút is, in the voice of the people it is for, with the
+ * What Nhịp Bút is, in the voice of the people it is for, with the
  * product itself on the page rather than described: real covers in the hero,
  * working miniatures of each feature, and counts summed from the live
  * catalogue. The writer's own shelf, which used to live here, is at /cua-toi.

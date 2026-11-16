@@ -288,7 +288,7 @@ function Settings() {
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
-            placeholder="Vài dòng về bạn: thích đọc gì, viết gì, sợ gì nhất…"
+            placeholder="Vài dòng về bạn: mê thể loại nào, thích đọc gì, đang viết gì…"
             className="field resize-y leading-relaxed"
           />
         </label>

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: `%s · ${BRAND}`,
   },
   description:
-    'Viết truyện cùng AI. Rẽ nhánh câu chuyện. Nghe bản audio miễn phí.',
+    'Nghe, đọc và viết truyện đủ mọi thể loại. Rẽ nhánh câu chuyện, viết chung với bạn bè, nghe bản audio miễn phí.',
 };
 
 /**

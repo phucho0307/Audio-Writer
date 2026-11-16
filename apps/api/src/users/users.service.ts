@@ -40,7 +40,7 @@ export const HANDLE_COOLDOWN_DAYS = 14;
  */
 const RESERVED = new Set([
   'admin', 'administrator', 'root', 'support', 'help', 'mod', 'moderator',
-  'staff', 'system', 'official', 'ronbut', 'ron_but', 'audiowriter',
+  'staff', 'system', 'official', 'nhipbut', 'nhip_but', 'ronbut', 'ron_but', 'audiowriter',
   'api', 'me', 'settings', 'cai_dat', 'login', 'logout', 'null', 'undefined',
 ]);
 

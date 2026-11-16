@@ -157,8 +157,8 @@ export default function Bento({ stories }: { stories: Story[] }) {
                 Tủ tham khảo cho người <span className="italic text-[var(--color-accent)]">bí plot</span>
               </h3>
               <p className="max-w-[46ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
-                Mấy trang truyện audio Việt hội tụi tui hay cày, kèm ghi chú vì sao truyện ma thì
-                phải cắt chương ngay trước lúc giải thích, truyện ngoại tình thì nghi ngờ phải đến
+                Mấy trang truyện audio Việt hội tụi tui hay cày, kèm ghi chú vì sao truyện kinh dị thì
+                phải cắt chương ngay trước lúc giải thích, truyện tình cảm thì cảm xúc phải đến
                 từ chi tiết đời thường. Dẫn link cho bà đi nghe, chứ hông chôm truyện người ta.
               </p>
               <span className="text-[13px] text-[var(--color-accent)] transition-transform group-hover:translate-x-1">
@@ -171,7 +171,7 @@ export default function Bento({ stories }: { stories: Story[] }) {
           <Glyph>☾</Glyph>
           <h3 className="display text-[21px]">Đêm hay ngày tuỳ bà</h3>
           <p className="text-[14px] leading-relaxed text-[var(--color-muted)]">
-            Mặc định tối thui cho hợp truyện ma. Muốn đọc giờ nghỉ trưa thì bấm cái trăng trên góc.
+            Mặc định nền tối cho dịu mắt lúc đọc khuya. Muốn đọc giờ nghỉ trưa thì bấm cái trăng trên góc.
           </p>
         </Tile>
         <Tile>
