@@ -9,6 +9,8 @@ export interface DomainEventMap {
   'chapter.played': { branchId: string; depth: number; voice: string };
   /** A chapter became part of a branch, and so part of what can be retrieved. */
   'chapter.committed': { contributionId: string; branchId: string };
+  /** A reader (not the author) opened a story. Feeds the "Đang hot" ranking. */
+  'story.viewed': { storyId: string };
 }
 
 /**

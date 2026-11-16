@@ -5,17 +5,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { EmbeddingService } from './embedding.service';
 import { GeminiJson } from './gemini-json';
+import { boosted, fuseRanks } from './scoring';
 import { ENDING_WORDS, ENDINGS, MOODS, StoryCardsService } from './story-cards.service';
 
 /** Candidates taken from each of the two searches before fusing. */
 const POOL = 60;
 /** Results returned, and explained. */
 const SHOWN = 8;
-/** Reciprocal-rank-fusion constant; the usual 60. */
-const RRF_K = 60;
 const CACHE_TTL = 6 * 3600;
-/** Ratings needed before a story's average counts for anything in ranking. */
-const RATING_PRIOR = 10;
 
 interface ParsedQuery {
   /** The request restated as a description of the story wanted. */
@@ -208,11 +205,7 @@ Nếu có yêu cầu trước đó, đây là lời nói thêm: gộp cả hai t
       ORDER BY ts_rank(c.search, q) DESC
       LIMIT ${POOL}`;
 
-    const score = new Map<string, number>();
-    const fuse = (list: { id: string }[]) =>
-      list.forEach((r, i) => score.set(r.id, (score.get(r.id) ?? 0) + 1 / (RRF_K + i + 1)));
-    fuse(byMeaning);
-    fuse(byWords);
+    const score = fuseRanks([byMeaning, byWords]);
     if (score.size === 0) return [];
 
     const candidates = await this.prisma.story.findMany({
@@ -225,23 +218,9 @@ Nếu có yêu cầu trước đó, đây là lời nói thêm: gộp cả hai t
     });
 
     const mean = await this.meanRating();
-    const wantGenres = new Set(p.genres.map((g) => g.toLowerCase()));
-    const wantMoods = new Set(p.moods);
-    const boosted = candidates.map((s) => {
-      let b = score.get(s.id) ?? 0;
-      // Each boost is worth a few places in one list, never the whole answer:
-      // what the story is about stays the main thing.
-      if (s.genres.some((g) => wantGenres.has(g.toLowerCase()))) b += 0.006;
-      b += 0.003 * (s.card?.moods.filter((m) => wantMoods.has(m)).length ?? 0);
-      if (p.ending !== 'ANY' && s.card?.ending === p.ending) b += 0.006;
-      if (p.ending !== 'ANY' && s.card && s.card.ending !== p.ending && s.card.ending !== 'UNKNOWN') b -= 0.006;
-      const bayes = (s.ratingSum + RATING_PRIOR * mean) / (s.ratingCount + RATING_PRIOR);
-      b += 0.002 * (bayes - mean);
-      b += 0.0008 * Math.log10(1 + s.viewCount);
-      return { s, b };
-    });
-    boosted.sort((x, y) => y.b - x.b);
-    return boosted.slice(0, SHOWN).map((x) => x.s);
+    const ranked = candidates.map((s) => ({ s, b: boosted(score.get(s.id) ?? 0, s, p, mean) }));
+    ranked.sort((x, y) => y.b - x.b);
+    return ranked.slice(0, SHOWN).map((x) => x.s);
   }
 
   private async meanRating(): Promise<number> {

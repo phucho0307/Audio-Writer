@@ -11,6 +11,7 @@ import Account from './Account';
 const LINKS = [
   { href: '/', label: 'Trang chủ', match: [] as string[] },
   { href: '/kham-pha', label: 'Khám phá', match: ['/kham-pha', '/doc', '/tac-pham'] },
+  { href: '/xep-hang', label: 'Xếp hạng', match: ['/xep-hang'] },
   { href: '/tham-khao', label: 'Tham khảo', match: ['/tham-khao'] },
   { href: '/cua-toi', label: 'Truyện của tôi', match: ['/cua-toi', '/stories'] },
 ];

@@ -258,7 +258,6 @@ model Contribution {
   createdAt DateTime @default(now())
 
   audio     AudioClip[]
-  ragChunks RagChunk[]
 
   @@unique([branchId, depth])
   @@index([branchId, depth])
@@ -420,61 +419,11 @@ model CraftNote {
   sourceId String?          @db.Uuid
   source   ReferenceSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
 
-  chunks    RagChunk[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
   @@index([genre, kind])
   @@map("craft_notes")
-}
-
-enum ChunkKind {
-  /// A craft note, split if long.
-  CRAFT
-  /// A chapter from this platform, indexed with its author's consent.
-  CHAPTER
-}
-
-/// RETIRED (2026-11-16): chapter-passage retrieval for "AI viết tiếp" was
-/// switched off and its code removed - the model is sent the whole story, so
-/// retrieved passages added little and the indexing spent the readers' Gemini
-/// quota. The table is kept until it is deliberately dropped.
-///
-/// The retrieval index: one row per passage, with its embedding.
-///
-/// Both kinds live in one table so a single query can mix "how this genre
-/// usually turns" with "how this story has been going" - which is what makes a
-/// continuation sound like the story rather than like the genre.
-///
-/// `embedding` is pgvector's type, which Prisma has no mapping for: it is
-/// created by the migration and read through raw SQL. The generated client
-/// still manages every other column, so the table is not second-class.
-model RagChunk {
-  id   String    @id @default(uuid()) @db.Uuid
-  kind ChunkKind
-
-  craftNoteId String?    @db.Uuid
-  craftNote   CraftNote? @relation(fields: [craftNoteId], references: [id], onDelete: Cascade)
-
-  contributionId String?       @db.Uuid
-  contribution   Contribution? @relation(fields: [contributionId], references: [id], onDelete: Cascade)
-  storyId        String?       @db.Uuid
-
-  genre Genre?
-  /// The passage as indexed, which is what gets shown back as a citation.
-  text   String
-  /// Characters, not tokens - close enough to budget a prompt with.
-  length Int
-
-  /// Which model produced the embedding. Changing models invalidates the index,
-  /// and without this nobody can tell which rows are stale.
-  embeddedBy String?
-
-  createdAt DateTime @default(now())
-
-  @@index([kind, genre])
-  @@index([storyId])
-  @@map("rag_chunks")
 }
 
 model AudioClip {

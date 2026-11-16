@@ -215,6 +215,36 @@ loại thì tra là đủ, không cần embedding). Bảng `rag_chunks` vẫn đ
 **Chi phí:** gói free. Thẻ tạo 300/ngày trong nền, cả thư viện ~4 ngày. Mỗi lần tìm
 mới ~2 lần gọi Flash-Lite + 1 embedding; mỗi người 20 lần/ngày, câu lặp lại miễn phí.
 
+## 7c. Bảng xếp hạng theo thể loại
+
+**Vấn đề:** cần "truyện hay nhất" và "truyện đang hot", chung toàn site và riêng từng thể loại.
+
+**Hay nhất: trung bình Bayes.** Điểm = (tổng sao + 10 × điểm trung bình toàn site) /
+(số lượt chấm + 10). Một lượt 5 sao không vượt được 40 lượt trung bình 4,7, vì mỗi truyện
+coi như bắt đầu với 10 lượt chấm ở mức trung bình. Chỉ truyện **đã có người chấm** mới
+lên bảng: xếp truyện chưa ai chấm theo lượt xem mà để tiêu đề "hay nhất" là nói sai.
+
+**Đang hot: lượt đọc 7 ngày, hôm nay nặng hơn.** Mỗi ngày là một sorted set trong Redis
+(truyện → lượt đọc). Ghi một lượt đọc là một lệnh `ZINCRBY`; ra bảng là một
+`ZUNIONSTORE` với trọng số giảm 0,85 mỗi ngày. Không quét bảng stories mỗi lần xem.
+Lượt đọc đi qua event `story.viewed`, nên module truyện không phải biết tới module xếp hạng.
+Khi chưa có lượt đọc nào trong tuần (vừa deploy), bảng ghi rõ là đang xếp theo tổng lượt
+đọc từ trước tới nay.
+
+**Thể loại là bộ lọc, không phải bảng riêng.** Cùng một điểm, chỉ lọc theo thể loại, nên
+thứ tự giữa hai truyện giống nhau trên mọi bảng. Thể loại là tag tự do, nên phát hiện
+"Gia đình" và "gia đình" bị tách đôi; giờ gom và lọc không phân biệt hoa thường.
+
+Bảng được cache 5 phút. Logic tính điểm có unit test (Bayes, trọng số hot), và phần chấm
+điểm của tìm kiếm AI (RRF và các mức cộng) được tách thành hàm thuần để test riêng.
+Một test từng thất bại và chỉ ra điều đáng biết: khi khớp cả thể loại, cảm xúc và kiểu kết,
+truyện hạng 10 của một danh sách có thể vượt truyện cả hai danh sách đều xếp đầu. Giữ
+nguyên vì người đọc đã hỏi đúng cả ba điều đó.
+
+**Admin chấm được mọi truyện.** Luật "không tự chấm truyện của mình" và "đọc rồi mới chấm"
+không áp cho admin, vì 1.111 truyện mẫu đứng tên tài khoản admin. Bảng `rag_chunks` cũ đã
+xoá bằng migration.
+
 ## 8. Hồ sơ người dùng và avatar
 
 - **Username:** 3–24 ký tự gồm chữ thường, số, `_`. Có danh sách tên bị giữ (admin,

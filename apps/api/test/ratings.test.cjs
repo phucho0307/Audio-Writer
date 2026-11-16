@@ -44,7 +44,7 @@ function world({ owner = 'author', reader = 'reader', read = true } = {}) {
   return {
     svc: new RatingsService(prisma, currentUser),
     story,
-    as: (id) => (me = id ? { id } : null),
+    as: (id, role = 'USER') => (me = id ? { id, role } : null),
   };
 }
 
@@ -100,4 +100,13 @@ test(`no average until ${MIN_RATINGS_SHOWN} readers have rated`, async () => {
   const r = await w.svc.summary(STORY);
   assert.equal(r.count, MIN_RATINGS_SHOWN);
   assert.equal(r.average, 4.2);
+});
+
+test('an admin may rate the library it owns, without the read-first rule', async () => {
+  const w = world({ owner: 'boss', read: false });
+  w.as('boss', 'ADMIN');
+  assert.equal((await w.svc.summary(STORY)).canRate, true);
+  const r = await w.svc.rate(STORY, 5);
+  assert.equal(r.mine, 5);
+  assert.deepEqual([w.story.ratingCount, w.story.ratingSum], [1, 5]);
 });

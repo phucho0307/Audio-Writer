@@ -4,7 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Visibility } from '@prisma/client';
+import { Role, Visibility } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 
@@ -30,7 +30,9 @@ export interface RatingSummary {
  *
  * Three rules keep the numbers honest: one rating per reader per story
  * (changing your mind overwrites it), only readers who have opened at least
- * one chapter may rate, and an author cannot rate their own story. The
+ * one chapter may rate, and an author cannot rate their own story. An admin
+ * is exempt from the last two: the seeded library is owned by the admin
+ * account, and the admin curates it. The
  * story row carries count and sum, updated in the same transaction, so lists
  * and rankings never aggregate the ratings table.
  */
@@ -48,8 +50,8 @@ export class RatingsService {
     let mine: number | null = null;
     let reason: RatingSummary['reason'] = null;
     if (!user) reason = 'SIGN_IN';
-    else if (story.ownerId === user.id) reason = 'OWN_STORY';
     else {
+      const admin = user.role === Role.ADMIN;
       const [rating, read] = await Promise.all([
         this.prisma.storyRating.findUnique({
           where: { storyId_userId: { storyId, userId: user.id } },
@@ -58,7 +60,8 @@ export class RatingsService {
         this.hasRead(storyId, user.id),
       ]);
       mine = rating?.stars ?? null;
-      if (!read && mine === null) reason = 'READ_FIRST';
+      if (!admin && story.ownerId === user.id) reason = 'OWN_STORY';
+      else if (!admin && !read && mine === null) reason = 'READ_FIRST';
     }
 
     return {
@@ -75,10 +78,11 @@ export class RatingsService {
     }
     const user = await this.currentUser.current();
     const story = await this.publicStory(storyId);
-    if (story.ownerId === user.id) {
+    const admin = user.role === Role.ADMIN;
+    if (!admin && story.ownerId === user.id) {
       throw new ForbiddenException({ code: 'RATING_OWN_STORY', message: 'Không tự chấm sao truyện của mình được.' });
     }
-    if (!(await this.hasRead(storyId, user.id))) {
+    if (!admin && !(await this.hasRead(storyId, user.id))) {
       throw new ForbiddenException({
         code: 'RATING_READ_FIRST',
         message: 'Đọc hoặc nghe ít nhất một chương rồi hãy chấm sao.',

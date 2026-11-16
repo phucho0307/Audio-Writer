@@ -33,6 +33,28 @@ export type RatingSummary = {
   reason: 'SIGN_IN' | 'READ_FIRST' | 'OWN_STORY' | null;
 };
 
+export type BoardEntry = {
+  rank: number;
+  id: string;
+  title: string;
+  synopsis: string | null;
+  coverUrl: string | null;
+  genres: string[];
+  authorName: string | null;
+  contributionCount: number;
+  viewCount: number;
+  average: number | null;
+  ratingCount: number;
+  recentReads: number | null;
+};
+
+export type Board = {
+  kind: 'best' | 'hot';
+  genre: string | null;
+  fallback: boolean;
+  entries: BoardEntry[];
+};
+
 export type Story = {
   id: string;
   title: string;
@@ -668,6 +690,11 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ q, ...(previous ? { previous } : {}) }),
     }),
+
+  /** "Hay nhất" (Bayesian stars) or "Đang hot" (reads this week), optionally in one genre. */
+  rankings: (kind: 'best' | 'hot', genre?: string | null) =>
+    call<Board>(`/rankings?kind=${kind}${genre ? `&genre=${encodeURIComponent(genre)}` : ''}`),
+  rankingGenres: () => call<{ genre: string; count: number }[]>('/rankings/genres'),
 
   /** Average (null until enough readers rated), count, and the caller's own. */
   storyRating: (storyId: string) => call<RatingSummary>(`/stories/${storyId}/rating`),
