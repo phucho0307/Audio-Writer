@@ -105,10 +105,13 @@ export class TtsService implements OnModuleInit {
       .filter((n) => n in build);
     const drivers = (names.length ? names : ['gemini']).map((n) => build[n]());
     this.driver = drivers.length === 1 ? drivers[0] : new MultiTtsDriver(drivers);
-    this.prerenderChapters = Math.max(
-      0,
-      Number(this.config.get<string>('PRERENDER_CHAPTERS', '3')),
-    );
+    // "all" narrates every chapter at publish. Sensible once synthesis is
+    // free (the Edge voices); with a metered provider keep a small number.
+    const head = this.config.get<string>('PRERENDER_CHAPTERS', '3').trim();
+    this.prerenderChapters =
+      head.toLowerCase() === 'all'
+        ? Number.POSITIVE_INFINITY
+        : Math.max(0, Number(head) || 0);
   }
 
   async onModuleInit(): Promise<void> {
@@ -305,7 +308,16 @@ export class TtsService implements OnModuleInit {
       story.mainBranchId ?? story.branches.find((b) => b.isRoot)?.id;
     if (!branchId) return 0;
 
-    const { contributions } = await this.stories.readBranch(branchId);
+    // Unbounded means every chapter, including those behind the paywall:
+    // narrating is not reading, and the clip is only served to readers who
+    // may open that chapter. Bounded keeps the anonymous view as before.
+    const contributions =
+      this.prerenderChapters === Number.POSITIVE_INFINITY
+        ? await this.prisma.contribution.findMany({
+            where: { branchId },
+            select: { id: true, textPlain: true, depth: true },
+          })
+        : (await this.stories.readBranch(branchId)).contributions;
     const voice = this.driver.defaultVoice;
 
     // Sorted defensively: the bound is only meaningful if these are the first
@@ -332,6 +344,61 @@ export class TtsService implements OnModuleInit {
       );
     }
     return queued;
+  }
+
+  /**
+   * Narrate one newly saved chapter, if strangers can hear it.
+   *
+   * Publishing pre-renders what exists at that moment; this covers what is
+   * written afterwards, so a public story never has a silent new chapter.
+   * Only public stories, only real branches (a draft room's text is not
+   * final), and only when pre-rendering is unbounded - with a metered
+   * provider the head-of-story limit is the budget and this would bypass it.
+   */
+  async prerenderChapter(contributionId: string): Promise<boolean> {
+    if (!this.available || this.prerenderChapters !== Number.POSITIVE_INFINITY) {
+      return false;
+    }
+    const chapter = await this.prisma.contribution.findUnique({
+      where: { id: contributionId },
+      select: {
+        id: true,
+        textPlain: true,
+        branchId: true,
+        branch: { select: { isDraft: true, story: { select: { visibility: true } } } },
+      },
+    });
+    if (!chapter || chapter.branch.isDraft) return false;
+    if (chapter.branch.story.visibility !== 'PUBLIC') return false;
+    const ticket = await this.enqueueOne(
+      chapter.branchId,
+      chapter,
+      this.driver.defaultVoice,
+      PRIORITY.BULK,
+    );
+    return ticket.jobId !== null;
+  }
+
+  /**
+   * Queue narration for every chapter on the platform that lacks it, in the
+   * default voice. A one-off after changing voices, run from
+   * scripts/narrate-all.ts. Every chapter is visited once, on the branch that
+   * owns it; a fork's inherited chapters are its parent's rows.
+   */
+  async backfillAll(): Promise<{ chapters: number; queued: number }> {
+    if (!this.available) return { chapters: 0, queued: 0 };
+    const voice = this.driver.defaultVoice;
+    const chapters = await this.prisma.contribution.findMany({
+      where: { branch: { isDraft: false } },
+      select: { id: true, textPlain: true, branchId: true },
+      orderBy: [{ branchId: 'asc' }, { depth: 'asc' }],
+    });
+    let queued = 0;
+    for (const c of chapters) {
+      const ticket = await this.enqueueOne(c.branchId, c, voice, PRIORITY.BULK);
+      if (ticket.jobId) queued += 1;
+    }
+    return { chapters: chapters.length, queued };
   }
 
   /**

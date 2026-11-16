@@ -34,5 +34,11 @@ export class NarrationPrerender implements OnModuleInit {
     this.events.on('story.published', async ({ storyId }) => {
       await this.tts.prerenderHead(storyId);
     });
+
+    // Chapters added after publishing. A no-op unless PRERENDER_CHAPTERS is
+    // "all" and the story is public.
+    this.events.on('chapter.committed', async ({ contributionId }) => {
+      await this.tts.prerenderChapter(contributionId);
+    });
   }
 }
