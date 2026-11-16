@@ -300,7 +300,10 @@ export default function Explore() {
             pushed the covers below the fold before anyone had chosen
             anything. */}
         {genres.length > 0 && (
-          <div className="-mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:flex-wrap sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div
+            aria-label={`Thể loại, ${genres.length} mục`}
+            className="genre-rail -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             <button
               onClick={() => setGenre(null)}
               aria-pressed={genre === null}
@@ -308,7 +311,9 @@ export default function Explore() {
             >
               Tất cả
             </button>
-            {genres.map(([g, n, label]) => (
+            {/* The chosen genre moves up front, so it stays visible while the
+                rail is folded to one row. */}
+            {[...genres].sort((a, b) => Number(b[0] === genre) - Number(a[0] === genre)).map(([g, n, label]) => (
               <button
                 key={g}
                 onClick={() => setGenre(genre === g ? null : g)}

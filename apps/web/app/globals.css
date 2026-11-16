@@ -784,3 +784,31 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .auth-card, .auth-scrim { animation: none; }
 }
+
+/*
+ * Genre chips on Khám phá: one row until the pointer is over them.
+ *
+ * Sixty-odd genres wrapped to six rows and pushed the covers off the first
+ * screen. Folded to one row with a fade at the end that says "more"; hover
+ * or keyboard focus opens the lot. Touch screens have no hover, so there the
+ * rail stays one row that scrolls sideways - the phone layout it already had.
+ */
+@media (min-width: 640px) and (hover: hover) {
+  .genre-rail {
+    flex-wrap: wrap;
+    overflow: hidden;
+    max-height: 2.25rem;
+    -webkit-mask-image: linear-gradient(to right, #000 82%, transparent);
+    mask-image: linear-gradient(to right, #000 82%, transparent);
+    transition: max-height 0.35s ease;
+  }
+  .genre-rail:hover,
+  .genre-rail:focus-within {
+    max-height: 40rem;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+@media (min-width: 640px) and (hover: hover) and (prefers-reduced-motion: reduce) {
+  .genre-rail { transition: none; }
+}
