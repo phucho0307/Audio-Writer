@@ -3,6 +3,28 @@ import { ensureSession, getToken, refresh } from './auth';
 
 export { API };
 
+export type DiscoveryResult = {
+  id: string;
+  title: string;
+  coverUrl: string | null;
+  genres: string[];
+  contributionCount: number;
+  viewCount: number;
+  ratingCount: number;
+  ratingSum: number;
+  authorName: string | null;
+  summary: string;
+  moods: string[];
+  ending: 'HE' | 'SE' | 'OE' | 'UNKNOWN';
+  why: string;
+};
+
+export type Discovery = {
+  understood: { query: string; genres: string[]; moods: string[]; tropes: string[]; ending: string };
+  results: DiscoveryResult[];
+  coverage: { withCard: number; total: number };
+};
+
 export type RatingSummary = {
   average: number | null;
   count: number;
@@ -638,6 +660,13 @@ export const api = {
     call<{ written: number }>(`/branches/${branchId}/draft/ai`, {
       method: 'POST',
       body: JSON.stringify(opts),
+    }),
+
+  /** AI story search: a request in the reader's own words. */
+  discover: (q: string, previous?: string) =>
+    call<Discovery>('/discover', {
+      method: 'POST',
+      body: JSON.stringify({ q, ...(previous ? { previous } : {}) }),
     }),
 
   /** Average (null until enough readers rated), count, and the caller's own. */

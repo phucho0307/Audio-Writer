@@ -9,7 +9,8 @@ import { StoriesModule } from './stories/stories.module';
 import { LlmModule } from './llm/llm.module';
 import { EventsModule } from './events/events.module';
 import { StorageModule } from './storage/storage.module';
-import { RagModule } from './rag/rag.module';
+import { ReferencesModule } from './references/references.module';
+import { DiscoveryModule } from './discovery/discovery.module';
 import { CollabModule } from './collab/collab.module';
 import { TtsModule } from './tts/tts.module';
 import { UsersModule } from './users/users.module';
@@ -36,7 +37,8 @@ import { RatingsModule } from './ratings/ratings.module';
     StorageModule,
     TtsModule,
     CollabModule,
-    RagModule,
+    ReferencesModule,
+    DiscoveryModule,
   ],
 })
 export class AppModule {}

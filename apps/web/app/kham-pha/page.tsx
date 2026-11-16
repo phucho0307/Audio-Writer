@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { api, type Story } from '@/lib/api';
 import Reveal from '../Reveal';
 import CoverThumb from '../CoverThumb';
+import AiFinder from './AiFinder';
 import SpiritText from '../SpiritText';
 import Tilt, { Sheen } from '../Tilt';
 import RatingBadge from '../Rating';
@@ -172,6 +173,8 @@ export default function Explore() {
       {error && (
         <p className="panel text-sm text-[var(--color-son)]">{error}</p>
       )}
+
+      <AiFinder />
 
       {featured && <Featured story={featured} />}
 

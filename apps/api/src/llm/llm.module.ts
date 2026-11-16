@@ -3,10 +3,9 @@ import { LlmController } from './llm.controller';
 import { LlmService } from './llm.service';
 import { AiQuotaService } from './ai-quota.service';
 import { StoriesModule } from '../stories/stories.module';
-import { RagModule } from '../rag/rag.module';
 
 @Module({
-  imports: [StoriesModule, RagModule],
+  imports: [StoriesModule],
   controllers: [LlmController],
   providers: [LlmService, AiQuotaService],
   exports: [LlmService],

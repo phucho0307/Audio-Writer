@@ -21,7 +21,9 @@ export class EmbeddingService {
 
   constructor(private readonly config: ConfigService) {
     this.key = this.config.get<string>('GEMINI_API_KEY', '');
-    this.model = this.config.get<string>('EMBED_MODEL', 'gemini-embedding-001');
+    // embedding-2: newer, and its free quota is separate from 001's, which
+    // the retired chapter index used to spend.
+    this.model = this.config.get<string>('EMBED_MODEL', 'gemini-embedding-2');
   }
 
   get available(): boolean {

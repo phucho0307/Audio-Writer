@@ -181,6 +181,40 @@ Câu nên nói: biết lúc nào một kỹ thuật **chưa** đáng dùng cũng
 **Đã quyết (16/11):** tắt bằng `RAG_INDEX_ON_COMMIT=false` và `RAG_BACKFILL_ON_BOOT=false`.
 Code giữ nguyên. Ngay sau khi tắt, log hết hẳn lỗi 429 từ Gemini.
 
+## 7b. Bỏ RAG cũ, xây tìm truyện bằng AI
+
+**Đã gỡ:** cắt và lập chỉ mục từng chương, các endpoint `/rag/*`, bước tìm đoạn cũ khi
+"AI viết tiếp". Ghi chú kỹ thuật viết giờ lấy thẳng theo thể loại (vài ghi chú mỗi thể
+loại thì tra là đủ, không cần embedding). Bảng `rag_chunks` vẫn để đó, chưa xoá.
+
+**Tìm bằng AI** (ô "Tìm bằng AI" ở trang Khám phá):
+- Mỗi truyện có một **thẻ mô tả** do Flash-Lite viết từ phần đầu, giữa và cuối truyện:
+  tóm tắt, motif ("chồng ngoại tình", "tiểu tam mang thai"), cảm xúc chọn từ **danh sách
+  cố định** (để "buồn" ở câu hỏi và "buồn" trên thẻ là cùng một chuỗi), kiểu kết
+  HE/SE/OE. Thẻ được embed bằng pgvector và đánh chỉ mục full-text không dấu.
+- Khi tìm: LLM tách câu hỏi thành bộ lọc → tìm kết hợp vector + full-text, gộp bằng
+  **RRF** → cộng điểm theo thể loại, cảm xúc, kiểu kết, đánh giá (Bayes) và độ hot →
+  LLM chấm mức hợp và viết **một câu "vì sao hợp"**; truyện "không hợp" bị ẩn.
+- Nói thêm để lọc: "kết có hậu thôi" gộp với câu trước thành một yêu cầu.
+- Đo được: lần đầu 6-10 giây (hiểu câu hỏi ~2s, tìm ~1-3s từ Mỹ sang database
+  Singapore, giải thích ~2-4s); câu đã hỏi lấy từ cache 0,02 giây.
+
+**Chuyện thật khi làm, đáng kể:**
+- `gemini-2.5-flash-lite` trả 404: Google đã đóng model này với tài khoản mới. Bộ tạo
+  thẻ vẫn đếm các lần lỗi vào hạn mức. Sửa: lỗi cấu hình (400/404) **dừng ngay**, chỉ
+  tính hạn mức cho lần gọi thật sự tới được model.
+- Embedding-001 hết hạn mức (do RAG cũ tiêu hôm đó) nên 10 thẻ đã viết bị bỏ. Sửa:
+  **lưu thẻ trước, embed sau**; thiếu vector thì lần sau bù. Chuyển sang
+  `gemini-embedding-2` (hạn mức riêng, vẫn 768 chiều).
+- Model trả tiếng Việt dạng mã thoát unicode, câu trả lời dài gấp nhiều lần và bị **cắt
+  cụt giữa JSON**. Sửa: đánh số 1-8 thay UUID, nới giới hạn token.
+- Flash-Lite mới hay báo 503 quá tải. Tạo thẻ chạy nền thì chờ lâu (4s, 12s); người
+  đang chờ kết quả thì thử lại 1 lần rồi chuyển **model dự phòng**. Kết quả dự phòng
+  không lưu cache.
+
+**Chi phí:** gói free. Thẻ tạo 300/ngày trong nền, cả thư viện ~4 ngày. Mỗi lần tìm
+mới ~2 lần gọi Flash-Lite + 1 embedding; mỗi người 20 lần/ngày, câu lặp lại miễn phí.
+
 ## 8. Hồ sơ người dùng và avatar
 
 - **Username:** 3–24 ký tự gồm chữ thường, số, `_`. Có danh sách tên bị giữ (admin,

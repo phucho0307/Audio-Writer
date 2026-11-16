@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { createHash } from 'node:crypto';
-import { ChunkKind } from '@prisma/client';
 import type {
   ContinueRequest,
   LlmDriver,
@@ -15,7 +14,8 @@ import { RateLimitedError } from '@aw/shared';
 import { GeminiDriver } from './drivers/gemini.driver';
 import { StoriesService } from '../stories/stories.service';
 import { AiQuotaService, type QuotaStatus, type Spend } from './ai-quota.service';
-import { RagService, firstKnownGenre } from '../rag/rag.service';
+import { firstKnownGenre } from '../references/genre';
+import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { RedisService } from '../redis/redis.service';
 
@@ -35,7 +35,7 @@ export class LlmService {
     private readonly config: ConfigService,
     private readonly stories: StoriesService,
     private readonly quota: AiQuotaService,
-    private readonly rag: RagService,
+    private readonly prisma: PrismaService,
     private readonly currentUser: CurrentUserService,
     private readonly redis: RedisService,
   ) {
@@ -240,50 +240,33 @@ export class LlmService {
    * malformed request against a second provider just wastes its quota too.
    */
   /**
-   * What to put in front of the model besides the story itself.
+   * Genre craft notes to put in front of the model beside the story.
    *
-   * The query is the tail of the draft rather than the whole thing: retrieval
-   * should answer "what is about to happen", and the opening chapters are the
-   * least relevant part of that. Two searches rather than one, because the two
-   * corpora land in different parts of the prompt - facts that must hold, and
-   * technique that may help.
+   * Picked by genre, not retrieved by similarity: there are a few notes per
+   * genre, so a lookup finds the same ones an embedding search would, without
+   * spending an embedding call on every continuation. (Retrieving earlier
+   * passages of the story was dropped too: the model is sent the whole story.)
    *
-   * Failure here is silent on purpose. Retrieval makes a continuation better;
-   * it is not what makes it possible, and an embedding provider having a bad
-   * minute should not stop a writer working.
+   * Failure is silent on purpose - the notes improve a continuation, they are
+   * not what makes it possible.
    */
   private async retrieve(
-    storySoFar: string,
+    _storySoFar: string,
     genres: string[],
-    storyId: string,
+    _storyId: string,
   ): Promise<{ continuityNotes?: string[]; craftNotes?: string[] }> {
-    const tail = storySoFar.slice(-1200);
     const genre = firstKnownGenre(genres);
-    // The writer asking, so the passages fed to the model are ones they could
-    // read themselves - a stranger continuing a public story must not get a
-    // locked chapter back through the prompt.
-    const viewer = await this.currentUser.optional();
-
+    if (!genre) return {};
     try {
-      const [craft, continuity] = await Promise.all([
-        this.rag.search(tail, { genre, kinds: [ChunkKind.CRAFT], limit: 3 }),
-        this.rag.search(tail, {
-          storyId,
-          kinds: [ChunkKind.CHAPTER],
-          limit: 3,
-          viewerId: viewer?.id ?? null,
-        }),
-      ]);
-
-      return {
-        craftNotes: craft.map((p) => `${p.label}: ${p.text}`),
-        // Trimmed harder than craft notes: these are reminders of what is
-        // already established, and pasting whole chapters back in crowds out
-        // the part of the prompt that matters, the last few lines.
-        continuityNotes: continuity.map((p) => p.text.slice(0, 280)),
-      };
+      const notes = await this.prisma.craftNote.findMany({
+        where: { genre },
+        orderBy: { kind: 'asc' },
+        take: 3,
+        select: { title: true, body: true },
+      });
+      return { craftNotes: notes.map((n) => `${n.title}: ${n.body.slice(0, 600)}`) };
     } catch (err) {
-      this.logger.warn(`retrieval unavailable: ${(err as Error).message}`);
+      this.logger.warn(`craft notes unavailable: ${(err as Error).message}`);
       return {};
     }
   }

@@ -159,6 +159,7 @@ model Story {
   unlocks  StoryUnlock[]
   ratings  StoryRating[]
   readers  StoryReader[]
+  card     StoryCard?
 
   @@index([visibility, status, updatedAt])
   @@index([genres], type: Gin)
@@ -434,6 +435,11 @@ enum ChunkKind {
   CHAPTER
 }
 
+/// RETIRED (2026-11-16): chapter-passage retrieval for "AI viết tiếp" was
+/// switched off and its code removed - the model is sent the whole story, so
+/// retrieved passages added little and the indexing spent the readers' Gemini
+/// quota. The table is kept until it is deliberately dropped.
+///
 /// The retrieval index: one row per passage, with its embedding.
 ///
 /// Both kinds live in one table so a single query can mix "how this genre
@@ -617,6 +623,36 @@ model Entitlement {
 
 /// One reader has paid for one story, permanently. Unique on (story, user) so
 /// a double-click or a retried request cannot charge twice.
+/// What AI search matches against: a short description of the story written
+/// by a model from its text - summary, plot motifs, mood, kind of ending -
+/// plus that description embedded. One row per story.
+///
+/// `embedding` (pgvector) and `search` (full-text, accent-folded) are created
+/// by the migration and used through raw SQL, as Prisma has no type for them.
+model StoryCard {
+  storyId    String   @id @db.Uuid
+  story      Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  summary    String
+  /// Concrete plot motifs: "chồng ngoại tình", "tiểu tam mang thai".
+  tropes     String[]
+  /// From a fixed list, so a query can match them exactly.
+  moods      String[]
+  /// HE (happy), SE (sad), OE (open) or UNKNOWN.
+  ending     String
+  keywords   String[]
+  /// The text that was embedded and full-text indexed.
+  document   String
+  /// Model that wrote the card, and the prompt version. A change means the
+  /// card is regenerated; "stale" marks one whose story has changed.
+  model      String
+  version    Int
+  stale      Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("story_cards")
+}
+
 /// One reader's stars for one story. Changing your mind overwrites it.
 model StoryRating {
   id        String   @id @default(uuid()) @db.Uuid
