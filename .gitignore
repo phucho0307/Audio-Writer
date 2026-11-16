@@ -54,3 +54,9 @@ __pycache__/
 /apps/web/public/author-covers/
 /apps/web/public/chinese-covers/
 /apps/web/public/*/thumbs/
+
+# Full texts of imported stories (Vietnamese authors, translated Chinese
+# fiction). Third-party copyrighted text: kept on the workstation and in the
+# database, never in this repository. The seed scripts read them locally.
+/apps/api/prisma/native-texts/
+/apps/api/prisma/chinese-stories/
