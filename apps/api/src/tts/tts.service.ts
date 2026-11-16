@@ -6,7 +6,7 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { RenderKind, RenderStatus } from '@prisma/client';
+import { Prisma, RenderKind, RenderStatus } from '@prisma/client';
 import { Inject } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -394,6 +394,42 @@ export class TtsService implements OnModuleInit {
       select: { id: true, textPlain: true, branchId: true },
       orderBy: [{ branchId: 'asc' }, { depth: 'asc' }],
     });
+    let queued = 0;
+    for (const c of chapters) {
+      const ticket = await this.enqueueOne(c.branchId, c, voice, PRIORITY.BULK);
+      if (ticket.jobId) queued += 1;
+    }
+    return { chapters: chapters.length, queued };
+  }
+
+  /**
+   * The narration that fits the storage budget: every chapter of stories
+   * written here, and only the opening chapter of imported ones, so any
+   * story can be played straight away. Later imported chapters are rendered
+   * when someone asks for them. Run from scripts/narrate-planned.ts.
+   *
+   * Rendering the whole catalogue would be about 28 GB at 64 kbps - three
+   * times the 9 GB cap - and days of synthesis.
+   */
+  async backfillPlanned(): Promise<{ chapters: number; queued: number }> {
+    if (!this.available) return { chapters: 0, queued: 0 };
+    const voice = this.driver.defaultVoice;
+    const chapters = await this.prisma.contribution.findMany({
+      where: {
+        branch: { isDraft: false },
+        OR: [
+          { branch: { story: { textSource: { equals: Prisma.AnyNull } } } },
+          { depth: 0 },
+        ],
+      },
+      select: { id: true, textPlain: true, branchId: true, branch: { select: { story: { select: { textSource: true } } } } },
+      // Stories written here first: they are what "Truyện trên Nhịp Bút" shows.
+      orderBy: [{ depth: 'asc' }, { branchId: 'asc' }],
+    });
+    chapters.sort(
+      (a, b) =>
+        Number(a.branch.story.textSource !== null) - Number(b.branch.story.textSource !== null),
+    );
     let queued = 0;
     for (const c of chapters) {
       const ticket = await this.enqueueOne(c.branchId, c, voice, PRIORITY.BULK);
