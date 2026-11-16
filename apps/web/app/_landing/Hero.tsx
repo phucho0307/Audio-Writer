@@ -154,7 +154,7 @@ export default function Hero({ stories }: { stories: Story[] }) {
           <SpiritText as="span" text="Nghe truyện theo nhịp của bạn." className="block" />
           <SpiritText
             as="span"
-            text="Kết toang thì tự viết lại."
+            text="Kết chán thì tự viết lại."
             delay={0.55}
             className="block italic text-[var(--color-accent)] [font-variation-settings:'SOFT'_100,'WONK'_1]"
           />
