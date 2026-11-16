@@ -1,5 +1,6 @@
 'use client';
 
+import RateStory from './RateStory';
 import { thumbUrl } from '@/lib/thumb';
 import { Fragment, use, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -7,7 +8,7 @@ import { useSearchParams } from 'next/navigation';
 import Reveal from '@/app/Reveal';
 import SpiritText from '@/app/SpiritText';
 import RatingBadge from '@/app/Rating';
-import { chapterRating, storyRating } from '@/lib/ratings';
+import { storyRating } from '@/lib/ratings';
 import { chapterAuthorHandle, storyAuthorHandle } from '@/lib/chapter-author';
 import { BranchBanner, BranchLink, forksAt, readableForks } from '../Branches';
 import AuthorByline from '@/app/AuthorByline';
@@ -158,7 +159,8 @@ export default function Contents({
               className="display text-[2.1rem] leading-[1.06] sm:text-[2.5rem]"
             />
 
-            {!story.textSource && <RatingBadge rating={storyRating(story.id)} variant="full" />}
+            <RatingBadge rating={storyRating(story)} variant="full" />
+            <RateStory storyId={story.id} />
 
             <p className="max-w-[52ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
               {story.synopsis}
@@ -229,16 +231,11 @@ export default function Contents({
                       {(authorHandle || story.textSource) && <span className="mt-1 block text-[11px] text-[var(--color-faint)]"><AuthorByline branchId={c.branchId} handle={authorHandle} nested /></span>}
                     </span>
 
-                    {!story.textSource && <RatingBadge
-                      rating={chapterRating(story.id, c.id, c.depth)}
-                      className="flex-none text-[11.5px]"
-                    />}
-
                     {/* A narrated chapter says so with its running time - the
                         one fact that tells a listener whether they have time
                         for it before bed. */}
                     {/* The slot is kept when a chapter has no audio yet, so the
-                        ratings to its left stay in one column. */}
+                        running times stay in one column. */}
                     {clip ? (
                       <span className="flex w-[46px] flex-none items-center justify-end gap-1.5 text-[11.5px] tabular-nums text-[var(--color-muted)]">
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden>

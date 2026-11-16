@@ -1,19 +1,26 @@
 /**
- * PLACEHOLDER RATINGS - not real data.
+ * Story ratings: real ones, and the demo placeholders.
  *
- * There is no rating system yet: no table, no endpoint, nobody has rated
- * anything. These numbers exist so the layout can be designed and judged with
- * ratings in it. Every place in the UI that shows a rating gets it from here,
- * so replacing this file with a call to a real endpoint is the whole job, and
- * nothing else in the app has to change.
+ * Real ratings come from readers (PUT /stories/:id/rating) and are shown
+ * once a story has MIN_RATINGS_SHOWN of them. Until then a story shows no
+ * score at all.
  *
- * Must not ship to real readers as-is: a star rating nobody gave is a claim
- * about a story that is not true.
+ * DEMO MODE ONLY: `placeholder*` below invents numbers so the layout can be
+ * judged and demoed with ratings in it. It is on in development and off in
+ * production builds (override with NEXT_PUBLIC_DEMO_RATINGS). A star rating
+ * nobody gave must never reach a real reader: it is a false claim about the
+ * story, and fake reviews are unlawful in many places.
  *
- * Deterministic on purpose. Numbers derived from the id stay the same across
- * reloads and between the list and the detail page; Math.random would make a
- * story's rating jump every time the page was opened, which reads as a bug.
+ * Placeholders are deterministic: derived from the id, so a story's number
+ * does not jump between reloads or between the list and its own page.
  */
+
+export const MIN_RATINGS_SHOWN = 5;
+
+export const DEMO_RATINGS =
+  process.env.NEXT_PUBLIC_DEMO_RATINGS !== undefined
+    ? process.env.NEXT_PUBLIC_DEMO_RATINGS === 'true'
+    : process.env.NODE_ENV !== 'production';
 
 export type Rating = {
   /** 1.0 - 5.0, one decimal. */
@@ -52,7 +59,7 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
  * into the hundreds. Capped under 500 - a new site with thousands of ratings
  * per story would not be believable.
  */
-export function storyRating(storyId: string): Rating {
+function placeholderStory(storyId: string): Rating {
   const r = seeded(hash(`story:${storyId}`));
   const score = round1(clamp(3.7 + r() * 1.2, 1, 5));
   // 12 to 492.
@@ -60,26 +67,35 @@ export function storyRating(storyId: string): Rating {
   return { score, count };
 }
 
-/**
- * A chapter's rating: near its story's, because a story's rating is roughly
- * the mood across its chapters, and fewer people rate a chapter than a story -
- * fewer still the further in it is, since readers drop off.
- */
-export function chapterRating(storyId: string, chapterId: string, depth: number): Rating {
-  const story = storyRating(storyId);
-  const r = seeded(hash(`chapter:${chapterId}`));
-  const score = round1(clamp(story.score + (r() - 0.5) * 0.8, 1, 5));
-  const dropOff = Math.pow(0.86, depth);
-  const count = Math.max(3, Math.round(story.count * 0.35 * dropOff * (0.7 + r() * 0.6)));
-  return { score, count };
-}
-
 /** A branch's rating: wider spread than the story's, and far fewer ratings. */
-export function branchRating(branchId: string): Rating {
+function placeholderBranch(branchId: string): Rating {
   const r = seeded(hash(`branch:${branchId}`));
   const score = round1(clamp(3.3 + r() * 1.6, 1, 5));
   const count = Math.round(4 + Math.pow(r(), 1.6) * 260);
   return { score, count };
+}
+
+/**
+ * What to show for a story: its real average once enough readers have
+ * rated, a placeholder in demo mode, otherwise nothing.
+ */
+export function storyRating(story: {
+  id: string;
+  ratingCount?: number;
+  ratingSum?: number;
+  textSource?: unknown;
+}): Rating | null {
+  const count = story.ratingCount ?? 0;
+  if (count >= MIN_RATINGS_SHOWN) {
+    return { score: Math.round(((story.ratingSum ?? 0) / count) * 10) / 10, count };
+  }
+  // Never invent stars for a real author's published work, even in a demo.
+  return DEMO_RATINGS && !story.textSource ? placeholderStory(story.id) : null;
+}
+
+/** Branches have no real ratings yet; demo mode only. */
+export function branchRating(branchId: string): Rating | null {
+  return DEMO_RATINGS ? placeholderBranch(branchId) : null;
 }
 
 /** "4,6" - Vietnamese uses a decimal comma. */

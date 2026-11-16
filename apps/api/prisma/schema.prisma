@@ -52,6 +52,8 @@ model User {
   entitlements   Entitlement[]
   renderJobs     RenderJob[]
   unlocks        StoryUnlock[]
+  ratings        StoryRating[]
+  readsLog       StoryReader[]
   ledger         LedgerEntry[]
   collaborations BranchCollaborator[]
 
@@ -117,6 +119,11 @@ model Story {
   branchCount       Int @default(1)
   wordCount         Int @default(0)
   viewCount         Int @default(0)
+  /// Reader ratings, kept as count and sum so the average and the ranking
+  /// score come from the row without aggregating story_ratings on every list.
+  /// Updated in the same transaction as the rating itself.
+  ratingCount       Int @default(0)
+  ratingSum         Int @default(0)
 
   /// Chapters below this depth are readable by anyone, forever. The story
   /// keeps spreading after it is monetised - gating discovery would cap the
@@ -150,6 +157,8 @@ model Story {
 
   branches Branch[]
   unlocks  StoryUnlock[]
+  ratings  StoryRating[]
+  readers  StoryReader[]
 
   @@index([visibility, status, updatedAt])
   @@index([genres], type: Gin)
@@ -608,6 +617,38 @@ model Entitlement {
 
 /// One reader has paid for one story, permanently. Unique on (story, user) so
 /// a double-click or a retried request cannot charge twice.
+/// One reader's stars for one story. Changing your mind overwrites it.
+model StoryRating {
+  id        String   @id @default(uuid()) @db.Uuid
+  storyId   String   @db.Uuid
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// 1 to 5.
+  stars     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storyId, userId])
+  @@index([userId])
+  @@map("story_ratings")
+}
+
+/// That a signed-in reader has opened at least one chapter of a story.
+/// Rating requires it: stars from someone who never read the story say
+/// nothing about the story.
+model StoryReader {
+  storyId     String   @db.Uuid
+  story       Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  userId      String   @db.Uuid
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  firstReadAt DateTime @default(now())
+
+  @@id([storyId, userId])
+  @@index([userId])
+  @@map("story_readers")
+}
+
 model StoryUnlock {
   id        String   @id @default(uuid()) @db.Uuid
   storyId   String   @db.Uuid

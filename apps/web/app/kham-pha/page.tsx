@@ -379,7 +379,7 @@ function Featured({ story }: { story: Story }) {
           </Link>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <RatingBadge rating={storyRating(story.id)} variant="full" />
+            <RatingBadge rating={storyRating(story)} variant="full" />
             {storyAuthorHandle(story) && (
               <span className="text-[13px] text-[var(--color-muted)]">
                 · <AuthorByline storyId={story.id} handle={storyAuthorHandle(story)} />
@@ -472,7 +472,7 @@ function StoryCard({ story: s }: { story: Story }) {
           <span className="truncate text-[var(--color-muted)]">
             <AuthorByline storyId={s.id} handle={storyAuthorHandle(s)} nested />
           </span>
-          {!s.textSource && <RatingBadge rating={storyRating(s.id)} className="flex-none text-[12px]" />}
+          <RatingBadge rating={storyRating(s)} className="flex-none text-[12px]" />
         </div>
       </div>
     </Link>

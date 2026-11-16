@@ -3,6 +3,14 @@ import { ensureSession, getToken, refresh } from './auth';
 
 export { API };
 
+export type RatingSummary = {
+  average: number | null;
+  count: number;
+  mine: number | null;
+  canRate: boolean;
+  reason: 'SIGN_IN' | 'READ_FIRST' | 'OWN_STORY' | null;
+};
+
 export type Story = {
   id: string;
   title: string;
@@ -18,6 +26,9 @@ export type Story = {
   branchCount: number;
   forkedByOthers?: number;
   viewCount: number;
+  /** Reader ratings: the average is shown only once there are enough. */
+  ratingCount?: number;
+  ratingSum?: number;
   freeChapters: number;
   unlockPrice: number;
   visibility: 'PUBLIC' | 'UNLISTED' | 'PRIVATE';
@@ -628,6 +639,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(opts),
     }),
+
+  /** Average (null until enough readers rated), count, and the caller's own. */
+  storyRating: (storyId: string) => call<RatingSummary>(`/stories/${storyId}/rating`),
+  rateStory: (storyId: string, stars: number) =>
+    call<RatingSummary>(`/stories/${storyId}/rating`, {
+      method: 'PUT',
+      body: JSON.stringify({ stars }),
+    }),
+  unrateStory: (storyId: string) =>
+    call<RatingSummary>(`/stories/${storyId}/rating`, { method: 'DELETE' }),
 
   recordView: (storyId: string) =>
     call<{ viewCount: number }>(`/stories/${storyId}/view`, { method: 'POST' }),

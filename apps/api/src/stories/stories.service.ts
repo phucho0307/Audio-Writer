@@ -303,6 +303,16 @@ export class StoriesService {
     // The author refreshing their own page is not an audience.
     if (user && story.ownerId === user.id) return { viewCount: story.viewCount };
 
+    // Remember that this reader opened the story: rating it requires that.
+    // Idempotent, so counting the same reader twice changes nothing here.
+    if (user) {
+      await this.prisma.storyReader.upsert({
+        where: { storyId_userId: { storyId: id, userId: user.id } },
+        create: { storyId: id, userId: user.id },
+        update: {},
+      });
+    }
+
     const updated = await this.prisma.story.update({
       where: { id },
       data: { viewCount: { increment: 1 } },

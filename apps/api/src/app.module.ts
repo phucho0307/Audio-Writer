@@ -13,6 +13,7 @@ import { RagModule } from './rag/rag.module';
 import { CollabModule } from './collab/collab.module';
 import { TtsModule } from './tts/tts.module';
 import { UsersModule } from './users/users.module';
+import { RatingsModule } from './ratings/ratings.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { UsersModule } from './users/users.module';
     HealthModule,
     StoriesModule,
     UsersModule,
+    RatingsModule,
     LlmModule,
     EventsModule,
     StorageModule,

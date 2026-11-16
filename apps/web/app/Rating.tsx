@@ -45,10 +45,13 @@ export default function RatingBadge({
   variant = 'compact',
   className = '',
 }: {
-  rating: Rating;
+  rating: Rating | null;
   variant?: 'compact' | 'full';
   className?: string;
 }) {
+  // Not enough real ratings yet (and not in demo mode): show nothing rather
+  // than a number nobody gave.
+  if (!rating) return null;
   const said = `Đánh giá ${formatScore(rating.score)} trên 5, ${rating.count.toLocaleString('vi-VN')} lượt`;
 
   if (variant === 'full') {

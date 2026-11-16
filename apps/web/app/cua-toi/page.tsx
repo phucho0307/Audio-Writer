@@ -202,7 +202,7 @@ function MyStories() {
                   {s.title}
                 </h2>
                 {s.contributionCount > 0 && (
-                  <RatingBadge rating={storyRating(s.id)} className="text-[12px]" />
+                  <RatingBadge rating={storyRating(s)} className="text-[12px]" />
                 )}
                 <p className="text-[11.5px] text-[var(--color-faint)]">
                   {s.contributionCount} chương · {s.wordCount.toLocaleString('vi-VN')} từ
