@@ -25,6 +25,7 @@ import { MultiTtsDriver } from './multi-tts.driver';
 import { AudioEncoder } from './audio-encoder';
 import {
   AUDIO_STORAGE,
+  StorageFullError,
   type StorageDriver,
 } from '../storage/storage-driver';
 
@@ -663,6 +664,12 @@ export class TtsService implements OnModuleInit {
       where: { id: renderJobId },
       data: { status: RenderStatus.RUNNING, stage: 'tts', progress: 10 },
     });
+
+    // Before synthesis, not after: a full bucket should cost nothing, not a
+    // minute of speech that is then thrown away.
+    if (this.storage.hasRoom && !(await this.storage.hasRoom())) {
+      throw new StorageFullError('Kho lưu trữ audio đã đầy, tạm ngừng tạo giọng đọc mới.');
+    }
 
     // Deliberately not wrapped: TtsRateLimitedError has to reach the worker,
     // which pauses the whole pool rather than failing this one job.

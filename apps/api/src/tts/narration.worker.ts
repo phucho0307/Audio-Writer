@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Worker, UnrecoverableError } from 'bullmq';
+import { StorageFullError } from '../storage/storage-driver';
 import { NotFoundException } from '@nestjs/common';
 import { QueueConnection } from '../queue/queue-connection';
 import { NARRATION_QUEUE, type NarrationJob } from '../queue/queue.constants';
@@ -86,6 +87,12 @@ export class NarrationWorker implements OnModuleInit, OnModuleDestroy {
         this.logger.warn(`provider rate limited - pausing ${ms}ms`);
         await this.worker!.rateLimit(ms);
         throw Worker.RateLimitError();
+      }
+
+      if (err instanceof StorageFullError) {
+        // Storage is at its budget. Retrying in a few seconds cannot free
+        // space, and each retry would synthesize the chapter again.
+        throw new UnrecoverableError(err.message);
       }
 
       if (err instanceof NotFoundException) {

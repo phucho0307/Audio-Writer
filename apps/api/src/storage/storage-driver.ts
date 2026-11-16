@@ -30,4 +30,22 @@ export interface StoredObject {
 export interface StorageDriver {
   readonly name: string;
   put(key: string, body: Buffer, contentType: string): Promise<StoredObject>;
+  /**
+   * Whether there is budget left to store more. Optional: only storage that
+   * costs money past a free allowance has a budget. Checked before expensive
+   * work (synthesis) so it is not done for a file that could not be kept.
+   */
+  hasRoom?(): Promise<boolean>;
+}
+
+/**
+ * put() refused because the write would take storage past its budget. Not a
+ * transient failure: retrying will not help until someone frees space or
+ * raises the limit.
+ */
+export class StorageFullError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'StorageFullError';
+  }
 }

@@ -4,11 +4,12 @@ import {
   Inject,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
-import { AUDIO_STORAGE, type StorageDriver } from '../storage/storage-driver';
+import { AUDIO_STORAGE, StorageFullError, type StorageDriver } from '../storage/storage-driver';
 
 /** Lowercase letters, digits and underscores; what sign-up already produces. */
 export const HANDLE_RE = /^[a-z0-9_]{3,24}$/;
@@ -76,7 +77,15 @@ export class UsersService {
     // keeps showing the old one. No slash: the local driver writes keys flat.
     const digest = createHash('sha256').update(bytes).digest('hex').slice(0, 16);
     const key = `avatar-${me.id}-${digest}.${kind.ext}`;
-    const stored = await this.storage.put(key, bytes, kind.type);
+    let stored;
+    try {
+      stored = await this.storage.put(key, bytes, kind.type);
+    } catch (e) {
+      if (e instanceof StorageFullError) {
+        throw new ServiceUnavailableException({ code: 'STORAGE_FULL', message: 'Kho ảnh đang đầy, tạm thời chưa đổi được ảnh.' });
+      }
+      throw e;
+    }
     const updated = await this.prisma.user.update({
       where: { id: me.id },
       data: { avatarUrl: stored.url },
