@@ -215,35 +215,38 @@ loại thì tra là đủ, không cần embedding). Bảng `rag_chunks` vẫn đ
 **Chi phí:** gói free. Thẻ tạo 300/ngày trong nền, cả thư viện ~4 ngày. Mỗi lần tìm
 mới ~2 lần gọi Flash-Lite + 1 embedding; mỗi người 20 lần/ngày, câu lặp lại miễn phí.
 
-## 7c. Bảng xếp hạng theo thể loại
+## 7c. Sắp xếp và hai cách tìm trong Khám phá
 
-**Vấn đề:** cần "truyện hay nhất" và "truyện đang hot", chung toàn site và riêng từng thể loại.
+**Lần đầu làm quá tay.** Mình xây một trang Xếp hạng riêng: "Hay nhất" theo trung bình Bayes,
+"Đang hot" theo lượt đọc 7 ngày lưu trong Redis sorted set. Chủ dự án xem và nói không cần
+trang riêng: chỉ cần **bộ lọc sắp xếp** trong Khám phá. Đã gỡ trang và API đó. Bài học kể
+được khi phỏng vấn: hỏi rõ phạm vi trước khi xây, đừng tự mở rộng tính năng.
 
-**Hay nhất: trung bình Bayes.** Điểm = (tổng sao + 10 × điểm trung bình toàn site) /
-(số lượt chấm + 10). Một lượt 5 sao không vượt được 40 lượt trung bình 4,7, vì mỗi truyện
-coi như bắt đầu với 10 lượt chấm ở mức trung bình. Chỉ truyện **đã có người chấm** mới
-lên bảng: xếp truyện chưa ai chấm theo lượt xem mà để tiêu đề "hay nhất" là nói sai.
+**Bản hiện tại:** trong Khám phá có ba kiểu sắp xếp: *Phổ biến nhất* (lượt đọc),
+*Mới nhất* (ngày đăng), *Được thích nhất* (đúng điểm sao đang hiện trên thẻ, hoà điểm thì
+truyện nhiều lượt chấm hơn đứng trước). Sắp trên dữ liệu đã tải về trình duyệt, nên đổi kiểu
+là tức thì, không gọi API. Đi chung với lọc thể loại sẵn có.
 
-**Đang hot: lượt đọc 7 ngày, hôm nay nặng hơn.** Mỗi ngày là một sorted set trong Redis
-(truyện → lượt đọc). Ghi một lượt đọc là một lệnh `ZINCRBY`; ra bảng là một
-`ZUNIONSTORE` với trọng số giảm 0,85 mỗi ngày. Không quét bảng stories mỗi lần xem.
-Lượt đọc đi qua event `story.viewed`, nên module truyện không phải biết tới module xếp hạng.
-Khi chưa có lượt đọc nào trong tuần (vừa deploy), bảng ghi rõ là đang xếp theo tổng lượt
-đọc từ trước tới nay.
+**Hai cách tìm:** nút chuyển giữa *Tìm theo tên & bộ lọc* (tức thì, không tốn gì) và
+*Tìm bằng AI* (tả bằng lời, tốn lượt gọi model, có hạn mức mỗi ngày). Tách ra để người chỉ
+muốn gõ tên truyện không phải đợi AI.
 
-**Thể loại là bộ lọc, không phải bảng riêng.** Cùng một điểm, chỉ lọc theo thể loại, nên
-thứ tự giữa hai truyện giống nhau trên mọi bảng. Thể loại là tag tự do, nên phát hiện
-"Gia đình" và "gia đình" bị tách đôi; giờ gom và lọc không phân biệt hoa thường.
-
-Bảng được cache 5 phút. Logic tính điểm có unit test (Bayes, trọng số hot), và phần chấm
-điểm của tìm kiếm AI (RRF và các mức cộng) được tách thành hàm thuần để test riêng.
-Một test từng thất bại và chỉ ra điều đáng biết: khi khớp cả thể loại, cảm xúc và kiểu kết,
-truyện hạng 10 của một danh sách có thể vượt truyện cả hai danh sách đều xếp đầu. Giữ
-nguyên vì người đọc đã hỏi đúng cả ba điều đó.
+**Thể loại bị tách đôi theo chữ hoa/thường.** Tag là chữ tự do nên có cả "Gia đình" (60)
+và "gia đình" (11). Giờ gom không phân biệt hoa thường và hiện cách viết phổ biến hơn.
 
 **Admin chấm được mọi truyện.** Luật "không tự chấm truyện của mình" và "đọc rồi mới chấm"
-không áp cho admin, vì 1.111 truyện mẫu đứng tên tài khoản admin. Bảng `rag_chunks` cũ đã
-xoá bằng migration.
+không áp cho admin, vì 1.111 truyện mẫu đứng tên tài khoản admin.
+
+**Phần chấm điểm của tìm kiếm AI** (RRF và các mức cộng) được tách thành hàm thuần để unit
+test. Một test từng thất bại và chỉ ra: khi khớp cả thể loại, cảm xúc và kiểu kết, truyện hạng
+10 của một danh sách có thể vượt truyện cả hai danh sách đều xếp đầu. Giữ nguyên, vì người đọc
+đã hỏi đúng cả ba điều đó.
+
+**Lỗi làm sập API khi tạo audio:** tiến trình con (Python/ffmpeg) thoát trước khi đọc hết
+dữ liệu, pipe báo lỗi EOF mà không ai bắt, nên cả API chết. Thêm bộ bắt lỗi cho stdin; việc
+báo lỗi đã có ở handler `close`.
+
+Bảng `rag_chunks` cũ đã xoá bằng migration.
 
 ## 8. Hồ sơ người dùng và avatar
 

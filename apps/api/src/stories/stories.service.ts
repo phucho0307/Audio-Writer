@@ -318,7 +318,6 @@ export class StoriesService {
       data: { viewCount: { increment: 1 } },
       select: { viewCount: true },
     });
-    this.events.emit('story.viewed', { storyId: id });
     return updated;
   }
 

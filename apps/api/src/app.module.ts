@@ -11,7 +11,6 @@ import { EventsModule } from './events/events.module';
 import { StorageModule } from './storage/storage.module';
 import { ReferencesModule } from './references/references.module';
 import { DiscoveryModule } from './discovery/discovery.module';
-import { RankingsModule } from './rankings/rankings.module';
 import { CollabModule } from './collab/collab.module';
 import { TtsModule } from './tts/tts.module';
 import { UsersModule } from './users/users.module';
@@ -40,7 +39,6 @@ import { RatingsModule } from './ratings/ratings.module';
     CollabModule,
     ReferencesModule,
     DiscoveryModule,
-    RankingsModule,
   ],
 })
 export class AppModule {}

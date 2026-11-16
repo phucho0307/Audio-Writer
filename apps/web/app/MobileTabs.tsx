@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 /**
  * The navigation on a phone, at the bottom where a thumb is.
  *
- * Five section links, a logo, an account menu and two toggles do not fit
+ * Four section links, a logo, an account menu and two toggles do not fit
  * across 390px - the header was 466px wide and every page scrolled sideways.
  * Squeezing the links into first-word fragments ("Khám", "Tham", "Truyện")
  * would have fixed the width and made them unreadable. A listening app is held
@@ -28,17 +28,6 @@ const TABS = [
       <>
         <circle cx="12" cy="12" r="8.5" />
         <path d="m15.5 8.5-2 5-5 2 2-5z" />
-      </>
-    ),
-  },
-  {
-    href: '/xep-hang',
-    label: 'Xếp hạng',
-    match: (p: string) => p.startsWith('/xep-hang'),
-    icon: (
-      <>
-        <path d="M4 20h16" />
-        <path d="M6 20v-6h4v6M10 20V8h4v12M14 20v-9h4v9" />
       </>
     ),
   },
@@ -74,7 +63,7 @@ export default function MobileTabs() {
       aria-label="Điều hướng chính"
       className="fixed inset-x-0 bottom-0 z-50 border-t border-[var(--color-line)] bg-[color-mix(in_oklab,var(--color-ground)_88%,transparent)] pb-[env(safe-area-inset-bottom)] backdrop-blur-xl sm:hidden"
     >
-      <ul className="grid grid-cols-5">
+      <ul className="grid grid-cols-4">
         {TABS.map((t) => {
           const active = t.match(pathname);
           return (

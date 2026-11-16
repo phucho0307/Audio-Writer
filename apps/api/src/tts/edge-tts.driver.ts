@@ -66,6 +66,11 @@ function run(
       const tail = Buffer.concat(err).toString('utf8').trim().split('\n').slice(-2).join(' ');
       reject(new TtsError(`${cmd} exited ${code}: ${tail.slice(0, 300)}`));
     });
+    // A child that exits before reading all its input (ffmpeg failing, the
+    // timeout kill) makes the pipe throw EPIPE/EOF. Unhandled, that error
+    // takes down the whole API; the 'close' handler already reports the
+    // failure, so here it only needs swallowing.
+    child.stdin.on('error', () => undefined);
     if (input) child.stdin.end(input);
     else child.stdin.end();
   });

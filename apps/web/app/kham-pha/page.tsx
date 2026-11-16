@@ -22,6 +22,25 @@ import { FAMOUS_AUTHORS, FAMOUS_WORKS, foldSearch, matchesCatalogSearch, type Fa
 import { BRAND } from '@/lib/brand';
 
 type Shelf = 'all' | 'library' | 'famous' | 'chinese';
+type SortBy = 'popular' | 'latest' | 'liked';
+type SearchMode = 'plain' | 'ai';
+
+const SORTS: { id: SortBy; label: string }[] = [
+  { id: 'popular', label: 'Phổ biến nhất' },
+  { id: 'latest', label: 'Mới nhất' },
+  { id: 'liked', label: 'Được thích nhất' },
+];
+
+/** The numbers a sort reads. Catalogue works sort by the story they are read as. */
+function sortKey(story: Story | undefined, by: SortBy): number {
+  if (!story) return -1;
+  if (by === 'popular') return story.viewCount;
+  if (by === 'latest') return Date.parse(story.createdAt ?? story.updatedAt) || 0;
+  // The score the card shows, so the order matches the stars on screen;
+  // the count breaks ties, so 4.8 from 300 readers leads 4.8 from 6.
+  const r = storyRating(story);
+  return r ? r.score * 1e6 + r.count : 0;
+}
 
 /**
  * Written here - by the AI or by people on the site - rather than imported.
@@ -50,6 +69,8 @@ export default function Explore() {
   const [chineseSource, setChineseSource] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState<SortBy>('popular');
+  const [mode, setMode] = useState<SearchMode>('plain');
 
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
@@ -68,7 +89,7 @@ export default function Explore() {
       .catch((e: Error) => setError(e.message));
   }, []);
 
-  useEffect(() => setPage(1), [shelf, authorId, chineseSource, genre, query]);
+  useEffect(() => setPage(1), [shelf, authorId, chineseSource, genre, query, sortBy]);
 
   function chooseShelf(next: Shelf) {
     setShelf(next);
@@ -128,22 +149,33 @@ export default function Explore() {
 
   // Derived from the content, so the filter never offers an empty genre or
   // omits one a writer has just used. Multi-genre stories count under each.
+  // Tags are free text, so "Gia đình" and "gia đình" are one genre: grouped
+  // without case, shown under whichever spelling more stories use.
   const counts = new Map<string, number>();
+  const spellings = new Map<string, Map<string, number>>();
   for (const s of [...matchingStories, ...matchingFamous, ...matchingChinese]) {
-    for (const g of s.genres) {
-      if (shelf === 'chinese' && g === 'Truyện Trung') continue;
+    for (const g of new Set(s.genres.map((x) => x.toLocaleLowerCase('vi')))) {
+      if (shelf === 'chinese' && g === 'truyện trung') continue;
       counts.set(g, (counts.get(g) ?? 0) + 1);
     }
+    for (const g of s.genres) {
+      const key = g.toLocaleLowerCase('vi');
+      const m = spellings.get(key) ?? new Map<string, number>();
+      m.set(g, (m.get(g) ?? 0) + 1);
+      spellings.set(key, m);
+    }
   }
-  const genres = [...counts.entries()].sort(
-    (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'vi'),
-  );
+  const labelOf = (key: string) =>
+    [...(spellings.get(key) ?? new Map([[key, 1]])).entries()].sort((a, b) => b[1] - a[1])[0][0];
+  const genres = [...counts.entries()]
+    .map(([key, n]) => [key, n, labelOf(key)] as const)
+    .sort((a, b) => b[1] - a[1] || a[2].localeCompare(b[2], 'vi'));
+  const hasGenre = (list: string[]) =>
+    genre === null || list.some((g) => g.toLocaleLowerCase('vi') === genre);
 
-  const shown = matchingStories.filter(
-    (s) => genre === null || s.genres.includes(genre),
-  );
-  const shownFamous = matchingFamous.filter((work) => genre === null || work.genres.includes(genre));
-  const shownChinese = matchingChinese.filter((work) => genre === null || work.genres.includes(genre));
+  const shown = matchingStories.filter((s) => hasGenre(s.genres));
+  const shownFamous = matchingFamous.filter((work) => hasGenre(work.genres));
+  const shownChinese = matchingChinese.filter((work) => hasGenre(work.genres));
   const selectedAuthor = FAMOUS_AUTHORS.find((author) => author.id === authorId);
 
   // The most-read story leads the page, and only while nothing is filtered -
@@ -151,20 +183,19 @@ export default function Explore() {
   // a hero would just be one of its own results, repeated at four times the
   // size.
   const featured =
-    shelf === 'all' && !authorId && !query.trim() && genre === null && stories && stories.length > 2
+    shelf === 'all' && sortBy === 'popular' && !authorId && !query.trim() && genre === null && stories && stories.length > 2
       ? [...stories].filter((story) => !nativeStory(story.id)).sort((a, b) => b.viewCount - a.viewCount)[0]
       : null;
   const grid = featured ? shown.filter((s) => s.id !== featured.id) : shown;
-  const entries: ShelfEntry[] = [];
-  let storyIndex = 0;
-  let famousIndex = 0;
-  let chineseIndex = 0;
-  while (storyIndex < grid.length || famousIndex < shownFamous.length || chineseIndex < shownChinese.length) {
-    if (chineseIndex < shownChinese.length) entries.push({ kind: 'chinese', work: shownChinese[chineseIndex++] });
-    if (famousIndex < shownFamous.length) entries.push({ kind: 'famous', work: shownFamous[famousIndex++] });
-    if (storyIndex < grid.length) entries.push({ kind: 'story', story: grid[storyIndex++] });
-    if (famousIndex < shownFamous.length) entries.push({ kind: 'famous', work: shownFamous[famousIndex++] });
-  }
+  const entries: ShelfEntry[] = [
+    ...grid.map((story) => ({ kind: 'story' as const, story })),
+    ...shownFamous.map((work) => ({ kind: 'famous' as const, work })),
+    ...shownChinese.map((work) => ({ kind: 'chinese' as const, work })),
+  ];
+  const storyOf = (e: ShelfEntry) =>
+    e.kind === 'story' ? e.story : e.work.nativeStoryId ? publicStories.get(e.work.nativeStoryId) : undefined;
+  // Stable sort, so equal keys keep their shelf order.
+  entries.sort((x, y) => sortKey(storyOf(y), sortBy) - sortKey(storyOf(x), sortBy));
   const visible = entries.slice(0, page * 24);
   const totalShown = shown.length + shownFamous.length + shownChinese.length;
 
@@ -173,8 +204,6 @@ export default function Explore() {
       {error && (
         <p className="panel text-sm text-[var(--color-son)]">{error}</p>
       )}
-
-      <AiFinder />
 
       {featured && <Featured story={featured} />}
 
@@ -193,15 +222,35 @@ export default function Explore() {
       <section className="flex flex-col gap-6">
         <div className="flex flex-wrap items-baseline justify-between gap-4">
           <h2 className="label">
-            {selectedAuthor ? selectedAuthor.name : genre ? `Thể loại · ${genre}` : shelf === 'chinese' ? 'Truyện Trung' : shelf === 'famous' ? 'Tác giả nổi tiếng' : shelf === 'library' ? `Truyện trên ${BRAND}` : 'Tất cả truyện'}
+            {mode === 'ai' ? 'Tìm truyện' : selectedAuthor ? selectedAuthor.name : genre ? `Thể loại · ${labelOf(genre)}` : shelf === 'chinese' ? 'Truyện Trung' : shelf === 'famous' ? 'Tác giả nổi tiếng' : shelf === 'library' ? `Truyện trên ${BRAND}` : 'Tất cả truyện'}
           </h2>
-          {(stories || shelf === 'famous') && (
+          {mode === 'plain' && (stories || shelf === 'famous') && (
             <span className="text-[12.5px] text-[var(--color-faint)]">
               {totalShown} truyện / tác phẩm
             </span>
           )}
         </div>
 
+        <div role="tablist" aria-label="Cách tìm truyện" className="flex gap-1 self-start rounded-full border border-[var(--color-line)] bg-[var(--color-surface)] p-1">
+          {([{ id: 'plain', label: 'Tìm theo tên & bộ lọc' }, { id: 'ai', label: 'Tìm bằng AI' }] as const).map((m) => (
+            <button
+              key={m.id}
+              type="button"
+              role="tab"
+              aria-selected={mode === m.id}
+              onClick={() => setMode(m.id)}
+              className={`rounded-full px-4 py-1.5 text-[13px] font-medium transition-colors ${
+                mode === m.id
+                  ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
+                  : 'text-[var(--color-muted)] hover:text-[var(--color-ink)]'
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        {mode === 'ai' ? <AiFinder /> : (<>
         <div className="flex flex-col gap-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-4 sm:p-5">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc thư viện">
             {([{ id: 'all', label: 'Tất cả', count: (stories?.filter((story) => !nativeStory(story.id)).length ?? 0) + availableFamous.length + availableChinese.length },
@@ -217,6 +266,14 @@ export default function Explore() {
             <span className="sr-only">Tìm truyện hoặc tác giả</span>
             <input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tên truyện, tác giả…" className="field" />
           </label>
+          <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Sắp xếp">
+            <span className="label text-[10px]">Sắp xếp</span>
+            {SORTS.map((o) => (
+              <button key={o.id} type="button" onClick={() => setSortBy(o.id)} aria-pressed={sortBy === o.id} className={`chip ${sortBy === o.id ? 'chip-on' : ''}`}>
+                {o.label}
+              </button>
+            ))}
+          </div>
           {shelf === 'chinese' && <div className="flex flex-col gap-2.5">
             <span className="label text-[10px]">Nguồn tuyển truyện</span>
             <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc nguồn truyện Trung">
@@ -251,14 +308,14 @@ export default function Explore() {
             >
               Tất cả
             </button>
-            {genres.map(([g, n]) => (
+            {genres.map(([g, n, label]) => (
               <button
                 key={g}
                 onClick={() => setGenre(genre === g ? null : g)}
                 aria-pressed={genre === g}
                 className={`chip ${genre === g ? 'chip-on' : ''}`}
               >
-                {g}
+                {label}
                 <span className="text-[10.5px] opacity-55">{n}</span>
               </button>
             ))}
@@ -291,6 +348,7 @@ export default function Explore() {
           </p>
         )}
         {(query || genre || authorId) && <button type="button" onClick={() => { setQuery(''); setGenre(null); chooseShelf('all'); }} className="btn btn-quiet self-start">Xóa bộ lọc ×</button>}
+        </>)}
       </section>
     </main>
   );
