@@ -1,0 +1,93 @@
+# Production on one VM: Caddy (HTTPS) -> web + api, with Redis beside them.
+# Postgres is Supabase and files are R2, so nothing here holds data that
+# cannot be rebuilt except Redis' queue.
+#
+#   docker compose -f infra/docker-compose.prod.yml --env-file .env up -d --build
+#
+# Reads the repo-root .env (the server's copy, never committed). Needs, on top
+# of the app's own variables: DOMAIN, and MEDIA_BASE (the R2 public URL).
+name: nhipbut
+
+services:
+  caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env, e.g. nhipbut.vn}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+
+  web:
+    image: nhipbut-web:${TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/docker/web.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        NEXT_PUBLIC_MEDIA_BASE: ${MEDIA_BASE:-}
+        API_URL: http://api:4000
+    restart: unless-stopped
+
+  # Runs pending migrations, then exits. The API waits for it to succeed,
+  # so a deploy never starts new code against an old schema.
+  migrate:
+    image: nhipbut-migrate:${TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+      target: migrate
+    env_file: ../.env
+    restart: "no"
+
+  api:
+    image: nhipbut-api:${TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/docker/api.Dockerfile
+      target: runtime
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      NODE_ENV: production
+      API_PORT: "4000"
+      REDIS_URL: redis://redis:6379
+      WEB_ORIGIN: https://${DOMAIN}
+      # One proxy (Caddy) in front, so client IPs for rate limiting come
+      # from its X-Forwarded-For rather than being Caddy's own address.
+      TRUST_PROXY: "1"
+    depends_on:
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    # Give in-flight narration a moment to finish on deploy.
+    stop_grace_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # BullMQ requires noeviction: an evicted job key is a lost job.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  caddy_data:
+  caddy_config:
+  redis_data:

@@ -1,0 +1,17 @@
+# One public origin for everything. Caddy gets and renews the HTTPS
+# certificate for $DOMAIN on its own, and proxies WebSockets as-is.
+#
+# Same origin for the site and the API means no CORS preflights, and the
+# refresh-token cookie stays first-party.
+{$DOMAIN} {
+	encode zstd gzip
+
+	@api path /api /api/* /collab /collab/*
+	handle @api {
+		reverse_proxy api:4000
+	}
+
+	handle {
+		reverse_proxy web:3000
+	}
+}

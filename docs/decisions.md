@@ -229,6 +229,33 @@ trước khi trả tiền.
 **Ước lượng:** một máy cỡ vừa chịu được vài nghìn người dùng mỗi ngày. Những gì phải sửa
 để chạy nhiều server được ghi ở [production-later.md](production-later.md).
 
+## 11b. Đóng gói để deploy (Docker)
+
+**Thiết kế:** hai image (web, API kèm worker giọng đọc) và một `docker-compose.prod.yml`:
+- **Caddy** đứng trước, tự lấy chứng chỉ HTTPS và chia đường: `/api` và `/collab` sang
+  API, còn lại sang web. Web và API **cùng một tên miền**, nên không cần CORS, cookie
+  đăng nhập là cookie của chính trang.
+- Một dịch vụ **`migrate`** chạy `prisma migrate deploy` rồi thoát. API chỉ khởi động khi
+  bước này thành công, nên code mới không bao giờ chạy trên schema cũ.
+- Redis đặt `maxmemory-policy noeviction`, vì BullMQ mất việc nếu Redis tự xoá key.
+- Ảnh và audio nằm trên R2, nên **image web chỉ mang 7 MB ảnh thay vì gần 1 GB**. Web
+  dùng Next.js `output: 'standalone'`, chỉ chép những gì server thật sự import.
+
+**Đã chạy thử cả hệ thống trên laptop:** trang chủ, Khám phá, API, danh sách truyện từ
+Supabase, socket phòng viết chung (HTTP 101), edge-tts sẵn sàng trong container.
+
+**Ba lỗi tìm ra khi build, đáng kể:**
+- npm báo "Exit handler never called" rất khó hiểu. Đọc log chi tiết mới thấy nguyên
+  nhân thật: phần mềm diệt virus trên máy dev ký lại HTTPS, kể cả bên trong Docker.
+  Cách sửa: build secret `extra_ca` **tuỳ chọn**, chỉ dùng lúc tải thư viện, không nằm
+  trong image, server không cần.
+- `docker run --env-file` giữ nguyên dấu ngoặc kép trong `.env`, nên `DATABASE_URL` hỏng.
+  Docker Compose thì bỏ ngoặc, nên trên server không gặp. Phát hiện nhờ chạy thử image
+  một mình trước khi chạy cả hệ thống.
+- `.env` dev ghi `EDGE_TTS_PYTHON=python` mà image chỉ có `python3`, và biến trong env
+  file luôn đè giá trị mặc định của image. Giọng đọc âm thầm bị tắt. Sửa bằng cách cho
+  image có cả hai tên.
+
 ## 12. Làm việc với hai AI agent trong cùng một repo
 
 Claude Code và Codex sửa code song song trong cùng thư mục.
@@ -258,13 +285,15 @@ Claude Code và Codex sửa code song song trong cùng thư mục.
 
 ## Trạng thái và kế hoạch (16/11/2026)
 
-**Đã duyệt, chờ Codex xong việc mới làm:**
-1. Đọc lại và commit phần Codex làm dở. Liệt kê **nguồn và bản quyền** của các truyện
-   seed để quyết giữ hay bỏ, vì một số là tác phẩm còn bản quyền.
-2. Đóng gói Docker (web, API, worker) và `docker-compose.prod.yml`, kèm chạy migration
-   mỗi lần deploy.
-3. Đưa ảnh bìa (khoảng 350 MB) lên R2. Xoá 441 MB audio cũ trên laptop sau khi xác nhận
-   web phát được từ R2.
+**Đã xong:**
+1. Commit phần Codex (truyện nhập, kệ truyện Trung, chọn ảnh bìa). Nguồn và bản quyền
+   đã liệt kê; quyết định: giữ hết, **repo phải chuyển sang private trước khi push**.
+2. Docker (web, API kèm worker), `docker-compose.prod.yml`, Caddy, hướng dẫn
+   [deploy.md](deploy.md). Đã chạy thử cả hệ thống trên laptop.
+3. Ảnh bìa lên R2 (2.548 file, 345 MB). R2 khoảng 0,93 GB / 9 GB.
+
+**Còn lại:** chuyển repo sang private rồi push; thuê máy ảo và deploy; xoá 441 MB audio
+cũ trên laptop sau khi xác nhận web phát được từ R2.
 
 **Chưa duyệt, để sau:**
 - Dọn trước khi ra mắt: tắt `DEV_ENDPOINTS`, ẩn đánh giá và tác giả giả, chuyển Google

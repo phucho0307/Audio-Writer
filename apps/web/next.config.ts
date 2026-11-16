@@ -3,6 +3,9 @@ import path from 'node:path';
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // `next build` also writes a self-contained server (.next/standalone) with
+  // only the node_modules it imports - what the production image runs.
+  output: 'standalone',
   // There is a stray package-lock.json in the Windows home directory. Without
   // this, Next infers that as the workspace root and warns on every start.
   outputFileTracingRoot: path.join(__dirname, '../../'),

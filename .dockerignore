@@ -1,0 +1,26 @@
+# Only source goes into the build context. Media lives in R2, secrets come
+# from the environment at run time, never from the image.
+**/node_modules
+**/.next
+**/dist
+**/*.tsbuildinfo
+**/__pycache__
+.git
+.env
+.env.*
+!.env.example
+
+# Served from R2 in production (see apps/api/scripts/upload-static-covers.ts)
+apps/web/public/audio
+apps/web/public/uploads
+apps/web/public/author-covers
+apps/web/public/chinese-covers
+apps/web/public/*/thumbs
+
+# Seed data and content tooling: run from a workstation, not the server
+apps/api/prisma/native-texts
+apps/api/prisma/chinese-stories
+apps/api/prisma/dark-stories
+tools
+media
+docs
