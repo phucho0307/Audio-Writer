@@ -8,6 +8,8 @@ export type AuthUser = {
   avatarUrl: string | null;
   locale: string;
   role: 'USER' | 'ADMIN';
+  /** False for an email sign-up that has not clicked its link yet. */
+  emailVerified?: boolean;
 };
 
 export type Providers = { google: boolean; password?: boolean; devUser: boolean };
@@ -145,7 +147,8 @@ export async function ensureSession(): Promise<void> {
 
 // ---------------------------------------------------------------- the dialog
 
-export type DialogState = { open: boolean; mode: 'signin' | 'signup'; reason: string | null };
+export type DialogMode = 'signin' | 'signup' | 'forgot';
+export type DialogState = { open: boolean; mode: DialogMode; reason: string | null };
 let dialog: DialogState = { open: false, mode: 'signin', reason: null };
 const dialogListeners = new Set<() => void>();
 
@@ -173,7 +176,7 @@ function setDialog(next: DialogState): void {
  * chấm sao"), which is the difference between a prompt and a wall. Safe to
  * pass straight to onClick - an event is not a string and is ignored.
  */
-export function signIn(reason?: unknown, mode: 'signin' | 'signup' = 'signin'): void {
+export function signIn(reason?: unknown, mode: DialogMode = 'signin'): void {
   setDialog({ open: true, mode, reason: typeof reason === 'string' ? reason : null });
 }
 
@@ -181,7 +184,7 @@ export function closeSignIn(): void {
   setDialog({ ...dialog, open: false });
 }
 
-export function setSignInMode(mode: 'signin' | 'signup'): void {
+export function setSignInMode(mode: DialogMode): void {
   setDialog({ ...dialog, mode });
 }
 
@@ -192,31 +195,66 @@ export class AuthError extends Error {
   }
 }
 
-async function passwordCall(path: 'login' | 'register', body: object): Promise<void> {
+type AuthBody = {
+  accessToken?: string;
+  expiresIn?: number;
+  user?: AuthUser;
+  email?: string;
+  message?: string | string[];
+  code?: string;
+};
+
+/** POST to /auth/*, the API's own (Vietnamese) message on failure. */
+async function authPost(path: string, body: object, token?: string | null): Promise<AuthBody> {
   let res: Response;
   try {
     res = await fetch(`${API}/auth/${path}`, {
       method: 'POST',
-      credentials: 'include', // so the refresh cookie it sets is kept
-      headers: { 'content-type': 'application/json' },
+      credentials: 'include', // so a refresh cookie it sets is kept
+      headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: JSON.stringify(body),
     });
   } catch {
     throw new AuthError('Không kết nối được máy chủ. Thử lại sau.');
   }
-  const json = (await res.json().catch(() => ({}))) as {
-    accessToken?: string;
-    expiresIn?: number;
-    user?: AuthUser;
-    message?: string | string[];
-    code?: string;
-  };
-  if (!res.ok || !json.accessToken || !json.user) {
+  const json = (await res.json().catch(() => ({}))) as AuthBody;
+  if (!res.ok) {
     const msg = Array.isArray(json.message) ? json.message[0] : json.message;
     throw new AuthError(msg || 'Có lỗi xảy ra. Thử lại sau.', json.code);
   }
+  return json;
+}
+
+/** Calls that end signed in: login, register, reset. */
+async function passwordCall(path: string, body: object): Promise<void> {
+  const json = await authPost(path, body);
+  if (!json.accessToken || !json.user) throw new AuthError('Có lỗi xảy ra. Thử lại sau.');
   setSession(json.accessToken, json.user, json.expiresIn);
   closeSignIn();
+}
+
+/** Always "sent" from the user's side: the API does not say whether the address exists. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  await authPost('password/forgot', { email });
+}
+
+export function resetPassword(token: string, password: string): Promise<void> {
+  return passwordCall('password/reset', { token, password });
+}
+
+export async function verifyEmail(token: string): Promise<string> {
+  const json = await authPost('verify', { token });
+  // Signed in on this device: show the change without a reload.
+  // (Not setSession: that would drop the token's renewal timer.)
+  if (user && user.email === json.email) {
+    user = { ...user, emailVerified: true };
+    emit();
+  }
+  return json.email ?? '';
+}
+
+export async function resendVerification(): Promise<void> {
+  await authPost('verify/send', {}, accessToken ?? (await refresh()));
 }
 
 export function signInWithPassword(email: string, password: string): Promise<void> {

@@ -68,12 +68,14 @@ export class AuthService {
         data: {
           googleSub: profile.googleSub,
           avatarUrl: byEmail.avatarUrl ?? profile.avatarUrl,
-          // Email sign-up does not verify the address (yet), so anyone could
-          // have registered this email with a password of their choosing and
+          // An unverified email sign-up could be anyone: someone may have
+          // registered this address with a password of their choosing and
           // waited for the real owner to arrive through Google. Google has
-          // just proved who owns the address; a password nobody proved
-          // ownership for is dropped, so it cannot be a back door.
-          passwordHash: null,
+          // just proved who owns the address, so a password set before the
+          // address was proven is dropped - it cannot be a back door. A
+          // verified account keeps its password: its owner set it.
+          ...(byEmail.emailVerifiedAt ? {} : { passwordHash: null }),
+          emailVerifiedAt: byEmail.emailVerifiedAt ?? new Date(),
         },
       });
     }
@@ -86,6 +88,7 @@ export class AuthService {
         displayName: profile.displayName || profile.email.split('@')[0],
         avatarUrl: profile.avatarUrl,
         locale: 'vi',
+        emailVerifiedAt: new Date(),
       },
     });
   }

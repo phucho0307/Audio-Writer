@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
+import { MailModule } from './mail/mail.module';
 import { AwThrottlerModule } from './throttler/throttler.module';
 import { HealthModule } from './health/health.module';
 import { AuthModule } from './auth/auth.module';
@@ -26,6 +27,7 @@ import { RatingsModule } from './ratings/ratings.module';
     }),
     PrismaModule,
     RedisModule,
+    MailModule,
     AwThrottlerModule,
     AuthModule,
     HealthModule,

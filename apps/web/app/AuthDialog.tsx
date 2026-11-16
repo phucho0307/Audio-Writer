@@ -5,6 +5,7 @@ import {
   AuthError,
   closeSignIn,
   getDialog,
+  requestPasswordReset,
   getServerDialog,
   setSignInMode,
   signInWithGoogle,
@@ -36,10 +37,13 @@ export default function AuthDialog() {
   const first = useRef<HTMLInputElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const signup = d.mode === 'signup';
+  const forgot = d.mode === 'forgot';
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!d.open) return;
     setError(null);
+    setSentTo(null);
     const t = setTimeout(() => first.current?.focus(), 30);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -70,6 +74,11 @@ export default function AuthDialog() {
     setBusy(true);
     setError(null);
     try {
+      if (forgot) {
+        await requestPasswordReset(email);
+        setSentTo(email.trim());
+        return;
+      }
       if (signup) await signUpWithPassword(email, password, name);
       else await signInWithPassword(email, password);
       setPassword('');
@@ -112,14 +121,26 @@ export default function AuthDialog() {
 
         <div className="flex flex-col gap-1.5 pr-8">
           <h2 id="auth-title" className="display text-[1.7rem] leading-tight">
-            {signup ? 'Tạo tài khoản' : `Đăng nhập ${BRAND}`}
+            {forgot ? 'Quên mật khẩu' : signup ? 'Tạo tài khoản' : `Đăng nhập ${BRAND}`}
           </h2>
           <p className="text-[13.5px] leading-relaxed text-[var(--color-muted)]">
-            {(signup ? d.reason?.replace(/^Đăng nhập để/, 'Tạo tài khoản để') : d.reason) ?? (signup ? 'Để chấm sao, rẽ nhánh và viết truyện của riêng bạn.' : 'Chào mừng bạn quay lại.')}
+            {forgot
+              ? 'Nhập email của tài khoản. Chúng tôi gửi một liên kết để bạn đặt mật khẩu mới.'
+              : (signup ? d.reason?.replace(/^Đăng nhập để/, 'Tạo tài khoản để') : d.reason) ?? (signup ? 'Để chấm sao, rẽ nhánh và viết truyện của riêng bạn.' : 'Chào mừng bạn quay lại.')}
           </p>
         </div>
 
-        {providers?.google && (
+        {forgot && sentTo ? (
+          <div className="flex flex-col gap-4">
+            <p className="rounded-md border border-[var(--color-accent-line)] bg-[var(--color-accent-soft)] p-4 text-[14px] leading-relaxed">
+              Nếu <strong>{sentTo}</strong> có tài khoản, liên kết đặt lại mật khẩu đã được gửi tới đó. Liên kết có hiệu lực 1 giờ. Nhớ xem cả mục Spam.
+            </p>
+            <button type="button" onClick={() => setSignInMode('signin')} className="btn btn-ghost w-full justify-center">
+              Quay lại đăng nhập
+            </button>
+          </div>
+        ) : (<>
+        {providers?.google && !forgot && (
           <>
             <button type="button" onClick={signInWithGoogle} className="btn btn-ghost w-full justify-center">
               <GoogleMark />
@@ -163,7 +184,7 @@ export default function AuthDialog() {
               placeholder="ban@email.com"
             />
           </label>
-          <label className="flex flex-col gap-1.5">
+          {!forgot && <label className="flex flex-col gap-1.5">
             <span className="flex items-baseline justify-between text-[12.5px] text-[var(--color-muted)]">
               Mật khẩu
               {signup && <span className="text-[11px] text-[var(--color-faint)]">ít nhất 8 ký tự</span>}
@@ -188,7 +209,16 @@ export default function AuthDialog() {
                 {show ? 'Ẩn' : 'Hiện'}
               </button>
             </span>
-          </label>
+          </label>}
+          {d.mode === 'signin' && (
+            <button
+              type="button"
+              onClick={() => { setError(null); setSignInMode('forgot'); }}
+              className="-mt-1 self-end text-[12.5px] text-[var(--color-muted)] hover:text-[var(--color-accent)]"
+            >
+              Quên mật khẩu?
+            </button>
+          )}
 
           {error && (
             <p role="alert" className="text-[12.5px] text-[var(--color-son)]">
@@ -198,23 +228,24 @@ export default function AuthDialog() {
 
           <button
             type="submit"
-            disabled={busy || !email || !password || (signup && (!name.trim() || password.length < 8))}
+            disabled={busy || !email || (!forgot && !password) || (signup && (!name.trim() || password.length < 8))}
             className="btn btn-primary mt-1 w-full justify-center"
           >
-            {busy ? 'Đang xử lý…' : signup ? 'Tạo tài khoản' : 'Đăng nhập'}
+            {busy ? 'Đang xử lý…' : forgot ? 'Gửi liên kết' : signup ? 'Tạo tài khoản' : 'Đăng nhập'}
           </button>
         </form>
 
         <p className="text-center text-[13px] text-[var(--color-muted)]">
-          {signup ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
+          {signup || forgot ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
           <button
             type="button"
-            onClick={() => { setError(null); setSignInMode(signup ? 'signin' : 'signup'); }}
+            onClick={() => { setError(null); setSignInMode(signup || forgot ? 'signin' : 'signup'); }}
             className="font-medium text-[var(--color-accent)] hover:underline"
           >
-            {signup ? 'Đăng nhập' : 'Đăng ký'}
+            {signup || forgot ? 'Đăng nhập' : 'Đăng ký'}
           </button>
         </p>
+        </>)}
       </div>
     </div>
   );

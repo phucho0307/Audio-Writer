@@ -70,3 +70,12 @@ test('Google arriving on an email someone registered drops that unverified passw
   // ... and the squatter's password no longer opens the account.
   await assert.rejects(w.svc.login({ email: 'victim@gmail.com', password: 'squatter-pass' }));
 });
+
+test('a verified account keeps its password when Google is linked', async () => {
+  const w = world();
+  await w.svc.register({ email: 'lan@gmail.com', password: 'mat-khau-dai', displayName: 'Lan' });
+  w.rows[0].emailVerifiedAt = new Date();
+  const u = await w.svc.fromGoogle({ googleSub: 'g', email: 'lan@gmail.com', emailVerified: true, displayName: 'Lan' });
+  assert.ok(u.passwordHash);
+  await w.svc.login({ email: 'lan@gmail.com', password: 'mat-khau-dai' });
+});

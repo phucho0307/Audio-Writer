@@ -270,7 +270,22 @@ khác với mật khẩu họ biết, chờ chủ thật đăng nhập Google v�
 chặn: khi Google nối vào tài khoản có sẵn, mật khẩu chưa xác minh bị xoá, vì Google vừa
 chứng minh ai là chủ email. Có unit test cho đúng tình huống này.
 
-**Chưa làm (cần dịch vụ gửi mail):** xác minh email, quên mật khẩu.
+**Xác minh email và quên mật khẩu (Resend).**
+- Gửi mail bằng một lệnh `fetch` tới API của Resend, không thêm SDK. Không có key thì mail
+  được ghi vào log, nên trên laptop vẫn bấm thử được toàn bộ luồng.
+- Link chứa token ngẫu nhiên 256-bit; chỉ lưu **SHA-256** của token trong Redis kèm thời hạn
+  (xác minh 24 giờ, đặt lại mật khẩu 1 giờ). Lộ dữ liệu Redis cũng không mở được tài khoản nào.
+  Token chỉ dùng một lần (`GETDEL`), và xin link mới thì link cũ hết hiệu lực.
+- "Quên mật khẩu" luôn trả cùng một câu, nên không ai dò được email nào có tài khoản. Mỗi
+  email nhận tối đa 3 mail mỗi loại mỗi giờ, để form không bị dùng để spam người khác.
+- Đặt lại mật khẩu thì **đăng xuất mọi thiết bị**: nếu có người biết mật khẩu cũ (có thể là
+  lý do phải đổi), họ cũng mất phiên. Mở được link nghĩa là đã chứng minh hộp thư, nên tài
+  khoản được tính là đã xác minh.
+- Trang nhận link đọc token rồi xoá nó khỏi thanh địa chỉ, để link đã dùng không nằm lại
+  trong lịch sử trình duyệt.
+- Luật nối Google được tinh chỉnh: tài khoản **đã xác minh** giữ mật khẩu khi nối Google;
+  chỉ mật khẩu đặt khi email chưa được chứng minh mới bị xoá.
+- Chưa xác minh vẫn dùng được mọi thứ; chỉ có một dòng nhắc dưới thanh menu kèm nút gửi lại.
 
 ## 8. Hồ sơ người dùng và avatar
 

@@ -26,6 +26,10 @@ model User {
   handle       String  @unique
   displayName  String
   passwordHash String? // null for OAuth-only accounts
+  /// When the owner proved they read this inbox: a link we emailed, a
+  /// password reset, or Google saying so. Null for an email sign-up that has
+  /// not clicked its link yet.
+  emailVerifiedAt DateTime?
   googleSub    String? @unique
   avatarUrl    String?
   locale       String  @default("vi")

@@ -17,6 +17,29 @@ export class RegisterDto {
   displayName!: string;
 }
 
+export class EmailDto {
+  @IsEmail({}, { message: 'Email không hợp lệ.' })
+  @MaxLength(254)
+  email!: string;
+}
+
+export class TokenDto {
+  @IsString()
+  @MaxLength(200)
+  token!: string;
+}
+
+export class ResetDto {
+  @IsString()
+  @MaxLength(200)
+  token!: string;
+
+  @IsString()
+  @MinLength(8, { message: 'Mật khẩu cần ít nhất 8 ký tự.' })
+  @MaxLength(128, { message: 'Mật khẩu tối đa 128 ký tự.' })
+  password!: string;
+}
+
 export class LoginDto {
   @IsString()
   @MaxLength(254)

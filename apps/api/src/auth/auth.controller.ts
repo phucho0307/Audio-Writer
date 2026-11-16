@@ -17,7 +17,8 @@ import type { Role } from '@prisma/client';
 import { AuthFailureLimiter, clientIp } from './auth-failure.limiter';
 import { AuthService, normaliseEmail, type GoogleProfile } from './auth.service';
 import { LoginLimiter } from './login-limiter';
-import { LoginDto, RegisterDto } from './password.dto';
+import { EmailDto, LoginDto, RegisterDto, ResetDto, TokenDto } from './password.dto';
+import { EmailFlowsService } from './email-flows.service';
 import { CurrentUserService } from './current-user.service';
 import { OAuthFailureFilter } from './oauth-failure.filter';
 import { TokenService, type IssuedTokens } from './token.service';
@@ -44,6 +45,7 @@ export class AuthController {
     private readonly currentUser: CurrentUserService,
     private readonly failures: AuthFailureLimiter,
     private readonly logins: LoginLimiter,
+    private readonly emails: EmailFlowsService,
     private readonly config: ConfigService,
   ) {}
 
@@ -137,6 +139,39 @@ export class AuthController {
     const tokens = await this.tokens.issue(user, this.meta(req));
     this.setRefreshCookie(res, tokens.refreshToken);
     this.logger.log(`Registered @${user.handle}`);
+    // The account works straight away; the email only proves the address.
+    // A mail that fails to go out must not fail the sign-up - "gửi lại" exists.
+    await this.emails.sendVerification(user).catch((err: Error) =>
+      this.logger.warn(`verification mail for @${user.handle} not sent: ${err.message}`),
+    );
+    return this.body(tokens, user);
+  }
+
+  /** "Gửi lại email xác minh", for the signed-in owner of an unverified address. */
+  @Post('verify/send')
+  async resendVerification() {
+    await this.emails.sendVerification(await this.currentUser.current());
+    return { ok: true };
+  }
+
+  @Post('verify')
+  verify(@Body() dto: TokenDto) {
+    return this.emails.verify(dto.token);
+  }
+
+  /** Same answer whether or not the address has an account. */
+  @Post('password/forgot')
+  async forgot(@Body() dto: EmailDto) {
+    await this.emails.forgot(dto.email);
+    return { ok: true };
+  }
+
+  /** New password from an emailed link; signs out every other session and signs this one in. */
+  @Post('password/reset')
+  async reset(@Body() dto: ResetDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    const user = await this.emails.reset(dto.token, dto.password);
+    const tokens = await this.tokens.issue(user, this.meta(req));
+    this.setRefreshCookie(res, tokens.refreshToken);
     return this.body(tokens, user);
   }
 
@@ -229,6 +264,7 @@ export class AuthController {
     avatarUrl: string | null;
     locale: string;
     role: Role;
+    emailVerifiedAt?: Date | null;
   }) {
     return {
       id: user.id,
@@ -238,6 +274,7 @@ export class AuthController {
       avatarUrl: user.avatarUrl,
       locale: user.locale,
       role: user.role,
+      emailVerified: Boolean(user.emailVerifiedAt),
     };
   }
 }

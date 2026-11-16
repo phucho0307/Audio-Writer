@@ -10,6 +10,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthFailureLimiter } from './auth-failure.limiter';
 import { LoginLimiter } from './login-limiter';
+import { EmailFlowsService } from './email-flows.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { CurrentUserService } from './current-user.service';
@@ -58,6 +59,7 @@ const GOOGLE_STRATEGY = {
     TokenService,
     AuthFailureLimiter,
     LoginLimiter,
+    EmailFlowsService,
     AuthService,
     OAuthFailureFilter,
     SessionCleanupService,
