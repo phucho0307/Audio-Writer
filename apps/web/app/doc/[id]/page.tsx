@@ -121,7 +121,7 @@ export default function Contents({
         <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[460px] overflow-hidden">
           <div
             className="h-full w-full scale-125 bg-cover bg-center opacity-30 blur-3xl"
-            style={{ backgroundImage: `url(${story.coverUrl})` }}
+            style={{ backgroundImage: `url(${thumbUrl(story.coverUrl)})` }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_oklab,var(--color-ground)_55%,transparent)] to-[var(--color-ground)]" />
         </div>

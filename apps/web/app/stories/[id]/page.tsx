@@ -1,5 +1,6 @@
 "use client";
 
+import { thumbUrl } from '@/lib/thumb';
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -452,7 +453,7 @@ export default function StoryPage({
               ) : (
                 <div className="cover aspect-[3/4]">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={story.coverUrl!} alt={`Ảnh bìa ${story.title}`} />
+                  <img src={thumbUrl(story.coverUrl!)} alt={`Ảnh bìa ${story.title}`} />
                 </div>
               )}
               {story.coverCredit && <a href={story.coverCredit.sourceUrl} target="_blank" rel="noopener noreferrer" className="mt-2 block text-[10px] text-[var(--color-muted)] underline">{story.coverCredit.photographer || 'Ảnh'} / Pexels ↗</a>}

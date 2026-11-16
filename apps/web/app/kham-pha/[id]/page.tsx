@@ -109,7 +109,7 @@ export default function ForkPicker({
         >
           <div
             className="h-full w-full scale-125 bg-cover bg-center opacity-25 blur-3xl"
-            style={{ backgroundImage: `url(${story.coverUrl})` }}
+            style={{ backgroundImage: `url(${thumbUrl(story.coverUrl)})` }}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[color-mix(in_oklab,var(--color-ground)_60%,transparent)] to-[var(--color-ground)]" />
         </div>

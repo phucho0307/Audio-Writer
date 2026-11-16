@@ -1,5 +1,6 @@
 'use client';
 
+import { thumbUrl } from '@/lib/thumb';
 import { useRef } from 'react';
 import Link from 'next/link';
 import type { Story } from '@/lib/api';
@@ -225,7 +226,7 @@ export default function Hero({ stories }: { stories: Story[] }) {
                 >
                   <div className="cover aspect-[3/4] shadow-[0_30px_60px_-20px_rgb(0_0_0/0.8)]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={s.coverUrl!} alt="" />
+                    <img src={thumbUrl(s.coverUrl!)} alt="" />
                     <span className="scrim">
                       <span className="display line-clamp-2 block text-[14px] leading-tight text-white">
                         {s.title}

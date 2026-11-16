@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { thumbUrl } from '@/lib/thumb';
+import { mediaUrl, thumbUrl } from '@/lib/thumb';
 
 export { thumbUrl };
 
@@ -36,7 +36,7 @@ export default function CoverThumb({
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"
       onError={() => {
-        if (current !== src) setCurrent(src);
+        if (current !== mediaUrl(src)) setCurrent(mediaUrl(src));
         else onFail?.();
       }}
     />

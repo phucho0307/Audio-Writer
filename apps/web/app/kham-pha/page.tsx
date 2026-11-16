@@ -342,7 +342,7 @@ function Featured({ story }: { story: Story }) {
           ref={backdrop}
           aria-hidden
           className="absolute inset-0 scale-125 bg-cover bg-center opacity-35 blur-3xl"
-          style={{ backgroundImage: `url(${story.coverUrl})` }}
+          style={{ backgroundImage: `url(${thumbUrl(story.coverUrl)})` }}
         />
       )}
       <div

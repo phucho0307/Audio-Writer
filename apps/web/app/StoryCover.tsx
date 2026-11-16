@@ -55,7 +55,8 @@ function CoverDialog({ story, onClose, onChange }: {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [broken, setBroken] = useState<string[]>([]);
-  const preview = mode === 'upload' ? localUrl ?? story.coverUrl : selected?.previewUrl ?? story.coverUrl;
+  const current = story.coverUrl ? thumbUrl(story.coverUrl) : story.coverUrl;
+  const preview = mode === 'upload' ? localUrl ?? current : selected?.previewUrl ?? current;
   const credit = mode === 'ai' ? selected?.credit ?? story.coverCredit : file ? null : story.coverCredit;
   const canSave = mode === 'upload' ? !!file : !!selected;
 
