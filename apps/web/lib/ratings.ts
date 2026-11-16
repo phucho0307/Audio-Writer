@@ -48,13 +48,15 @@ const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, n
 
 /**
  * A story's rating. Skewed the way real catalogues are: most stories sit
- * between 4.0 and 4.8, and a few have thousands of ratings while most have
- * tens or hundreds.
+ * between 4.0 and 4.8, and most have a few dozen ratings while a few get
+ * into the hundreds. Capped under 500 - a new site with thousands of ratings
+ * per story would not be believable.
  */
 export function storyRating(storyId: string): Rating {
   const r = seeded(hash(`story:${storyId}`));
   const score = round1(clamp(3.7 + r() * 1.2, 1, 5));
-  const count = Math.round(40 + Math.pow(r(), 2.2) * 4200);
+  // 12 to 492.
+  const count = Math.round(12 + Math.pow(r(), 2.2) * 480);
   return { score, count };
 }
 
