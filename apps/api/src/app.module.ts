@@ -11,6 +11,8 @@ import { LlmModule } from './llm/llm.module';
 import { EventsModule } from './events/events.module';
 import { StorageModule } from './storage/storage.module';
 import { DiscoveryModule } from './discovery/discovery.module';
+import { ReadingModule } from './reading/reading.module';
+import { CommentsModule } from './comments/comments.module';
 import { CollabModule } from './collab/collab.module';
 import { TtsModule } from './tts/tts.module';
 import { UsersModule } from './users/users.module';
@@ -39,6 +41,8 @@ import { RatingsModule } from './ratings/ratings.module';
     TtsModule,
     CollabModule,
     DiscoveryModule,
+    ReadingModule,
+    CommentsModule,
   ],
 })
 export class AppModule {}

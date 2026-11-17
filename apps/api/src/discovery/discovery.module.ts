@@ -6,6 +6,7 @@ import { DiscoveryService } from './discovery.service';
 import { EmbeddingService } from './embedding.service';
 import { GeminiJson } from './gemini-json';
 import { StoryCardsService } from './story-cards.service';
+import { RelatedService } from './related.service';
 
 /**
  * AI story search: a card per story (written in the background, within a
@@ -14,6 +15,6 @@ import { StoryCardsService } from './story-cards.service';
 @Module({
   imports: [AuthModule],
   controllers: [DiscoveryController],
-  providers: [GeminiJson, EmbeddingService, StoryCardsService, DiscoveryService, CardScheduler],
+  providers: [GeminiJson, EmbeddingService, StoryCardsService, DiscoveryService, RelatedService, CardScheduler],
 })
 export class DiscoveryModule {}

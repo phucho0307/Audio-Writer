@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { EntitlementKind, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
+import { emailUnverified, requiresVerifiedEmail } from '../auth/verified';
 
 export interface QuotaStatus {
   /** Free turns included every day. */
@@ -39,12 +40,15 @@ export class AiQuotaService {
   private readonly dailyLimit: number;
   private readonly timeZone: string;
 
+  private readonly needVerified: boolean;
+
   constructor(
     private readonly config: ConfigService,
     private readonly redis: RedisService,
     private readonly prisma: PrismaService,
   ) {
     this.dailyLimit = Number(this.config.get('AI_FREE_DAILY', 3));
+    this.needVerified = requiresVerifiedEmail(this.config);
     // The audience is Vietnamese, so the day should roll over at their
     // midnight, not UTC's.
     this.timeZone = this.config.get('AI_QUOTA_TZ', 'Asia/Ho_Chi_Minh');
@@ -121,6 +125,9 @@ export class AiQuotaService {
    * given a 200 and cannot be shown a paywall.
    */
   async consume(user: User): Promise<QuotaStatus & { spent: Spend }> {
+    // Before anything is counted: an account whose email nobody has proven
+    // gets no free turns, or accounts would be a way to mint them.
+    if (this.needVerified && !user.emailVerifiedAt) throw emailUnverified();
     const status = await this.status(user);
     if (status.unlimited) return { ...status, spent: null };
 

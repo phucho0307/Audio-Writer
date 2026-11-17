@@ -135,7 +135,9 @@ export class AuthController {
    */
   @Post('register')
   async register(@Body() dto: RegisterDto, @Req() req: Request, @Res({ passthrough: true }) res: Response) {
+    await this.logins.assertMayRegister(clientIp(req));
     const user = await this.auth.register(dto);
+    await this.logins.countRegistration(clientIp(req));
     const tokens = await this.tokens.issue(user, this.meta(req));
     this.setRefreshCookie(res, tokens.refreshToken);
     this.logger.log(`Registered @${user.handle}`);

@@ -6,6 +6,7 @@ const WINDOW_S = 15 * 60;
 const PER_EMAIL = 10;
 /** Wrong passwords from one address across all accounts: stops spraying one password at many. */
 const PER_IP = 30;
+const REGISTRATIONS_PER_IP_PER_DAY = 5;
 
 /**
  * Password guessing limits, separate from the refresh-token limiter.
@@ -47,6 +48,35 @@ export class LoginLimiter {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
+  }
+
+  /**
+   * New accounts per address per day. A household or a small office fits
+   * under it; a script registering accounts to collect free allowances does
+   * not. Google sign-in is unaffected: Google has already done this work.
+   */
+  async assertMayRegister(ip: string): Promise<void> {
+    let made = 0;
+    try {
+      made = Number((await this.redis.client.get(`regs:ip:${ip}`)) ?? 0);
+    } catch {
+      return; // fail open, as above
+    }
+    if (made >= REGISTRATIONS_PER_IP_PER_DAY) {
+      throw new HttpException(
+        {
+          code: 'TOO_MANY_ACCOUNTS',
+          message:
+            'Mạng này đã tạo quá nhiều tài khoản hôm nay. Hãy đăng nhập bằng Google, hoặc thử lại vào ngày mai.',
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
+  /** Counted only once an account was really created, so a typo in the form costs nothing. */
+  async countRegistration(ip: string): Promise<void> {
+    await this.redis.incrementWindow(`regs:ip:${ip}`, 24 * 3600).catch(() => 0);
   }
 
   async recordFailure(email: string, ip: string): Promise<void> {

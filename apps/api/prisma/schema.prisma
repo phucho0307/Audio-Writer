@@ -21,19 +21,19 @@ enum Role {
 }
 
 model User {
-  id           String  @id @default(uuid()) @db.Uuid
-  email        String  @unique
-  handle       String  @unique
-  displayName  String
-  passwordHash String? // null for OAuth-only accounts
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  handle          String    @unique
+  displayName     String
+  passwordHash    String? // null for OAuth-only accounts
   /// When the owner proved they read this inbox: a link we emailed, a
   /// password reset, or Google saying so. Null for an email sign-up that has
   /// not clicked its link yet.
   emailVerifiedAt DateTime?
-  googleSub    String? @unique
-  avatarUrl    String?
-  locale       String  @default("vi")
-  role         Role    @default(USER)
+  googleSub       String?   @unique
+  avatarUrl       String?
+  locale          String    @default("vi")
+  role            Role      @default(USER)
 
   /// A few lines about themselves, shown on their profile. Plain text.
   bio             String?
@@ -58,6 +58,9 @@ model User {
   unlocks        StoryUnlock[]
   ratings        StoryRating[]
   readsLog       StoryReader[]
+  progress       ReadingProgress[]
+  follows        StoryFollow[]
+  comments       Comment[]
   ledger         LedgerEntry[]
   collaborations BranchCollaborator[]
 
@@ -99,24 +102,24 @@ enum Visibility {
 }
 
 model Story {
-  id         String      @id @default(uuid()) @db.Uuid
-  ownerId    String      @db.Uuid
-  owner      User        @relation(fields: [ownerId], references: [id])
-  title      String
-  synopsis   String?
+  id          String      @id @default(uuid()) @db.Uuid
+  ownerId     String      @db.Uuid
+  owner       User        @relation(fields: [ownerId], references: [id])
+  title       String
+  synopsis    String?
   /// Cover art. Local path in dev, object-store URL in production.
-  coverUrl   String?
+  coverUrl    String?
   /// Source and photographer for a cover selected from a stock library.
   coverCredit Json?
   /// Attribution for a full-text work imported with republication rights.
   /// Ownership of the library record is separate from the literary author.
-  textSource Json?
-  genres     String[]
-  language   String      @default("vi")
-  status     StoryStatus @default(DRAFTING)
+  textSource  Json?
+  genres      String[]
+  language    String      @default("vi")
+  status      StoryStatus @default(DRAFTING)
   /// Starts private. A story becomes visible only through an explicit publish,
   /// which is also where the fork policy has to be answered.
-  visibility Visibility  @default(PRIVATE)
+  visibility  Visibility  @default(PRIVATE)
 
   // Denormalised for the feed. Recomputed on write, never read-modify-write.
   contributionCount Int @default(0)
@@ -164,6 +167,8 @@ model Story {
   ratings  StoryRating[]
   readers  StoryReader[]
   card     StoryCard?
+  progress ReadingProgress[]
+  follows  StoryFollow[]
 
   @@index([visibility, status, updatedAt])
   @@index([genres], type: Gin)
@@ -261,7 +266,8 @@ model Contribution {
 
   createdAt DateTime @default(now())
 
-  audio     AudioClip[]
+  audio    AudioClip[]
+  comments Comment[]
 
   @@unique([branchId, depth])
   @@index([branchId, depth])
@@ -375,11 +381,11 @@ enum SourceKind {
 /// gets indexed is our own craft notes, written from reading them, which is
 /// what a human studying the genre would produce anyway.
 model ReferenceSource {
-  id    String     @id @default(uuid()) @db.Uuid
-  slug  String     @unique
-  name  String
-  url   String
-  kind  SourceKind
+  id     String     @id @default(uuid()) @db.Uuid
+  slug   String     @unique
+  name   String
+  url    String
+  kind   SourceKind
   /// Which of the five this is worth studying for.
   genres Genre[]
   /// One line: what a writer gets here that they will not get elsewhere.
@@ -423,8 +429,8 @@ model CraftNote {
   sourceId String?          @db.Uuid
   source   ReferenceSource? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([genre, kind])
   @@map("craft_notes")
@@ -583,25 +589,25 @@ model Entitlement {
 /// `embedding` (pgvector) and `search` (full-text, accent-folded) are created
 /// by the migration and used through raw SQL, as Prisma has no type for them.
 model StoryCard {
-  storyId    String   @id @db.Uuid
-  story      Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  summary    String
+  storyId   String   @id @db.Uuid
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  summary   String
   /// Concrete plot motifs: "chồng ngoại tình", "tiểu tam mang thai".
-  tropes     String[]
+  tropes    String[]
   /// From a fixed list, so a query can match them exactly.
-  moods      String[]
+  moods     String[]
   /// HE (happy), SE (sad), OE (open) or UNKNOWN.
-  ending     String
-  keywords   String[]
+  ending    String
+  keywords  String[]
   /// The text that was embedded and full-text indexed.
-  document   String
+  document  String
   /// Model that wrote the card, and the prompt version. A change means the
   /// card is regenerated; "stale" marks one whose story has changed.
-  model      String
-  version    Int
-  stale      Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  model     String
+  version   Int
+  stale     Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("story_cards")
 }
@@ -636,6 +642,74 @@ model StoryReader {
   @@id([storyId, userId])
   @@index([userId])
   @@map("story_readers")
+}
+
+/// Where a signed-in reader stopped in a story: which chapter, and how far
+/// into its narration. One row per reader per story - the newest position
+/// wins - so "nghe tiếp" picks up on another device.
+model ReadingProgress {
+  userId  String @db.Uuid
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId String @db.Uuid
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  /// The branch being read; null is the story's main line.
+  branchId    String? @db.Uuid
+  /// 0-based chapter.
+  depth       Int
+  /// Seconds into that chapter's narration; 0 when only reading.
+  positionSec Int     @default(0)
+
+  /// When the reader was there, by their device's clock (never in the
+  /// future). Two devices are merged on this, so an old phone coming back
+  /// online does not rewind what was heard since on the laptop.
+  updatedAt DateTime
+
+  @@id([userId, storyId])
+  @@index([userId, updatedAt])
+  @@map("reading_progress")
+}
+
+/// A reader following a story.
+///
+/// New chapters are found by comparison, not by fan-out: the story's chapter
+/// count against what this follower had seen. Publishing a chapter writes
+/// nothing per follower, so a story with a hundred thousand followers costs
+/// the same to update as one with none.
+model StoryFollow {
+  userId  String @db.Uuid
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storyId String @db.Uuid
+  story   Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+
+  /// Chapters the story had when this follower last opened it.
+  seenChapters Int      @default(0)
+  createdAt    DateTime @default(now())
+
+  @@id([userId, storyId])
+  @@index([storyId])
+  @@map("story_follows")
+}
+
+/// A reader's comment on one chapter.
+///
+/// Attached to the chapter row itself rather than to "story + chapter
+/// number": chapter 5 of a fork is a different text from chapter 5 of the
+/// original, and a branch's inherited chapters are the same rows as its
+/// parent's, so their comments are shared exactly where the text is.
+model Comment {
+  id             String       @id @default(uuid()) @db.Uuid
+  contributionId String       @db.Uuid
+  contribution   Contribution @relation(fields: [contributionId], references: [id], onDelete: Cascade)
+  userId         String       @db.Uuid
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([contributionId, createdAt])
+  @@index([userId, createdAt])
+  @@map("comments")
 }
 
 model StoryUnlock {

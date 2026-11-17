@@ -5,12 +5,20 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { unsafeProductionSettings } from './production-guard';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
   });
   const config = app.get(ConfigService);
+
+  const unsafe = unsafeProductionSettings((key) => config.get<string>(key));
+  if (unsafe.length > 0) {
+    Logger.error(`Refusing to start in production:\n - ${unsafe.join('\n - ')}`, 'Bootstrap');
+    await app.close();
+    process.exit(1);
+  }
 
   // Both rate limiters key on the caller's address, so this has to be exact,
   // and it is wrong in opposite directions depending on the deployment. Off,
