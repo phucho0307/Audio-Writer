@@ -7,6 +7,9 @@ import { mainBranch, api, type BranchRead, type Story } from '@/lib/api';
 import { useAuth } from '@/lib/useAuth';
 import { signIn } from '@/lib/auth';
 import ChapterNarration from './ChapterNarration';
+import Comments from './Comments';
+import { saveProgress, progressOf } from '@/lib/progress';
+import ReaderSettings from './ReaderSettings';
 import RichText from '@/app/RichText';
 import { docOf } from '@/lib/prose';
 import { chapterAuthorHandle } from '@/lib/chapter-author';
@@ -109,6 +112,25 @@ export default function Reader({
   useEffect(() => {
     if (story) api.recordView(id).catch(() => {});
   }, [story, id]);
+
+  // Opening a chapter is a place to come back to, even without listening.
+  // A position further into this same chapter (left mid-narration) is kept.
+  useEffect(() => {
+    if (!story || !read) return;
+    if (!read.contributions.some((c) => c.depth === depth)) return;
+    const kept = progressOf(story.id);
+    const sameSpot =
+      kept && kept.chapter === depth + 1 && (kept.branchId ?? null) === (wantedBranch ?? null);
+    saveProgress({
+      storyId: story.id,
+      title: story.title,
+      coverUrl: story.coverUrl,
+      branchId: wantedBranch,
+      chapter: depth + 1,
+      totalChapters: story.contributionCount,
+      at: sameSpot ? kept.at : 0,
+    });
+  }, [story, read, depth, wantedBranch]);
 
   /**
    * Fork here and go straight to writing.
@@ -223,9 +245,12 @@ export default function Reader({
             </Link>
           </div>
 
-          <span className="label label-accent">
-            Chương {depth + 1} / {total}
-          </span>
+          <div className="flex items-center justify-between gap-3">
+            <span className="label label-accent">
+              Chương {depth + 1} / {total}
+            </span>
+            <ReaderSettings />
+          </div>
 
           <h1 className="display text-[1.9rem] leading-[1.12] sm:text-[2.2rem]">
             {chapter.title ?? `Chương ${depth + 1}`}
@@ -245,6 +270,10 @@ export default function Reader({
         {current && <BranchBanner story={story} branch={current} />}
 
         <ChapterNarration
+          story={{ id: story.id, title: story.title, coverUrl: story.coverUrl, totalChapters: story.contributionCount }}
+          branchParam={wantedBranch}
+          chapterTitle={chapter.title ?? `Chương ${depth + 1}`}
+          prevHref={prev !== null ? `/doc/${id}/${prev}${q}` : null}
           branchId={read.branch.id}
           depth={depth}
           next={
@@ -352,6 +381,8 @@ export default function Reader({
             </span>
           )}
         </nav>
+
+        <Comments chapterId={chapter.id} />
       </main>
     </>
   );

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type RatingSummary } from '@/lib/api';
 import { signIn } from '@/lib/auth';
 import { useAuth } from '@/lib/useAuth';
+import { progressOf } from '@/lib/progress';
 
 const STAR =
   'M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z';
@@ -28,7 +29,31 @@ export default function RateStory({ storyId }: { storyId: string }) {
   const pending = useRef(0);
 
   useEffect(() => {
-    api.storyRating(storyId).then(setR).catch(() => setR(null));
+    let live = true;
+    api
+      .storyRating(storyId)
+      .then(async (summary) => {
+        // Read on this device before signing in: the server has not heard
+        // yet. Tell it, and ask again, rather than say "read it first" to
+        // someone who just did.
+        const local = progressOf(storyId);
+        if (summary.reason === 'READ_FIRST' && user && local) {
+          await api
+            .saveProgress(storyId, {
+              branchId: local.branchId,
+              depth: local.chapter - 1,
+              at: local.at,
+              updatedAt: local.updatedAt,
+            })
+            .catch(() => {});
+          summary = await api.storyRating(storyId);
+        }
+        if (live) setR(summary);
+      })
+      .catch(() => live && setR(null));
+    return () => {
+      live = false;
+    };
   }, [storyId, user?.id]);
 
   useEffect(() => {

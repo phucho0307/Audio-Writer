@@ -7,6 +7,7 @@ import { api, type Story } from '@/lib/api';
 import Reveal from '../Reveal';
 import CoverThumb from '../CoverThumb';
 import AiFinder from './AiFinder';
+import ContinueShelf from './ContinueShelf';
 import SpiritText from '../SpiritText';
 import Tilt, { Sheen } from '../Tilt';
 import RatingBadge from '../Rating';
@@ -215,6 +216,8 @@ export default function Explore() {
           </p>
         </Reveal>
       )}
+
+      <ContinueShelf />
 
       <section className="flex flex-col gap-6">
         <div className="flex flex-wrap items-baseline justify-between gap-4">

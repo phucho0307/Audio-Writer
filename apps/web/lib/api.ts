@@ -33,6 +33,59 @@ export type RatingSummary = {
   reason: 'SIGN_IN' | 'READ_FIRST' | 'OWN_STORY' | null;
 };
 
+/** Where a reader stopped in a story, as the server keeps it. */
+export type ServerProgress = {
+  storyId: string;
+  title: string;
+  coverUrl: string | null;
+  totalChapters: number;
+  branchId: string | null;
+  /** 0-based chapter. */
+  depth: number;
+  /** Seconds into the chapter's narration. */
+  at: number;
+  /** Epoch milliseconds. */
+  updatedAt: number;
+};
+
+export type FollowState = { following: boolean; followers: number };
+
+export type FollowedStory = {
+  storyId: string;
+  title: string;
+  coverUrl: string | null;
+  genres: string[];
+  totalChapters: number;
+  newChapters: number;
+  /** 1-based chapter to open to read what is new. */
+  firstNew: number;
+  updatedAt: string;
+};
+
+export type ChapterComment = {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: { handle: string; displayName: string; avatarUrl: string | null };
+  mine: boolean;
+  canDelete: boolean;
+};
+
+export type CommentPage = { total: number; items: ChapterComment[]; nextCursor: string | null };
+
+export type RelatedStories = {
+  /** `similar`: closest in what the story is about. `genre`: shares a genre. */
+  basis: 'similar' | 'genre';
+  stories: {
+    id: string;
+    title: string;
+    coverUrl: string | null;
+    genres: string[];
+    contributionCount: number;
+    authorName: string | null;
+  }[];
+};
+
 export type Story = {
   id: string;
   title: string;
@@ -669,6 +722,41 @@ export const api = {
     }),
   unrateStory: (storyId: string) =>
     call<RatingSummary>(`/stories/${storyId}/rating`, { method: 'DELETE' }),
+
+  // ---- what a reader carries between visits
+
+  progress: () => call<ServerProgress[]>('/me/progress'),
+  saveProgress: (
+    storyId: string,
+    p: { branchId: string | null; depth: number; at: number; updatedAt: number },
+    keepalive = false,
+  ) =>
+    call<{ ok: true }>(`/me/progress/${storyId}`, {
+      method: 'PUT',
+      body: JSON.stringify(p),
+      // Lets the last position leave with the page when a tab is closed.
+      keepalive,
+    }),
+  forgetProgress: (storyId: string) =>
+    call<{ ok: true }>(`/me/progress/${storyId}`, { method: 'DELETE' }),
+
+  followState: (storyId: string) => call<FollowState>(`/stories/${storyId}/follow`),
+  follow: (storyId: string) => call<FollowState>(`/stories/${storyId}/follow`, { method: 'PUT' }),
+  unfollow: (storyId: string) => call<FollowState>(`/stories/${storyId}/follow`, { method: 'DELETE' }),
+  followSeen: (storyId: string) =>
+    call<{ ok: true }>(`/stories/${storyId}/follow/seen`, { method: 'POST' }),
+  myFollows: () => call<FollowedStory[]>('/me/follows'),
+
+  comments: (chapterId: string, cursor?: string | null) =>
+    call<CommentPage>(`/chapters/${chapterId}/comments${cursor ? `?cursor=${cursor}` : ''}`),
+  addComment: (chapterId: string, body: string) =>
+    call<ChapterComment>(`/chapters/${chapterId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify({ body }),
+    }),
+  deleteComment: (id: string) => call<{ deleted: true }>(`/comments/${id}`, { method: 'DELETE' }),
+
+  related: (storyId: string) => call<RelatedStories>(`/stories/${storyId}/related`),
 
   recordView: (storyId: string) =>
     call<{ viewCount: number }>(`/stories/${storyId}/view`, { method: 'POST' }),

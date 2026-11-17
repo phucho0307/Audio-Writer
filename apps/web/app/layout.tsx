@@ -8,6 +8,7 @@ import MotionToggle from './MotionToggle';
 import MobileTabs from './MobileTabs';
 import AuthDialog from './AuthDialog';
 import VerifyBanner from './VerifyBanner';
+import FollowBell from './FollowBell';
 import './globals.css';
 
 export const viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' as const };
@@ -92,6 +93,7 @@ export default function RootLayout({
             <div className="flex items-center gap-1 sm:gap-4">
               <Nav />
               <div className="flex items-center">
+                <FollowBell />
                 <MotionToggle />
                 <ThemeToggle />
               </div>

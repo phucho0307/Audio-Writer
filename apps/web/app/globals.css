@@ -642,7 +642,7 @@ body {
  */
 .prose-read {
   font-family: var(--font-serif);
-  font-size: 19px;
+  font-size: var(--read-size, 19px);
   line-height: 1.78;
   letter-spacing: 0.002em;
   max-width: 34em;

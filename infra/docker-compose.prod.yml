@@ -37,6 +37,10 @@ services:
         NEXT_PUBLIC_API_URL: /api
         NEXT_PUBLIC_MEDIA_BASE: ${MEDIA_BASE:-}
         API_URL: http://api:4000
+    environment:
+      # Read at request time by the server-rendered link previews.
+      API_URL: http://api:4000
+      SITE_URL: https://${DOMAIN}
     restart: unless-stopped
 
   # Runs pending migrations, then exits. The API waits for it to succeed,

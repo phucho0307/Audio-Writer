@@ -6,6 +6,25 @@
 {$DOMAIN} {
 	encode zstd gzip
 
+	# Sent with every page and API response.
+	header {
+		# HTTPS only from now on, for a year, subdomains included.
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# No other site may put these pages in a frame (clickjacking).
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		# Links out carry only the origin, never the path - a share or reset
+		# token in a URL stays here.
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+		# Where a page may load things from. Scripts: this site only, plus the
+		# inline theme script that runs before first paint. Images and audio
+		# also come from R2. Fonts from Google. frame-ancestors repeats the
+		# frame rule for browsers that only read CSP.
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; object-src 'none'"
+		-Server
+	}
+
 	@api path /api /api/* /collab /collab/*
 	handle @api {
 		reverse_proxy api:4000

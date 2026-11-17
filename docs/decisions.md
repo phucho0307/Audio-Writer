@@ -293,6 +293,67 @@ chứng minh ai là chủ email. Có unit test cho đúng tình huống này.
   chỉ mật khẩu đặt khi email chưa được chứng minh mới bị xoá.
 - Chưa xác minh vẫn dùng được mọi thứ; chỉ có một dòng nhắc dưới thanh menu kèm nút gửi lại.
 
+## 7e. Đợt cải thiện lớn: tốc độ, nghe tiếp, theo dõi, bình luận
+
+**Lỗi hiệu năng lớn nhất: danh sách truyện mất 10–15 giây.** Trang chủ và Khám phá đều tải
+toàn bộ 1.111 truyện. Mỗi lần là ba truy vấn tới database ở Singapore trong khi máy chủ ở
+Mỹ, và kết quả nặng 1,75 MB. Cách sửa: dựng danh sách một lần, lưu sẵn dạng JSON trong
+Redis, trả về ngay rồi làm mới ngầm khi có thay đổi (đăng truyện, thêm chương, chấm sao).
+Kỹ thuật này gọi là *stale-while-revalidate*. Còn **0,06 giây**. Có xử lý trường hợp một thay
+đổi xảy ra đúng lúc đang dựng lại: đếm "thế hệ", nếu trong lúc dựng có thay đổi thì dựng tiếp.
+
+**Lượt xem bị đếm trùng.** Mỗi chương mở ra đều cộng một lượt, nên đọc hết truyện 20 chương
+là 20 lượt, và tải lại trang liên tục là đẩy được truyện lên "Phổ biến nhất". Giờ mỗi người
+đọc (tài khoản, hoặc IP nếu chưa đăng nhập) chỉ được tính một lần mỗi 30 phút.
+
+**Thời lượng audio hiển thị sai.** Mục lục chia thời lượng cho 1,5 (tốc độ mặc định cũ của
+giọng Gemini), nên số phút hiện ra thấp hơn thật khoảng một phần ba. Giờ tính theo đúng tốc
+độ người nghe đang chọn.
+
+**Nghe tiếp chỗ đang dở.** Vị trí (chương và giây) được lưu trên máy trước, nên chạy được
+cả khi chưa đăng nhập hay mất mạng. Khi đã đăng nhập thì đồng bộ lên máy chủ: gộp theo nguyên
+tắc *mới nhất thắng*, quyết định ngay trong câu lệnh SQL để hai thiết bị ghi cùng lúc không
+đè nhau. Thời gian lấy theo đồng hồ của thiết bị nhưng không được vượt quá giờ máy chủ: một
+điện thoại đặt sai giờ sang năm sau không thể chiếm vị trí mãi mãi.
+
+**Theo dõi truyện không cần gửi thông báo cho từng người.** "Có chương mới" là phép so sánh
+số chương hiện có với số chương người theo dõi đã xem, làm lúc họ mở chuông. Đăng một chương
+mới không ghi gì cho từng người theo dõi, nên truyện có 100.000 người theo dõi tốn chi phí
+như truyện không ai theo dõi. Cách kia (tạo một dòng thông báo cho mỗi người mỗi chương)
+gây bão ghi đúng vào những truyện đang ăn khách.
+
+**Bình luận gắn vào chính dòng chương**, không phải "truyện X, chương số 5". Chương 5 của
+một nhánh rẽ là nội dung khác chương 5 bản gốc, còn các chương nhánh thừa hưởng từ bản gốc
+là cùng một dòng dữ liệu, nên bình luận dùng chung đúng chỗ nội dung giống nhau. Lưu và hiển
+thị dạng chữ thuần (không có HTML nên không phải lọc mã độc). Có lọc ký tự điều khiển và
+ký tự đảo chiều văn bản (hay dùng để giả mạo nội dung). Tác giả xoá được bình luận trên
+truyện của mình.
+
+**Truyện tương tự không tốn lượt gọi AI.** Mỗi truyện đã có sẵn embedding từ phần tìm kiếm
+AI, nên "tương tự" chỉ là một truy vấn tìm các embedding gần nhất. Truyện chưa có embedding
+thì lấy truyện cùng thể loại được đọc nhiều nhất, và tiêu đề nói rõ là "cùng thể loại", không
+nhận là "tương tự" khi chưa đo.
+
+**Trình phát:** hẹn giờ tắt (15/30/45/60 phút hoặc hết chương, nhỏ dần trong 10 giây cuối
+thay vì tắt cái bụp), điều khiển từ màn hình khoá và tai nghe (Media Session API), phím tắt,
+trình phát nhỏ bám theo khi cuộn, cỡ chữ đọc.
+
+**Bảo mật:**
+- API **từ chối khởi động** ở production nếu còn bật `AUTH_DEV_USER`, `DEV_ENDPOINTS` hoặc
+  còn dùng khoá mẫu. File `.env.example` để sẵn các giá trị đó, nên chép nguyên lên máy chủ
+  là mở cửa; giờ thì máy chủ không chạy.
+- Ở production, tài khoản email chưa xác minh không có lượt AI miễn phí và không bình luận
+  được; mỗi IP tạo tối đa 5 tài khoản mỗi ngày. Mục đích là không cho tạo tài khoản hàng loạt
+  để ăn lượt AI.
+- Caddy gửi header bảo mật: HSTS, chặn nhúng iframe, CSP, Referrer-Policy.
+
+**Chia sẻ link:** trang truyện vốn dựng trên trình duyệt, nên Facebook/Zalo chỉ thấy chữ
+"Nhịp Bút". Thêm một layout chạy phía máy chủ chỉ để lấy tên, mô tả và ảnh bìa của truyện.
+
+**Kiểm thử:** 50 unit test, cùng 13 test tích hợp chạy trên một Postgres thử dựng riêng
+(không đụng Supabase), cho các phần là SQL thật: ghi đè theo thời gian, phân trang bình
+luận, tìm láng giềng gần nhất bằng pgvector.
+
 ## 8. Hồ sơ người dùng và avatar
 
 - **Username:** 3–24 ký tự gồm chữ thường, số, `_`. Có danh sách tên bị giữ (admin,

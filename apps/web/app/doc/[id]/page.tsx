@@ -1,6 +1,9 @@
 'use client';
 
 import RateStory from './RateStory';
+import StoryActions from './StoryActions';
+import Related from './Related';
+import { resumeHref, useProgress } from '@/lib/progress';
 import { thumbUrl } from '@/lib/thumb';
 import { Fragment, use, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -60,6 +63,7 @@ export default function Contents({
   const [error, setError] = useState<string | null>(null);
   const [rate, setRate] = useState(1);
   useEffect(() => setRate(savedRate()), []);
+  const resume = useProgress().find((p) => p.storyId === id) ?? null;
 
   useEffect(() => {
     (async () => {
@@ -199,15 +203,30 @@ export default function Contents({
               )}
             </div>
 
-            <Link
-              href={`/doc/${id}/1${q}`}
-              className="btn btn-primary btn-lg mt-1"
-            >
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                <path d="M8 5.5v13l11-6.5-11-6.5Z" />
-              </svg>
-              Đọc từ đầu
-            </Link>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              {/* Someone coming back wants their place, not chapter one. */}
+              {resume && (resume.chapter > 1 || resume.at > 0) ? (
+                <>
+                  <Link href={resumeHref(resume)} className="btn btn-primary btn-lg">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                      <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+                    </svg>
+                    Nghe tiếp chương {resume.chapter}
+                  </Link>
+                  <Link href={`/doc/${id}/1${q}`} className="btn btn-ghost">
+                    Đọc từ đầu
+                  </Link>
+                </>
+              ) : (
+                <Link href={`/doc/${id}/1${q}`} className="btn btn-primary btn-lg">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+                    <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+                  </svg>
+                  Đọc từ đầu
+                </Link>
+              )}
+              <StoryActions storyId={story.id} title={story.title} />
+            </div>
           </div>
         </Reveal>
 
@@ -316,6 +335,8 @@ export default function Contents({
             </div>
           </section>
         )}
+
+        <Related storyId={story.id} />
       </main>
     </>
   );
