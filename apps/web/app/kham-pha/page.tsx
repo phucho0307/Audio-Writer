@@ -76,6 +76,8 @@ export default function Explore() {
   useEffect(() => {
     const search = new URLSearchParams(window.location.search);
     const requested = search.get('tacgia');
+    // The front page's AI tile links here straight into AI search.
+    if (search.get('tim') === 'ai') setMode('ai');
     if (search.get('ke') === 'truyen-trung') {
       setShelf('chinese');
       const source = search.get('nguon');

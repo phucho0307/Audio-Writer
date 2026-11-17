@@ -234,6 +234,12 @@ muốn gõ tên truyện không phải đợi AI.
 **Thể loại bị tách đôi theo chữ hoa/thường.** Tag là chữ tự do nên có cả "Gia đình" (60)
 và "gia đình" (11). Giờ gom không phân biệt hoa thường và hiện cách viết phổ biến hơn.
 
+**Bỏ trang Tham khảo.** Trang liệt kê các web truyện audio khác cùng ghi chú kỹ thuật viết.
+Chủ dự án thấy không cần thiết nên đã gỡ trang, link trên menu và API `/references`. Ô lớn
+trên trang chủ trước giới thiệu tủ tham khảo, giờ giới thiệu **Tìm bằng AI** (link
+`/kham-pha?tim=ai` mở thẳng chế độ AI). Ghi chú kỹ thuật viết vẫn ở trong database, vì "AI
+viết tiếp" còn đọc chúng theo thể loại.
+
 **Admin chấm được mọi truyện.** Luật "không tự chấm truyện của mình" và "đọc rồi mới chấm"
 không áp cho admin, vì 1.111 truyện mẫu đứng tên tài khoản admin.
 

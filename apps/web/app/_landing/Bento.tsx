@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useRef, type ReactNode } from 'react';
 import Link from 'next/link';
-import { api, type Story } from '@/lib/api';
+import type { Story } from '@/lib/api';
 import { calm, gsap, useGSAP } from '@/lib/motion';
 import Reveal from '../Reveal';
 
@@ -103,29 +103,26 @@ function Count({ value, label }: { value: number; label: string }) {
   );
 }
 
-/**
- * The real names on the reference shelf, drifting across the big tile - the
- * tile describes the shelf, so it shows what is actually on it. Empty until
- * the list arrives, and the tile reads fine without it.
- */
-function ShelfNames() {
-  const [names, setNames] = useState<string[]>([]);
-  useEffect(() => {
-    api
-      .references()
-      .then((r) => setNames(r.sources.map((s) => s.name)))
-      .catch(() => {});
-  }, []);
-  if (!names.length) return null;
+/** What people actually type, drifting across the tile: it shows the feature by example. */
+const ASKS = [
+  'truyện buồn, chồng ngoại tình có con với bé ba',
+  'ma làng quê, đọc xong không dám ngủ',
+  'ngôn tình nhẹ nhàng, kết có hậu',
+  'trọng sinh báo thù, nữ chính mạnh mẽ',
+  'cổ đại cung đấu, kết mở',
+  'chữa lành, nghe trước khi ngủ',
+];
+
+function AskChips() {
   return (
     <div aria-hidden className="flex flex-wrap gap-2 [mask-image:linear-gradient(to_bottom,black_55%,transparent)]">
-      {names.map((n, i) => (
+      {ASKS.map((q, i) => (
         <span
-          key={n}
+          key={q}
           className="chip cursor-default animate-[drift_6s_ease-in-out_infinite]"
           style={{ animationDelay: `${(i % 5) * -1.1}s` }}
         >
-          {n}
+          “{q}”
         </span>
       ))}
     </div>
@@ -149,20 +146,20 @@ export default function Bento({ stories }: { stories: Story[] }) {
 
       <Reveal childrenStagger stagger={0.07} className="grid auto-rows-[minmax(190px,auto)] gap-4 md:grid-cols-3">
         <div className="md:col-span-2 md:row-span-2">
-          <Tile href="/tham-khao" className="justify-between">
-            <Glyph>☰</Glyph>
-            <ShelfNames />
+          <Tile href="/kham-pha?tim=ai" className="justify-between">
+            <Glyph>✦</Glyph>
+            <AskChips />
             <div className="mt-auto flex flex-col gap-3">
               <h3 className="display text-[clamp(1.6rem,3vw,2.4rem)] leading-tight">
-                Tủ tham khảo cho người <span className="italic text-[var(--color-accent)]">bí plot</span>
+                Tả truyện bằng lời, <span className="italic text-[var(--color-accent)]">AI tìm giùm</span>
               </h3>
               <p className="max-w-[46ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
-                Mấy trang truyện audio Việt hội tụi tui hay cày, kèm ghi chú vì sao truyện kinh dị thì
-                phải cắt chương ngay trước lúc giải thích, truyện tình cảm thì cảm xúc phải đến
-                từ chi tiết đời thường. Dẫn link cho bà đi nghe, chứ hông chôm truyện người ta.
+                Hông nhớ tên, hông biết thể loại gì? Cứ gõ như kể cho bạn thân nghe: muốn buồn hay vui,
+                kết có hậu hay kết mở, có bé ba hay hông. AI đọc hết thư viện rồi nói luôn vì sao truyện
+                đó hợp với bà, truyện nào không hợp thì giấu đi.
               </p>
               <span className="text-[13px] text-[var(--color-accent)] transition-transform group-hover:translate-x-1">
-                Mở tủ tham khảo →
+                Thử tìm bằng AI →
               </span>
             </div>
           </Tile>

@@ -14,7 +14,7 @@ import { RateLimitedError } from '@aw/shared';
 import { GeminiDriver } from './drivers/gemini.driver';
 import { StoriesService } from '../stories/stories.service';
 import { AiQuotaService, type QuotaStatus, type Spend } from './ai-quota.service';
-import { firstKnownGenre } from '../references/genre';
+import { firstKnownGenre } from './genre';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { RedisService } from '../redis/redis.service';
