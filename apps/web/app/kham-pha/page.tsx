@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api, type Story } from '@/lib/api';
 import Reveal from '../Reveal';
-import CoverThumb from '../CoverThumb';
 import AiFinder from './AiFinder';
 import ContinueShelf from './ContinueShelf';
 import SpiritText from '../SpiritText';
@@ -18,6 +17,7 @@ import AuthorByline from '@/app/AuthorByline';
 import { nativeStory } from '@/lib/native-catalog';
 import FamousWorkCard from './FamousWorkCard';
 import ChineseWorkCard from './ChineseWorkCard';
+import ShelfCard from './ShelfCard';
 import { CHINESE_SHELF_NAME, CHINESE_WORKS, matchesChineseSearch, type ChineseWork } from '@/lib/chinese-catalog';
 import { FAMOUS_AUTHORS, FAMOUS_WORKS, foldSearch, matchesCatalogSearch, type FamousWork } from '@/lib/famous-catalog';
 import { BRAND } from '@/lib/brand';
@@ -330,8 +330,8 @@ export default function Explore() {
               style={{ animationDelay: `${Math.min(i % 24, 11) * 45}ms` }}
             >
               {entry.kind === 'story' ? <StoryCard story={entry.story} />
-                : entry.kind === 'chinese' ? <ChineseWorkCard work={entry.work} />
-                : <FamousWorkCard work={entry.work} />}
+                : entry.kind === 'chinese' ? <ChineseWorkCard work={entry.work} story={publicStories.get(entry.work.nativeStoryId)} />
+                : <FamousWorkCard work={entry.work} story={entry.work.nativeStoryId ? publicStories.get(entry.work.nativeStoryId) : undefined} />}
             </div>
           ))}
         </div>
@@ -492,47 +492,27 @@ function Featured({ story }: { story: Story }) {
 
 function StoryCard({ story: s }: { story: Story }) {
   return (
-    <Link href={`/doc/${s.id}`} className="group flex flex-col gap-3">
-      <div className="cover aspect-[3/4]">
-        {s.coverUrl && <CoverThumb src={s.coverUrl} alt="" />}
-        <span className="scrim label flex items-center gap-2 text-white/85">
-          {s.contributionCount} chương
-          {/* `branchCount` includes the story itself, so the forks are one
-              fewer. Shown on the cover because it is the one thing that sets
-              a story here apart from the same story anywhere else: other
-              people have taken it somewhere. */}
-          {s.branchCount > 1 && (
-            <span className="rounded-full bg-[var(--color-accent)] px-1.5 py-px text-[9.5px] text-[var(--color-on-accent)]">
-              ⑂ {s.branchCount - 1} nhánh
-            </span>
-          )}
-        </span>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        {/* Clamped to two lines and held at two lines' height. A title that
-            wraps where its neighbour does not pushes everything below it out
-            of line, and a grid out of line reads as broken rather than as
-            varied. */}
-        <h3 className="display line-clamp-2 min-h-[2.4em] text-[17px] leading-[1.2] transition-colors group-hover:text-[var(--color-accent)]">
-          {s.title}
-        </h3>
-        <p className="line-clamp-2 text-[13px] leading-relaxed text-[var(--color-muted)]">
-          {s.synopsis}
-        </p>
-        <p className="truncate text-[11.5px] text-[var(--color-faint)]">
-          {s.genres.join(' · ')}
-        </p>
-        {/* Who wrote it and how it is rated, on one line at the foot of the
-            card, so a row of covers can be scanned for both at a glance. */}
-        <div className="flex items-center justify-between gap-2 border-t border-[var(--color-line)] pt-2 text-[12px]">
-          <span className="truncate text-[var(--color-muted)]">
-            <AuthorByline storyId={s.id} handle={storyAuthorHandle(s)} nested />
+    <ShelfCard
+      href={`/doc/${s.id}`}
+      title={s.title}
+      coverUrl={s.coverUrl}
+      coverLabel={BRAND}
+      chapters={s.contributionCount}
+      // `branchCount` includes the story itself, so the forks are one fewer.
+      // On the cover because it is what sets a story here apart from the same
+      // story anywhere else: other people have taken it somewhere.
+      badge={
+        s.branchCount > 1 ? (
+          <span className="rounded-full bg-[var(--color-accent)] px-1.5 py-px text-[9.5px] text-[var(--color-on-accent)]">
+            ⑂ {s.branchCount - 1} nhánh
           </span>
-          <RatingBadge rating={storyRating(s)} className="flex-none text-[12px]" />
-        </div>
-      </div>
-    </Link>
+        ) : null
+      }
+      synopsis={s.synopsis}
+      genres={s.genres}
+      author={<AuthorByline storyId={s.id} handle={storyAuthorHandle(s)} nested />}
+      rating={storyRating(s)}
+    />
   );
 }
 
