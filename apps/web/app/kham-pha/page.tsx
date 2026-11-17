@@ -67,7 +67,6 @@ export default function Explore() {
   const [picked, setPicked] = useState<string[]>([]);
   const [shelf, setShelf] = useState<Shelf>('all');
   const [authorId, setAuthorId] = useState<string | null>(null);
-  const [chineseSource, setChineseSource] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<SortBy>('popular');
@@ -80,8 +79,6 @@ export default function Explore() {
     if (search.get('tim') === 'ai') setMode('ai');
     if (search.get('ke') === 'truyen-trung') {
       setShelf('chinese');
-      const source = search.get('nguon');
-      if (source === 'monkeyd' || source === 'metruyen') setChineseSource(source);
     } else if (requested && FAMOUS_AUTHORS.some((author) => author.id === requested)) {
       setShelf('famous');
       setAuthorId(requested);
@@ -92,16 +89,14 @@ export default function Explore() {
       .catch((e: Error) => setError(e.message));
   }, []);
 
-  useEffect(() => setPage(1), [shelf, authorId, chineseSource, picked, query, sortBy]);
+  useEffect(() => setPage(1), [shelf, authorId, picked, query, sortBy]);
 
   function chooseShelf(next: Shelf) {
     setShelf(next);
     setAuthorId(null);
-    setChineseSource(null);
     setPicked([]);
     const url = new URL(window.location.href);
     url.searchParams.delete('tacgia');
-    url.searchParams.delete('nguon');
     if (next === 'chinese') url.searchParams.set('ke', 'truyen-trung');
     else url.searchParams.delete('ke');
     window.history.replaceState(null, '', url);
@@ -110,22 +105,11 @@ export default function Explore() {
   function chooseAuthor(id: string | null) {
     setAuthorId(id);
     setShelf('famous');
-    setChineseSource(null);
     setPicked([]);
     const url = new URL(window.location.href);
     url.searchParams.delete('ke');
-    url.searchParams.delete('nguon');
     if (id) url.searchParams.set('tacgia', id);
     else url.searchParams.delete('tacgia');
-    window.history.replaceState(null, '', url);
-  }
-
-  function chooseChineseSource(source: string | null) {
-    setChineseSource(source);
-    setPicked([]);
-    const url = new URL(window.location.href);
-    if (source) url.searchParams.set('nguon', source);
-    else url.searchParams.delete('nguon');
     window.history.replaceState(null, '', url);
   }
 
@@ -147,7 +131,7 @@ export default function Explore() {
     (!authorId || work.authorId === authorId) && matchesCatalogSearch(work, query),
   );
   const matchingChinese = shelf === 'library' || shelf === 'famous' ? [] : availableChinese.filter((work) =>
-    (!chineseSource || work.sourceId === chineseSource) && matchesChineseSearch(work, query),
+    matchesChineseSearch(work, query),
   );
 
   // Derived from the content, so the filter never offers an empty genre or
@@ -287,15 +271,6 @@ export default function Explore() {
               </button>
             ))}
           </div>
-          {shelf === 'chinese' && <div className="flex flex-col gap-2.5">
-            <span className="label text-[10px]">Nguồn tuyển truyện</span>
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Lọc nguồn truyện Trung">
-              <button type="button" onClick={() => chooseChineseSource(null)} aria-pressed={chineseSource === null} className={`chip ${chineseSource === null ? 'chip-on' : ''}`}>Tất cả nguồn</button>
-              {([{ id: 'monkeyd', name: 'MonkeyD' }, { id: 'metruyen', name: 'Mê Truyện' }] as const).map((source) => <button key={source.id} type="button" onClick={() => chooseChineseSource(source.id)} aria-pressed={chineseSource === source.id} className={`chip ${chineseSource === source.id ? 'chip-on' : ''}`}>
-                {source.name}<span className="text-[10.5px] opacity-60">{availableChinese.filter((work) => work.sourceId === source.id).length}</span>
-              </button>)}
-            </div>
-          </div>}
           {shelf !== 'library' && shelf !== 'chinese' && <div className="flex flex-col gap-2.5">
             <span className="label text-[10px]">Tác giả</span>
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="group" aria-label="Lọc tác giả nổi tiếng">
