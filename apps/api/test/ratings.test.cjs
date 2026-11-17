@@ -42,7 +42,7 @@ function world({ owner = 'author', reader = 'reader', read = true } = {}) {
     },
   };
   return {
-    svc: new RatingsService(prisma, currentUser),
+    svc: new RatingsService(prisma, currentUser, { emit() {} }),
     story,
     as: (id, role = 'USER') => (me = id ? { id, role } : null),
   };

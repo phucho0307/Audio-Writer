@@ -4,10 +4,11 @@ import { StoriesService } from './stories.service';
 import { PaywallService } from './paywall.service';
 import { StoryCoversController } from './story-covers.controller';
 import { StoryCoversService } from './story-covers.service';
+import { ShelfCache } from './shelf-cache';
 
 @Module({
   controllers: [StoriesController, StoryCoversController],
-  providers: [StoriesService, PaywallService, StoryCoversService],
+  providers: [StoriesService, PaywallService, StoryCoversService, ShelfCache],
   exports: [StoriesService, PaywallService],
 })
 export class StoriesModule {}

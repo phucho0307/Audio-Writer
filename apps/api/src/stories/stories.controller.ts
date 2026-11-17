@@ -8,8 +8,13 @@ import {
   Post,
   Query,
   Delete,
+  Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+import type { Request, Response } from 'express';
+import { clientIp } from '../auth/auth-failure.limiter';
+import { ShelfCache } from './shelf-cache';
 import { StoriesService } from './stories.service';
 import { DevOnlyGuard } from '../auth/dev-only.guard';
 import { PaywallService } from './paywall.service';
@@ -28,12 +33,16 @@ export class StoriesController {
   constructor(
     private readonly stories: StoriesService,
     private readonly paywall: PaywallService,
+    private readonly shelf: ShelfCache,
   ) {}
 
   /** The public shelf, or your own workspace with ?mine=true. */
   @Get('stories')
-  list(@Query('mine') mine?: string) {
-    return this.stories.list(mine === 'true');
+  async list(@Res({ passthrough: true }) res: Response, @Query('mine') mine?: string) {
+    if (mine === 'true') return this.stories.list(true);
+    // Already JSON: sent as it is rather than parsed only to be serialised again.
+    res.type('application/json');
+    return this.shelf.json();
   }
 
   @Post('stories')
@@ -60,8 +69,8 @@ export class StoriesController {
   }
 
   @Post('stories/:id/view')
-  recordView(@Param('id', ParseUUIDPipe) id: string) {
-    return this.stories.recordView(id);
+  recordView(@Param('id', ParseUUIDPipe) id: string, @Req() req: Request) {
+    return this.stories.recordView(id, clientIp(req));
   }
 
   @Post('stories/:id/unlock')

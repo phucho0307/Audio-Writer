@@ -9,6 +9,11 @@ export interface DomainEventMap {
   'chapter.played': { branchId: string; depth: number; voice: string };
   /** A chapter became part of a branch, and so part of what can be retrieved. */
   'chapter.committed': { contributionId: string; branchId: string };
+  /**
+   * Something a list shows about a public story changed - its title, its
+   * rating, that it exists at all. Cached lists rebuild on it.
+   */
+  'story.changed': { storyId: string };
 }
 
 /**

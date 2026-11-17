@@ -316,11 +316,23 @@ function authHeaders(extra?: HeadersInit, multipart = false): HeadersInit {
  * `retry` guards against a loop: if the refreshed token is also rejected,
  * something is wrong that another round trip will not fix.
  */
+/**
+ * The public shelf, kept for a minute per tab.
+ *
+ * The front page and Khám phá both ask for the whole catalogue, and moving
+ * between them used to download it again each time. A write to a story or a
+ * branch drops the copy, so a writer who has just published sees it.
+ */
+let shelf: { at: number; data: Promise<Story[]> } | null = null;
+const SHELF_MS = 60_000;
+
 async function call<T>(
   path: string,
   init?: RequestInit,
   retry = true,
 ): Promise<T> {
+  const method = (init?.method ?? 'GET').toUpperCase();
+  if (method !== 'GET' && /^\/(stories|branches)/.test(path) && !path.endsWith('/view')) shelf = null;
   await ensureSession();
   const res = await fetch(API + path, {
     ...init,
@@ -381,7 +393,16 @@ export type PublicProfile = {
 
 export const api = {
   /** The public shelf: PUBLIC stories only, works signed out. */
-  listStories: () => call<Story[]>('/stories'),
+  listStories: (): Promise<Story[]> => {
+    if (shelf && Date.now() - shelf.at < SHELF_MS) return shelf.data;
+    const data = call<Story[]>('/stories');
+    shelf = { at: Date.now(), data };
+    // A failed load is not worth remembering.
+    data.catch(() => {
+      if (shelf?.data === data) shelf = null;
+    });
+    return data;
+  },
 
   /** Your own workspace: every story you own, drafts included. */
   myStories: () => call<Story[]>('/stories?mine=true'),

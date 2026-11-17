@@ -7,6 +7,7 @@ import {
 import { Role, Visibility } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
+import { DomainEvents } from '../events/domain-events';
 
 /**
  * Below this many ratings a story shows "not enough ratings yet" instead of
@@ -41,6 +42,7 @@ export class RatingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly currentUser: CurrentUserService,
+    private readonly events: DomainEvents,
   ) {}
 
   async summary(storyId: string): Promise<RatingSummary> {
@@ -106,6 +108,7 @@ export class RatingsService {
           : { ratingCount: { increment: 1 }, ratingSum: { increment: stars } },
       });
     });
+    this.events.emit('story.changed', { storyId });
     return this.summary(storyId);
   }
 
@@ -124,6 +127,7 @@ export class RatingsService {
         data: { ratingCount: { decrement: 1 }, ratingSum: { decrement: before.stars } },
       });
     });
+    this.events.emit('story.changed', { storyId });
     return this.summary(storyId);
   }
 

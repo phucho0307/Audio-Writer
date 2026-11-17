@@ -21,10 +21,21 @@ import {
   type Story,
 } from '@/lib/api';
 
-function mmss(ms: number | null): string {
+/** Running time as the listener will hear it: at the speed their player is set to. */
+function mmss(ms: number | null, rate: number): string {
   if (!ms) return '';
-  const s = Math.round(ms / 1000 / 1.5); // shown at the default 1.5x
+  const s = Math.round(ms / 1000 / rate);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
+/** The speed saved by the chapter player; 1x until the listener picks another. */
+function savedRate(): number {
+  try {
+    const r = Number(localStorage.getItem('aw-rate'));
+    return [1, 1.25, 1.5, 1.75, 2].includes(r) ? r : 1;
+  } catch {
+    return 1;
+  }
 }
 
 /**
@@ -47,6 +58,8 @@ export default function Contents({
   const [read, setRead] = useState<BranchRead | null>(null);
   const [audio, setAudio] = useState<ChapterAudio[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [rate, setRate] = useState(1);
+  useEffect(() => setRate(savedRate()), []);
 
   useEffect(() => {
     (async () => {
@@ -110,7 +123,7 @@ export default function Contents({
   const current = story.branches.find((b) => b.id === read.branch.id);
   const others = readableForks(story).filter((b) => b.id !== read.branch.id);
   const minutes = Math.round(
-    audio.reduce((n, a) => n + (a.durationMs ?? 0), 0) / 1000 / 1.5 / 60,
+    audio.reduce((n, a) => n + (a.durationMs ?? 0), 0) / 1000 / rate / 60,
   );
 
   return (
@@ -241,7 +254,7 @@ export default function Contents({
                         <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                           <path d="M8 5.5v13l11-6.5-11-6.5Z" />
                         </svg>
-                        {mmss(clip.durationMs)}
+                        {mmss(clip.durationMs, rate)}
                       </span>
                     ) : (
                       <span className="w-[46px] flex-none" aria-hidden />

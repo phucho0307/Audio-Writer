@@ -18,6 +18,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { PaywallService } from './paywall.service';
 import { DomainEvents } from '../events/domain-events';
+import { RedisService } from '../redis/redis.service';
 import type {
   CommitContributionDto,
   CreateStoryDto,
@@ -27,6 +28,9 @@ import type {
   UpdateStoryDto,
 } from './dto';
 
+/** One reader opening one story counts once in this long. */
+const VIEW_WINDOW_SECONDS = 30 * 60;
+
 @Injectable()
 export class StoriesService {
   constructor(
@@ -34,6 +38,7 @@ export class StoriesService {
     private readonly currentUser: CurrentUserService,
     private readonly paywall: PaywallService,
     private readonly events: DomainEvents,
+    private readonly redis: RedisService,
   ) {}
 
   // -------------------------------------------------------------------------
@@ -267,6 +272,9 @@ export class StoriesService {
     ) {
       this.events.emit('story.published', { storyId: updated.id });
     }
+    if (story.visibility === Visibility.PUBLIC || updated.visibility === Visibility.PUBLIC) {
+      this.events.emit('story.changed', { storyId: updated.id });
+    }
 
     return updated;
   }
@@ -286,15 +294,19 @@ export class StoriesService {
       });
     }
     await this.prisma.story.delete({ where: { id } });
+    if (story.visibility === Visibility.PUBLIC) this.events.emit('story.changed', { storyId: id });
     return { deleted: true, id };
   }
 
   /**
-   * Counts one read. Deliberately not deduplicated yet - a real implementation
-   * needs a per-viewer window in Redis, and doing it wrong is worse than
-   * doing it late.
+   * Counts one read per reader per story per half hour.
+   *
+   * Every chapter opened calls this, so without the window one reader going
+   * through a twenty-chapter story was twenty "views", and a refresh loop
+   * could put any story at the top of "Phổ biến nhất". The reader is the
+   * account when there is one, the network address when there is not.
    */
-  async recordView(id: string) {
+  async recordView(id: string, ip = 'unknown') {
     // Anonymous reads are most of the audience and must still count.
     const user = await this.currentUser.optional();
     const story = await this.prisma.story.findUnique({ where: { id } });
@@ -312,6 +324,16 @@ export class StoriesService {
         update: {},
       });
     }
+
+    let counted = true;
+    try {
+      const who = user ? `u:${user.id}` : `ip:${ip}`;
+      counted =
+        (await this.redis.client.set(`view:${id}:${who}`, '1', 'EX', VIEW_WINDOW_SECONDS, 'NX')) === 'OK';
+    } catch {
+      // Redis down: count it. An inflated number beats a frozen one.
+    }
+    if (!counted) return { viewCount: story.viewCount };
 
     const updated = await this.prisma.story.update({
       where: { id },
