@@ -464,31 +464,100 @@ Claude Code và Codex sửa code song song trong cùng thư mục.
 **Bài học:** build lại thư mục `dist` trong lúc một tiến trình đang chạy từ chính thư mục
 đó sẽ làm nó sập. Giờ trước khi build luôn kiểm tra ai đang chạy.
 
-## 13. Những thứ cố tình chưa phải dữ liệu thật
+## 13. Số liệu thật và số liệu demo
 
-- Số sao đánh giá là **số giả cố định** (tính từ hash của id, nên không nhảy mỗi lần tải
-  trang), đã hạ xuống dưới 500 lượt cho hợp lý với một web mới.
-- Một số tên tác giả là tên mẫu.
-- Hai thứ này được ghi rõ trong code là **không được tới tay người dùng thật**. Đây là
-  việc phải dọn trước khi ra mắt (xem bên dưới).
+- **Sao đánh giá là thật**: người đọc chấm 1–5 sao, phải đọc ít nhất một chương mới được
+  chấm, đủ 5 lượt mới hiện điểm trung bình. Số đếm và tổng sao lưu ngay trên dòng truyện,
+  cập nhật trong cùng transaction với lượt chấm, nên danh sách không phải cộng lại mỗi lần.
+- **Chế độ demo** (bật khi chạy dev, tắt ở production): truyện chưa đủ lượt chấm hiện một số
+  sao giả cố định, tính từ hash của id, để xem bố cục. Không bao giờ hiện sao giả cho tác
+  phẩm của tác giả thật. Lý do: sao giả tới tay người dùng thật là nói sai về truyện, và
+  đánh giá giả là trái luật ở nhiều nơi.
+- Admin chấm được mọi truyện, vì 1.111 truyện mẫu đứng tên tài khoản admin.
+
+## 14. Hỏi đáp phỏng vấn
+
+**"Project có dùng RAG không?"**
+Có từng dùng, rồi gỡ, và nói được vì sao.
+- *RAG* = lấy đoạn văn liên quan (Retrieval), nhét vào prompt, để LLM sinh câu trả lời dựa
+  trên đó (Augmented Generation).
+- *Bản cũ:* "AI viết tiếp" cắt từng chương thành đoạn, tạo embedding, lấy các đoạn giống
+  nhất đưa vào prompt. Đã gỡ: model nhận được cả truyện trong prompt nên các đoạn lấy thêm
+  gần như không giúp gì, còn việc tạo embedding cho mọi chương thì tiêu hạn mức Gemini của
+  người đọc (mục 7, 7b).
+- *Bây giờ:* **Tìm bằng AI** là dạng gần RAG nhất: LLM đọc câu người dùng gõ thành bộ lọc,
+  tìm ứng viên bằng vector + từ khoá (hybrid search, gộp bằng RRF), rồi đưa ứng viên cho LLM
+  viết một câu "vì sao hợp". LLM chỉ diễn giải kết quả đã tìm, không tự bịa truyện.
+- *Truyện tương tự* **không phải RAG**: chỉ là tìm vector gần nhất (pgvector, `<=>` cosine),
+  không gọi LLM. Embedding đã có sẵn từ lúc viết thẻ cho tìm kiếm, nên chi phí bằng 0.
+
+**"Vector search khác full-text search thế nào, sao dùng cả hai?"**
+Vector hiểu nghĩa ("chồng phản bội" gần với "ngoại tình") nhưng hay bỏ sót từ hiếm, cụ thể
+("tiệm nail", "bé ba"). Full-text bắt đúng chữ nhưng không hiểu đồng nghĩa. Dùng cả hai rồi
+gộp bằng *reciprocal rank fusion*: cộng `1/(60 + hạng)` từ mỗi danh sách. Gộp theo hạng
+thay vì theo điểm, vì khoảng cách cosine và `ts_rank` không cùng thang đo.
+
+**"Làm sao để một truyện 1 lượt 5 sao không đứng trên truyện 40 lượt 4,7?"**
+Trung bình Bayes: coi như mỗi truyện có sẵn 10 lượt chấm ở mức trung bình toàn site.
+Ít lượt thì điểm bị kéo về mức trung bình, nhiều lượt thì điểm thật mới hiện rõ.
+
+**"Hệ thống chậm thì bạn tìm nguyên nhân thế nào?"** (mục 7e)
+Đo trước, không đoán. API danh sách truyện mất 10–15 giây. Tách ra đo: một lần ping database
+mất 215 ms (database ở Singapore, máy chủ ở Mỹ); đọc 1.111 truyện mất 2 giây, thêm phần
+join mất 4 giây; kết quả nặng 1,75 MB. Danh sách giống nhau với mọi người xem, nên cache.
+Chọn *stale-while-revalidate*: luôn trả bản đã lưu ngay, làm mới ngầm khi có thay đổi. Xử lý
+race: một thay đổi xảy ra đúng lúc đang dựng lại thì dựng lại lần nữa (đếm "thế hệ"). Kết quả
+0,06 giây. Có unit test cho đúng tình huống race đó.
+
+**"Thông báo chương mới cho người theo dõi: làm sao scale?"**
+Không tạo thông báo cho từng người (fan-out on write). "Có chương mới" là phép so sánh số
+chương hiện có với số chương người đó đã xem, tính lúc họ mở chuông (fan-out on read). Đăng
+chương mới không tốn thêm gì dù truyện có 100.000 người theo dõi. Đánh đổi: không có push
+notification; muốn có thì thêm hàng đợi gửi sau, nhưng nguồn sự thật vẫn là phép so sánh.
+
+**"Đồng bộ vị trí nghe giữa hai thiết bị, xung đột thì sao?"**
+Mới nhất thắng, theo thời điểm người nghe thật sự ở đó (đồng hồ thiết bị), quyết định ngay
+trong câu `INSERT ... ON CONFLICT DO UPDATE ... WHERE cũ <= mới`, nên hai thiết bị ghi cùng
+lúc không đè nhau. Đồng hồ thiết bị không được vượt quá giờ máy chủ: một điện thoại để sai
+giờ sang năm sau sẽ không chiếm vị trí mãi mãi. Thiết bị lưu cục bộ trước, nên chưa đăng
+nhập hay mất mạng vẫn chạy.
+
+**"Bảo mật: nếu bị tấn công thì sao?"** (mục 7d, 7e)
+Điểm yếu thật thường nằm ở cấu hình deploy, không phải code. Ví dụ ở đây: `.env.example`
+để sẵn chế độ dev (ai vào cũng thành tài khoản dev), nên API được sửa để **từ chối khởi
+động** ở production nếu còn cấu hình đó. Những chỗ khác: mật khẩu băm argon2id; đăng nhập
+sai luôn trả cùng một câu; giới hạn số lần sai; token trong link email chỉ lưu bản băm và chỉ
+dùng một lần; refresh token trong cookie httpOnly có xoay vòng; truyện riêng tư trả 404 chứ
+không phải 403; bình luận là chữ thuần và lọc ký tự đảo chiều văn bản; giới hạn tạo tài khoản
+để không ai tạo hàng loạt ăn lượt AI miễn phí.
+
+**"Kiểm thử thế nào?"**
+Logic thuần (tính điểm tìm kiếm, cache, rate limit, xác thực) có unit test với dữ liệu giả.
+Phần là SQL thật (ghi đè theo thời gian, phân trang, pgvector) có test tích hợp chạy trên
+một Postgres thử dựng riêng; script từ chối chạy nếu địa chỉ database không phải localhost,
+để không bao giờ lỡ chạy lên database thật. Giao diện được thử bằng tay trên trình duyệt.
+
+**"Bạn dùng AI để code thế nào?"** (mục 12)
+Tự quyết định kiến trúc, phạm vi và đánh đổi; AI viết phần lớn code. Bài học thật: một lần
+AI tự mở rộng phạm vi (làm trang Xếp hạng riêng khi chỉ cần bộ lọc sắp xếp), và một lần hai
+agent cùng sửa một file. Từ đó: hỏi rõ phạm vi trước khi xây; mỗi agent chỉ commit đúng phần
+của mình.
 
 ---
 
-## Trạng thái và kế hoạch (16/11/2026)
+## Trạng thái (17/11/2026)
 
-**Đã xong:**
-1. Commit phần Codex (truyện nhập, kệ truyện Trung, chọn ảnh bìa). Nguồn và bản quyền
-   đã liệt kê; quyết định: giữ hết, **repo phải chuyển sang private trước khi push**.
-2. Docker (web, API kèm worker), `docker-compose.prod.yml`, Caddy, hướng dẫn
-   [deploy.md](deploy.md). Đã chạy thử cả hệ thống trên laptop.
-3. Ảnh bìa lên R2 (2.548 file, 345 MB). R2 khoảng 0,93 GB / 9 GB.
+**Đã xong và đã push (nhánh `auth`):** mọi thứ ở các mục trên.
 
-**Còn lại:** chuyển repo sang private rồi push; thuê máy ảo và deploy; xoá 441 MB audio
-cũ trên laptop sau khi xác nhận web phát được từ R2.
+**Quyết định về bản quyền:** repo để public nhưng **không chứa văn bản truyện nhập**
+(truyện Trung, tác giả nổi tiếng): thư mục đó nằm trong `.gitignore`, chỉ có trong database.
+Lịch sử git đã được làm sạch trước lần push đầu.
 
-**Chưa duyệt, để sau:**
-- Dọn trước khi ra mắt: tắt `DEV_ENDPOINTS`, ẩn đánh giá và tác giả giả, chuyển Google
-  OAuth sang production, xoay lại các khoá.
-- Sao lưu database hằng đêm lên R2 (Supabase free không có bản sao lưu tải về được).
+**Còn lại:**
+- Merge `auth` vào `main`.
+- Thuê máy chủ, mua tên miền, deploy; thêm tên miền vào Resend để gửi mail cho mọi người.
+- Sao lưu database hằng đêm (Supabase bản free không cho tải bản sao lưu về).
+- Codex đang gỡ watermark ảnh bìa truyện Trung: 150/500 xong, chưa commit.
+- Bật xác minh 2 bước cho tài khoản Google admin.
 
 **Để khi có người dùng thật:** [production-later.md](production-later.md).
