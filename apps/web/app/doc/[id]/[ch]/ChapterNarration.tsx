@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
-import { ApiError, api, type RenderStatus, type Voice } from '@/lib/api';
+import { ApiError, api, forgetReads, type RenderStatus, type Voice } from '@/lib/api';
 import { awaitNarration, NarrationFailed } from '@/lib/narration';
 import NarrationProgress from '@/app/NarrationProgress';
 import VoicePicker from '@/app/VoicePicker';
@@ -16,9 +16,17 @@ import { BRAND } from '@/lib/brand';
 const AUTO_KEY = 'aw-auto-next';
 const VOICE_KEY = 'aw-voice';
 const RATE_KEY = 'aw-rate';
+const VOLUME_KEY = 'aw-volume';
 /** Set just before moving on, read by the next chapter's player. */
 const PLAY_ON_ARRIVAL = 'aw-play-on-arrival';
 const COUNTDOWN = 5;
+/**
+ * Start making the next chapter's narration once this much of this one has
+ * been heard. Early on purpose: a chapter takes over a minute to narrate, and
+ * at 1.5x a five-minute chapter is over in about three. Half a minute in,
+ * someone is listening rather than sampling.
+ */
+const AHEAD_AFTER_SECONDS = 30;
 const SKIP_SECONDS = 15;
 /** How often a playing chapter writes its position down. */
 const SAVE_EVERY_SECONDS = 5;
@@ -31,6 +39,10 @@ const SAVE_EVERY_SECONDS = 5;
 type Sleep = { kind: 'time'; until: number; minutes: number } | { kind: 'chapter' };
 const SLEEP_KEY = 'aw-sleep';
 const SLEEP_MINUTES = [15, 30, 45, 60];
+const SPEAKER = 'M4 9h4l5-4v14l-5-4H4z';
+const WAVES = 'M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12';
+const MUTED = 'M16 9l5 6M21 9l-5 6';
+
 /** The voice fades over the last seconds instead of stopping mid-word at full volume. */
 const FADE_SECONDS = 10;
 
@@ -126,6 +138,14 @@ export default function ChapterNarration({
   // 1x: the Edge voices already read at a natural pace. (1.5x was the default
   // when Gemini narrated, which reads much slower.)
   const [rate, setRate] = useState(1);
+  /**
+   * The listener's level, 0-1, and mute kept apart from it, so unmuting comes
+   * back to where it was. What the element plays at is this times `fade`.
+   */
+  const [volume, setVolume] = useState(1);
+  const [muted, setMuted] = useState(false);
+  /** The sleep timer's fade-out, 1 the rest of the time. It scales the level rather than replacing it. */
+  const [fade, setFade] = useState(1);
   /** Queued behind other work, or actually being synthesised right now. */
   const [stage, setStage] = useState<RenderStatus | null>(null);
   const [busy, setBusy] = useState(false);
@@ -167,6 +187,9 @@ export default function ChapterNarration({
     setAutoNext(load(AUTO_KEY) === '1');
     const r = Number(load(RATE_KEY));
     if ([1, 1.25, 1.5, 1.75, 2].includes(r)) setRate(r);
+    const kept = load(VOLUME_KEY);
+    const vol = kept === null ? NaN : Number(kept);
+    if (vol >= 0 && vol <= 1) setVolume(vol);
     setSleep(loadSleep());
     api
       .voices()
@@ -186,6 +209,22 @@ export default function ChapterNarration({
     setRate(r);
     save(RATE_KEY, String(r));
   }
+  function chooseVolume(v: number) {
+    const level = Math.max(0, Math.min(1, v));
+    setVolume(level);
+    setMuted(level === 0);
+    save(VOLUME_KEY, String(level));
+  }
+  const toggleMute = useCallback(() => {
+    // Unmuting at zero would be silent: give it a level to come back to.
+    setMuted((m) => {
+      if (m && volume === 0) {
+        setVolume(0.5);
+        save(VOLUME_KEY, '0.5');
+      }
+      return !m;
+    });
+  }, [volume]);
   function toggleAutoNext() {
     const on = !autoNext;
     setAutoNext(on);
@@ -196,7 +235,7 @@ export default function ChapterNarration({
     setSleep(s);
     storeSleep(s);
     setSlept(false);
-    if (!s && audioRef.current) audioRef.current.volume = 1;
+    if (!s) setFade(1);
   }
 
   /** Write down where the listener is: this chapter, or the one they are about to start. */
@@ -288,6 +327,42 @@ export default function ChapterNarration({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [branchId, depth, voice, story.id, branchParam]);
 
+  /**
+   * Have the next chapter ready before this one ends.
+   *
+   * Moving on used to start everything from nothing: load the page's data,
+   * find there is no narration yet, queue it, wait ten seconds or more while
+   * the voice is made (over a minute). Someone listening with the screen off heard a long
+   * silence between every chapter. So, once this chapter has been playing a
+   * little while, the next one's narration is made (only then: one tapped and
+   * left costs nothing) and the data its page needs is fetched. Arriving finds
+   * both waiting, and the sound picks up within a moment.
+   */
+  const preparedFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!next || !voice || !url || !playing || !length) return;
+    if (at < Math.min(AHEAD_AFTER_SECONDS, length / 2)) return;
+    const key = `${branchId}:${depth + 1}:${voice}`;
+    if (preparedFor.current === key) return;
+    preparedFor.current = key;
+    router.prefetch(next.href);
+    void api.getStory(story.id).catch(() => {});
+    void api.readBranch(branchId).catch(() => {});
+    void (async () => {
+      try {
+        const all = await api.chapterAudio(branchId, voice);
+        if (all.some((c) => c.depth === depth + 1 && c.url)) return;
+        const ticket = await api.narrateChapter(branchId, depth + 1, voice);
+        await awaitNarration(ticket, {});
+        // The copy kept from before says there is nothing to play yet.
+        forgetReads(`audio:${branchId}:`);
+        await api.chapterAudio(branchId, voice);
+      } catch {
+        // Not ready in advance is only the old behaviour: it is made on arrival.
+      }
+    })();
+  }, [next, voice, url, playing, length, at, branchId, depth, story.id, router]);
+
   // Loading a source resets the rate, so it is reapplied per track.
   useEffect(() => {
     const el = audioRef.current;
@@ -295,6 +370,13 @@ export default function ChapterNarration({
     el.defaultPlaybackRate = rate;
     el.playbackRate = rate;
   }, [rate, url]);
+
+  useEffect(() => {
+    const el = audioRef.current;
+    if (!el) return;
+    el.volume = volume * fade;
+    el.muted = muted;
+  }, [volume, muted, fade, url]);
 
   // The sleep timer. Wall-clock, so it runs whether or not sound is playing
   // - "30 minutes" means half an hour from now, as on any radio.
@@ -307,10 +389,8 @@ export default function ChapterNarration({
       const el = audioRef.current;
       const left = (sleep.until - Date.now()) / 1000;
       if (left <= 0) {
-        if (el) {
-          el.pause();
-          el.volume = 1;
-        }
+        el?.pause();
+        setFade(1);
         setCountdown(null);
         setSleep(null);
         storeSleep(null);
@@ -318,7 +398,7 @@ export default function ChapterNarration({
         return;
       }
       setSleepLeft(left);
-      if (el) el.volume = left <= FADE_SECONDS ? Math.max(0.05, left / FADE_SECONDS) : 1;
+      setFade(left <= FADE_SECONDS ? Math.max(0.05, left / FADE_SECONDS) : 1);
     };
     tick();
     const t = setInterval(tick, 1000);
@@ -338,6 +418,7 @@ export default function ChapterNarration({
       const ticket = await api.narrateChapter(branchId, depth, voice);
       setEstimatedMs(ticket.estimatedMs);
       const clip = await awaitNarration(ticket, { onStatus: setStage });
+      forgetReads(`audio:${branchId}:`);
       if (!ticket.cached) {
         setFinished(true);
         await new Promise((r) => setTimeout(r, 450));
@@ -388,6 +469,11 @@ export default function ChapterNarration({
       const t = e.target as HTMLElement | null;
       const tag = t?.tagName;
       if (t?.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        toggleMute();
+        return;
+      }
       if (e.key === ' ' || e.key.toLowerCase() === 'k') {
         // A focused button or link takes Space for itself.
         if (e.key === ' ' && (tag === 'BUTTON' || tag === 'A')) return;
@@ -403,7 +489,7 @@ export default function ChapterNarration({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [url, toggle, skip]);
+  }, [url, toggle, skip, toggleMute]);
 
   // Lock screen, headphone buttons, car display: the title and cover, and
   // play / pause / skip / next chapter without unlocking the phone.
@@ -661,16 +747,46 @@ export default function ChapterNarration({
             +15s
           </button>
 
+          {/* Desktop only: on phones the hardware buttons set the level, and
+              iOS ignores a page's volume anyway. The panel has it too.
+              The slider opens on hover or focus: the card is a reading
+              column wide, and a standing slider squeezed the seek bar to
+              nothing. */}
+          <div className="group/vol hidden flex-none items-center md:flex">
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-label={muted ? 'Bật tiếng' : 'Tắt tiếng'}
+              aria-pressed={muted}
+              title={`${muted ? 'Bật tiếng' : 'Tắt tiếng'} (phím M)`}
+              className="btn btn-quiet px-1"
+            >
+              <VolumeIcon level={muted ? 0 : volume} />
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              aria-label="Âm lượng"
+              aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)}%`}
+              onChange={(e) => chooseVolume(Number(e.target.value))}
+              className="scrub w-0 opacity-0 transition-[width,opacity] duration-150 group-hover/vol:w-[72px] group-hover/vol:opacity-100 group-focus-within/vol:w-[72px] group-focus-within/vol:opacity-100 motion-reduce:transition-none"
+              style={{ ['--pct' as string]: `${(muted ? 0 : volume) * 100}%` }}
+            />
+          </div>
+
+          {/* Speed only. The voice's name and "tự chuyển" used to sit here
+              too, and in a card a reading column wide they took 230px and
+              left the seek bar 11. They are in the tooltip and the panel. */}
           <button
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
+            title={`${label} · ${rate}×${autoNext ? ' · tự chuyển chương' : ''}`}
             className="btn btn-quiet flex-none text-[11.5px]"
           >
-            <span className="hidden max-w-[11ch] truncate md:inline">
-              {label}
-            </span>
             <span className="tabular-nums">{rate}×</span>
-            {autoNext && <span className="hidden sm:inline" title="Tự chuyển chương đang bật">· tự chuyển</span>}
             {sleepLabel && (
               <span className="flex items-center gap-1 text-[var(--color-accent)]" title="Hẹn giờ tắt đang bật">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -767,6 +883,32 @@ export default function ChapterNarration({
             ))}
           </div>
 
+          <div className="flex w-full items-center gap-2 text-[12.5px] text-[var(--color-muted)]">
+            <button
+              type="button"
+              onClick={toggleMute}
+              aria-label={muted ? 'Bật tiếng' : 'Tắt tiếng'}
+              aria-pressed={muted}
+              className="btn btn-quiet flex items-center gap-1.5 px-1"
+            >
+              <VolumeIcon level={muted ? 0 : volume} />
+              Âm lượng
+            </button>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={muted ? 0 : volume}
+              aria-label="Âm lượng"
+              aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)}%`}
+              onChange={(e) => chooseVolume(Number(e.target.value))}
+              className="scrub w-full max-w-[220px]"
+              style={{ ['--pct' as string]: `${(muted ? 0 : volume) * 100}%` }}
+            />
+            <span className="w-[4ch] text-right tabular-nums">{Math.round((muted ? 0 : volume) * 100)}%</span>
+          </div>
+
           <div className="flex w-full flex-wrap items-center gap-x-2 gap-y-1.5 text-[12.5px] text-[var(--color-muted)]" role="group" aria-label="Hẹn giờ tắt">
             <span className="flex items-center gap-1.5">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -835,5 +977,19 @@ export default function ChapterNarration({
 
       {mini}
     </section>
+  );
+}
+
+/** A speaker with waves for the level: none when silent, one when low, two above half. */
+function VolumeIcon({ level }: { level: number }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={SPEAKER} fill="currentColor" stroke="none" />
+      {level === 0 ? (
+        <path d={MUTED} />
+      ) : (
+        <path d={level > 0.5 ? WAVES : WAVES.split('M').slice(0, 2).join('M')} />
+      )}
+    </svg>
   );
 }

@@ -537,6 +537,42 @@ Phần là SQL thật (ghi đè theo thời gian, phân trang, pgvector) có tes
 một Postgres thử dựng riêng; script từ chối chạy nếu địa chỉ database không phải localhost,
 để không bao giờ lỡ chạy lên database thật. Giao diện được thử bằng tay trên trình duyệt.
 
+**"Chuyển chương khi đang nghe bị khựng: tìm và sửa thế nào?"**
+Đo trên trình duyệt, không đoán. Từ lúc sang chương mới đến lúc có tiếng mất 4,6 giây: trang
+chương mới hỏi lại API truyện (1,3 s), rồi cả nhánh (2,2 s), rồi danh sách audio, nối đuôi
+nhau, dù chẳng có gì thay đổi giữa chương 3 và chương 4. Nếu chương sau chưa có giọng thì
+thêm 1–4 phút chờ tạo giọng (Edge đọc nhanh hơn thời gian thật khoảng 3–4 lần).
+- *Cache theo tab* cho ba lượt đọc đó (5 phút, theo từng người dùng vì chương bị khoá phụ thuộc
+  người xem). Lần đầu làm, cache bị xoá bởi *mọi* lệnh ghi, kể cả lệnh lưu vị trí nghe mỗi 15
+  giây, nên vô dụng; đo lại mới thấy. Sửa: chỉ xoá phần bị ảnh hưởng (tạo giọng chỉ xoá danh
+  sách audio của nhánh đó). Trang soạn truyện luôn đọc mới vì sửa cộng tác không đi qua POST.
+- *Chuẩn bị trước*: nghe được 30 giây thì tạo sẵn giọng chương sau và tải sẵn dữ liệu trang
+  của nó. Server vốn đã tạo trước một chương, nhưng chỉ khi người nghe bấm tạo giọng; chương
+  đã có giọng thì không ai gọi server, nên trường hợp phổ biến nhất lại không được chuẩn bị.
+  Đợi 30 giây vì lúc đó người ta đang nghe thật, không phải bấm thử.
+- Kết quả: 4,6 s xuống 0,36 s. Server gộp yêu cầu trùng theo khoá `audio:{chương}:{giọng}`,
+  nên người nghe tới nơi khi bản tạo trước còn đang chạy cũng không tạo trùng.
+
+**"Thêm giọng đọc tự chạy (self-hosted) thế nào, gặp lỗi gì?"**
+Người dùng muốn thêm giọng nữ miền Bắc. Edge chỉ có một giọng nữ tiếng Việt. Đã thử FPT.AI
+(phải đăng ký và bật dịch vụ, bỏ). Chọn VieNeu-TTS v3 Turbo: giấy phép Apache 2.0, các giọng
+có sẵn (Trúc Ly, Ngọc Huyền) được người thật đồng ý cho dùng, chạy được trên CPU. Đo trên
+laptop (i5 4 nhân): nhanh hơn thời gian thật khoảng 1,3 lần, so với Edge khoảng 3,7 lần.
+- *Kiến trúc:* model nằm trong một tiến trình Python chạy thường trực trên cùng máy
+  (`tools/vieneu/sidecar.py`), API Node gọi qua HTTP nội bộ. Vì API viết bằng Node, không chạy
+  model Python trực tiếp được, và nạp model mỗi lần thì tốn thời gian.
+- *Lỗi 1:* gửi nguyên chương thì một yêu cầu chiếm model 8 phút; chương ngắn người đọc vừa
+  bấm phải chờ sau chương tạo trước của người khác. Sửa: cắt thành đoạn khoảng 1.200 ký tự,
+  các chương xen nhau theo từng đoạn. Chương ngắn còn chờ 50 giây thay vì 7,5 phút.
+- *Lỗi 2:* kết quả hay bị mất giữa đường (ECONNRESET, "terminated"). Tách từng giả thuyết và
+  đo: giữ kết nối lâu thì bị cắt, nên đổi sang gửi việc rồi hỏi kết quả; vẫn lỗi; thêm
+  `Connection: close`, vẫn lỗi; viết script Node riêng thì thấy cứ 2 lần hỏng 1, kể cả với
+  JSON vài byte. Kết luận: `http.server` có sẵn của Python không hợp. Chuyển sang uvicorn thì
+  3/3 lần thành công, chương 12.000 ký tự xong sau 6 phút 47 giây. Vẫn giữ thiết kế chịu
+  lỗi: kết quả chỉ xoá khi API báo đã nhận đủ, tải hỏng thì tải lại.
+- *Bài học:* khi lỗi lúc có lúc không, viết một bản dựng lại nhỏ nhất rồi đổi từng thứ một,
+  thay vì sửa theo giả thuyết đầu tiên.
+
 **"Bạn dùng AI để code thế nào?"** (mục 12)
 Tự quyết định kiến trúc, phạm vi và đánh đổi; AI viết phần lớn code. Bài học thật: một lần
 AI tự mở rộng phạm vi (làm trang Xếp hạng riêng khi chỉ cần bộ lọc sắp xếp), và một lần hai

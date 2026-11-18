@@ -1,5 +1,5 @@
 import { API } from './env';
-import { ensureSession, getToken, refresh } from './auth';
+import { ensureSession, getSnapshot, getToken, refresh } from './auth';
 
 export { API };
 
@@ -379,6 +379,54 @@ function authHeaders(extra?: HeadersInit, multipart = false): HeadersInit {
 let shelf: { at: number; data: Promise<Story[]> } | null = null;
 const SHELF_MS = 60_000;
 
+/**
+ * Reads the chapter view repeats on every chapter.
+ *
+ * Moving to the next chapter mounts the page afresh, and it used to ask again
+ * for the story, the whole branch and the branch's narration - round trips to
+ * a database across an ocean, one after another, seconds before a single word
+ * or sound. None of it changes between chapter 3 and chapter 4. Kept for a few
+ * minutes per tab, per signed-in user (the branch read depends on who may see
+ * which chapters), and dropped by any write, so nobody misses their own change.
+ */
+const reads = new Map<string, { at: number; data: Promise<unknown> }>();
+const READ_MS = 5 * 60_000;
+
+/**
+ * Writes that change none of the remembered reads. Listening saves its place
+ * every few seconds and narrating the next chapter is a POST: clearing
+ * everything on those would throw away exactly the copies kept for moving on.
+ */
+const UNRELATED_WRITE = /^\/(me\/progress|comments|chapters\/[^/]+\/comments)|\/(view|follow|follow\/seen)$/;
+
+function forgetChangedBy(path: string): void {
+  if (UNRELATED_WRITE.test(path)) return;
+  // A new narration changes the list of what has sound, and nothing else.
+  const audio = /^\/audio\/branches\/([^/?]+)/.exec(path);
+  if (audio) return forgetReads(`audio:${audio[1]}:`);
+  forgetReads();
+}
+
+/** `fresh` skips the copy (and replaces it): the editor, which changes things without a POST. */
+function remembered<T>(key: string, load: () => Promise<T>, fresh = false): Promise<T> {
+  const k = `${getSnapshot().user?.id ?? '-'}|${key}`;
+  const hit = reads.get(k);
+  if (!fresh && hit && Date.now() - hit.at < READ_MS) return hit.data as Promise<T>;
+  const data = load();
+  reads.set(k, { at: Date.now(), data });
+  data.catch(() => {
+    if (reads.get(k)?.data === data) reads.delete(k);
+  });
+  return data;
+}
+
+/** Drop remembered reads whose key starts with `prefix` (all of them by default). */
+export function forgetReads(prefix = ''): void {
+  for (const k of [...reads.keys()]) {
+    if (k.slice(k.indexOf('|') + 1).startsWith(prefix)) reads.delete(k);
+  }
+}
+
 async function call<T>(
   path: string,
   init?: RequestInit,
@@ -386,6 +434,7 @@ async function call<T>(
 ): Promise<T> {
   const method = (init?.method ?? 'GET').toUpperCase();
   if (method !== 'GET' && /^\/(stories|branches)/.test(path) && !path.endsWith('/view')) shelf = null;
+  if (method !== 'GET') forgetChangedBy(path);
   await ensureSession();
   const res = await fetch(API + path, {
     ...init,
@@ -463,7 +512,8 @@ export const api = {
   /** Branches I wrote in other people's stories. */
   myBranches: () => call<MyBranch[]>('/me/branches'),
 
-  getStory: (id: string) => call<Story>(`/stories/${id}`),
+  getStory: (id: string, fresh = false) =>
+    remembered(`story:${id}`, () => call<Story>(`/stories/${id}`), fresh),
 
   uploadCover: (id: string, file: File) => {
     const body = new FormData();
@@ -515,7 +565,8 @@ export const api = {
       method: 'DELETE',
     }),
 
-  readBranch: (id: string) => call<BranchRead>(`/branches/${id}`),
+  readBranch: (id: string, fresh = false) =>
+    remembered(`branch:${id}`, () => call<BranchRead>(`/branches/${id}`), fresh),
 
   /** An editable copy of the published version. */
   revise: (storyId: string, name?: string) =>
@@ -771,12 +822,12 @@ export const api = {
       '/audio/voices',
     ),
 
-  chapterAudio: (branchId: string, voice: string) =>
+  chapterAudio: (branchId: string, voice: string, fresh = false) =>
     // Encoded: self-hosted voice ids carry `:`, `#` and `@`, and an unencoded
     // `#` ends the URL right there - the server would never see the voice.
-    call<ChapterAudio[]>(
-      `/audio/branches/${branchId}?voice=${encodeURIComponent(voice)}`,
-    ),
+    remembered(`audio:${branchId}:${voice}`, () =>
+      call<ChapterAudio[]>(`/audio/branches/${branchId}?voice=${encodeURIComponent(voice)}`),
+    fresh),
 
   /** Mode one: queue a single chapter. Returns a job, not a clip. */
   narrateChapter: (branchId: string, depth: number, voice: string) =>

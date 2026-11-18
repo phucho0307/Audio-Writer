@@ -100,7 +100,7 @@ export default function StoryPage({
   const [draftDoc, setDraftDoc] = useState<PMDoc | null>(null);
 
   const loadStory = useCallback(async () => {
-    const s = await api.getStory(id);
+    const s = await api.getStory(id, true);
     setStory(s);
     setBranchId(
       (b) =>
@@ -129,14 +129,14 @@ export default function StoryPage({
   useEffect(() => {
     if (!branchId) return;
     api
-      .readBranch(branchId)
+      .readBranch(branchId, true)
       .then(setRead)
       .catch((e: Error) => setError(e.message));
   }, [branchId]);
 
   async function refresh() {
     await loadStory();
-    if (branchId) setRead(await api.readBranch(branchId));
+    if (branchId) setRead(await api.readBranch(branchId, true));
   }
 
   // -------------------------------------------------------------------------
@@ -263,7 +263,7 @@ export default function StoryPage({
     setError(null);
     try {
       await api.unlock(id);
-      if (branchId) setRead(await api.readBranch(branchId));
+      if (branchId) setRead(await api.readBranch(branchId, true));
       setWallet(await api.wallet());
     } catch (e) {
       setError((e as Error).message);

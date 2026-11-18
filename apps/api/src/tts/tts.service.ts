@@ -18,6 +18,7 @@ import { DomainEvents } from '../events/domain-events';
 import { PRIORITY, type NarrationJob } from '../queue/queue.constants';
 import ffmpegStatic from 'ffmpeg-static';
 import { EdgeTtsDriver } from './edge-tts.driver';
+import { VieneuTtsDriver } from './vieneu-tts.driver';
 import { GeminiTtsDriver } from './gemini-tts.driver';
 import type { TtsDriver } from './tts-driver';
 import { PiperTtsDriver } from './piper-tts.driver';
@@ -90,6 +91,12 @@ export class TtsService implements OnModuleInit {
           this.config.get<string>('EDGE_TTS_PYTHON', 'python'),
           this.config.get<string>('FFMPEG_PATH') || (ffmpegStatic as string | null) || null,
           timeout,
+        ),
+      // Its own per-piece deadline (queue included): TTS_TIMEOUT_MS is for a whole chapter.
+      vieneu: () =>
+        new VieneuTtsDriver(
+          this.config.get<string>('VIENEU_URL', 'http://127.0.0.1:5063'),
+          Number(this.config.get<string>('VIENEU_TIMEOUT_MS', String(30 * 60_000))),
         ),
       piper: () =>
         new PiperTtsDriver(

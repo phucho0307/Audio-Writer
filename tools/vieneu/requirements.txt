@@ -1,0 +1,6 @@
+# CPU build: ONNX Runtime, no PyTorch. Model weights (~580 MB) download from
+# Hugging Face on first start into the Hugging Face cache.
+vieneu==3.8.4
+soxr
+numpy
+truststore

@@ -44,7 +44,7 @@ export async function awaitNarration(
   ticket: NarrationTicket,
   opts: AwaitOptions = {},
 ): Promise<{ url: string; durationMs: number | null }> {
-  const { onStatus, timeoutMs = 10 * 60_000, signal } = opts;
+  const { onStatus, timeoutMs = 45 * 60_000, signal } = opts;
 
   // Already narrated: nothing was queued.
   if (ticket.url) {

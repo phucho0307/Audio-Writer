@@ -3,6 +3,8 @@
 import type { Voice } from '@/lib/api';
 
 const GROUPS: { provider: string; title: string }[] = [
+  { provider: 'vieneu', title: 'VieNeu' },
+  { provider: 'edge-tts', title: 'Microsoft' },
   { provider: 'gemini', title: 'Gemini' },
   { provider: 'piper', title: 'Piper · thử nghiệm' },
 ];

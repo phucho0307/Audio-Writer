@@ -31,7 +31,7 @@ export default function WritePage({
 
   useEffect(() => {
     api
-      .getStory(id)
+      .getStory(id, true)
       .then(setStory)
       .catch((e: Error) => setError(e.message));
   }, [id]);

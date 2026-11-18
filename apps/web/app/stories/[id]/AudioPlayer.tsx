@@ -82,13 +82,13 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
     setChapters(null);
     if (!voice) return;
     api
-      .chapterAudio(branchId, voice)
+      .chapterAudio(branchId, voice, true)
       .then(setChapters)
       .catch((e: Error) => setError(e.message));
   }, [branchId, voice]);
 
   async function refresh() {
-    setChapters(await api.chapterAudio(branchId, voice));
+    setChapters(await api.chapterAudio(branchId, voice, true));
   }
 
   function fail(e: unknown) {
