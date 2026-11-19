@@ -110,9 +110,14 @@ export default function RootLayout({
 
         <footer className="relative z-10 mt-24 border-t border-[var(--color-line)] pb-[calc(64px+env(safe-area-inset-bottom))] sm:pb-0">
           <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-5 py-10 sm:flex-row sm:items-baseline sm:justify-between sm:px-8">
-            <p className="display text-[15px] text-[var(--color-muted)]">
-              {BRAND}
-            </p>
+            <div className="flex items-baseline gap-4">
+              <p className="display text-[15px] text-[var(--color-muted)]">
+                {BRAND}
+              </p>
+              <a href="/chinh-sach-rieng-tu" className="text-[12.5px] text-[var(--color-faint)] underline-offset-4 hover:text-[var(--color-ink)] hover:underline">
+                Quyền riêng tư
+              </a>
+            </div>
             <p className="max-w-[46ch] text-[12.5px] leading-relaxed text-[var(--color-faint)]">
               Truyện trên nền tảng do người dùng viết. Các trang nghe truyện
               được dẫn nguồn để tham khảo, không sao chép nội dung.

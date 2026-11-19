@@ -97,10 +97,16 @@ Migration luôn chạy trước API mới, nên code mới không bao giờ ch�
 
 ## Kiểm tra
 
-- `docker compose -f infra/docker-compose.prod.yml ps`: mọi dịch vụ `healthy`,
+Mọi lệnh `docker compose` đều cần `--env-file .env`: Compose tìm `.env` cạnh file compose
+(`infra/`), không phải ở thư mục gốc, nên thiếu cờ này sẽ báo `DOMAIN is missing`. Tạo lệnh
+tắt một lần trên máy chủ:
+`echo "alias dc='docker compose -f infra/docker-compose.prod.yml --env-file .env'" >> ~/.bashrc`
+
+
+- `docker compose -f infra/docker-compose.prod.yml --env-file .env ps`: mọi dịch vụ `healthy`,
   riêng `migrate` là `exited (0)`.
 - `curl https://<tên miền>/api/health`
-- Log: `docker compose -f infra/docker-compose.prod.yml logs -f api`
+- Log: `docker compose -f infra/docker-compose.prod.yml --env-file .env logs -f api`
 
 ## Giới hạn đã biết của cách chạy một máy
 
