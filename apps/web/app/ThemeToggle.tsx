@@ -7,11 +7,9 @@ type Choice = 'light' | 'dark' | null;
 /**
  * Night and day.
  *
- * Three states rather than two: no choice means follow the system, which is
- * what most people want and what the stylesheet already handles. The toggle
- * only ever writes an override, and it reads the current state from the DOM
- * rather than keeping its own copy - the boot script in the document head has
- * already applied one by the time this mounts.
+ * Night unless the reader picks day: the boot script in the document head
+ * stamps one or the other before first paint (see layout.tsx). The toggle
+ * reads the current state from the DOM rather than keeping its own copy.
  */
 export default function ThemeToggle() {
   const [choice, setChoice] = useState<Choice>(null);

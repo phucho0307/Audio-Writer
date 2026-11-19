@@ -6,12 +6,9 @@ import { calm, MOTION_EVENT, setMotionPref } from '@/lib/motion';
 /**
  * Atmosphere on or off.
  *
- * The operating system's reduced-motion setting still decides what happens by
- * default. This exists because that setting is machine-wide and permanent,
- * and a reader who turned animations off in Windows years ago has not
- * necessarily asked this site to be a plain black page - while a reader who
- * finds drifting fog unpleasant can switch it off here even on a machine that
- * never asked for stillness.
+ * Effects are on by default, whatever the operating system's reduced-motion
+ * setting says (see calm() in lib/motion.ts). This is how a reader who finds
+ * the drifting fog unpleasant switches it off, and the choice is remembered.
  *
  * Whichever way it is pressed it writes an explicit answer, so the control
  * always does what it looks like it does.

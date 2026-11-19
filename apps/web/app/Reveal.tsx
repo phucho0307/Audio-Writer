@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, type ElementType, type ReactNode } from 'react';
-import { calm, gsap, useGSAP } from '@/lib/motion';
+import { calm, gsap, lowPower, useGSAP } from '@/lib/motion';
 
 /**
  * Brings a block up out of the dark as it is reached.
@@ -63,7 +63,9 @@ export default function Reveal({
         // A touch of blur reads as something resolving out of fog rather than
         // a box sliding in, which is the difference between this site and a
         // dashboard.
-        filter: blur ? 'blur(7px)' : 'none',
+        // Not on a phone: animating a filter repaints the element every frame,
+        // which across a grid of covers is the scroll stutter.
+        filter: blur && !lowPower() ? 'blur(7px)' : 'none',
         duration: 0.85,
         delay,
         stagger: childrenStagger ? stagger : 0,

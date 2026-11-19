@@ -31,8 +31,11 @@ export const metadata: Metadata = {
  * A theme read from localStorage in an effect arrives one frame too late, and
  * that frame is a white flash in the face of someone reading horror at 1am.
  * Inline and synchronous is the only version that does not flash.
+ *
+ * Night is the default, whatever the system says: the site is built for
+ * reading and listening in the dark. Day is there for whoever picks it.
  */
-const THEME_BOOT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('aw-theme');if(t==='light'||t==='dark')d.setAttribute('data-theme',t);var m=localStorage.getItem('aw-motion');if(m==='full'||m==='calm')d.setAttribute('data-motion',m)}catch(e){}})()`;
+const THEME_BOOT = `(function(){try{var d=document.documentElement;var t=localStorage.getItem('aw-theme');d.setAttribute('data-theme',t==='light'?'light':'dark');var m=localStorage.getItem('aw-motion');if(m==='full'||m==='calm')d.setAttribute('data-motion',m)}catch(e){document.documentElement.setAttribute('data-theme','dark')}})()`;
 
 export default function RootLayout({
   children,

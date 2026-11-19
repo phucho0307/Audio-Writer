@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { calm, MOTION_EVENT } from '@/lib/motion';
+import { calm, lowPower, MOTION_EVENT } from '@/lib/motion';
 import { isNarrating, onNarrating } from '@/lib/ambience';
 
 /**
@@ -135,12 +135,7 @@ export default function Atmosphere() {
   useEffect(() => {
     const bump = () => setEpoch((n) => n + 1);
     window.addEventListener(MOTION_EVENT, bump);
-    const system = window.matchMedia('(prefers-reduced-motion: reduce)');
-    system.addEventListener('change', bump);
-    return () => {
-      window.removeEventListener(MOTION_EVENT, bump);
-      system.removeEventListener('change', bump);
-    };
+    return () => window.removeEventListener(MOTION_EVENT, bump);
   }, []);
 
   useEffect(() => {
@@ -164,7 +159,12 @@ export default function Atmosphere() {
       });
       // Capped: this is a background wash, and a 4K pass of five-octave fbm
       // every frame is a laptop fan for something nobody is looking at.
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+      //
+      // On a phone, far lower still: the fog is soft by design, so half a
+      // pixel per CSS pixel looks the same once stretched, and it is a
+      // quarter of the fragment work on a GPU that also has to scroll the page.
+      const phone = lowPower();
+      renderer.setPixelRatio(phone ? 0.5 : Math.min(window.devicePixelRatio, 1.5));
       // `false`: size the drawing buffer only. Letting three.js write an
       // inline width from innerWidth (which includes the scrollbar) made
       // the canvas 13px wider than the page it sits behind.
@@ -205,7 +205,14 @@ export default function Atmosphere() {
       );
       scene.add(mesh);
 
+      // Mobile browsers fire `resize` throughout a scroll as the address bar
+      // slides in and out. Reallocating the drawing buffer on each of those
+      // was a stutter on every scroll; the canvas is stretched by CSS anyway,
+      // so a change of height alone is ignored on a phone.
+      let sizedWidth = window.innerWidth;
       const onResize = () => {
+        if (phone && window.innerWidth === sizedWidth) return;
+        sizedWidth = window.innerWidth;
         renderer.setSize(window.innerWidth, window.innerHeight, false);
         uniforms.uRes.value.set(window.innerWidth, window.innerHeight);
       };
@@ -236,9 +243,15 @@ export default function Atmosphere() {
       let raf = 0;
       let last = performance.now();
       const start = last;
+      // A phone draws the fog at 30 frames a second: it drifts slowly enough
+      // that nobody can tell, and it halves the GPU time taken from scrolling.
+      const minGap = phone ? 1000 / 30 - 2 : 0;
+      let drawn = 0;
 
       const frame = (now: number) => {
         raf = requestAnimationFrame(frame);
+        if (now - drawn < minGap) return;
+        drawn = now;
 
         // Nothing to draw when the tab is in the background or the reader has
         // scrolled the fog off screen.

@@ -618,25 +618,9 @@ body {
   animation: card-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-/* Stillness, in the same three states as the theme: the system setting is
-   honoured unless the reader has explicitly asked for one or the other.
-   `[data-motion='full']` is how someone whose machine asks every site for
-   stillness can still choose to have the atmosphere here. */
-@media (prefers-reduced-motion: reduce) {
-  :root:not([data-motion='full']) *,
-  :root:not([data-motion='full']) *::before,
-  :root:not([data-motion='full']) *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-
-  :root:not([data-motion='full']) .group:hover .cover,
-  :root:not([data-motion='full']) .cover:hover {
-    transform: none;
-  }
-}
-
+/* Stillness, only when the reader has switched effects off with the header
+   toggle. The system's reduced-motion setting no longer decides it; see
+   calm() in lib/motion.ts. */
 :root[data-motion='calm'] *,
 :root[data-motion='calm'] *::before,
 :root[data-motion='calm'] *::after {
@@ -798,9 +782,8 @@ body {
 }
 .auth-card { animation: auth-rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
 .auth-scrim { animation: auth-fade 200ms ease-out both; }
-@media (prefers-reduced-motion: reduce) {
-  .auth-card, .auth-scrim { animation: none; }
-}
+:root[data-motion='calm'] .auth-card,
+:root[data-motion='calm'] .auth-scrim { animation: none; }
 
 /*
  * Genre chips on Khám phá: one row until the pointer is over them.
@@ -826,6 +809,33 @@ body {
     mask-image: none;
   }
 }
-@media (min-width: 640px) and (hover: hover) and (prefers-reduced-motion: reduce) {
-  .genre-rail { transition: none; }
+@media (min-width: 640px) and (hover: hover) {
+  :root[data-motion='calm'] .genre-rail { transition: none; }
+}
+
+/* ------------------------------------------------------------------ phones */
+
+/*
+ * Touch screens: the same look, minus the effects a phone GPU pays for on
+ * every scroll frame.
+ *
+ * - The grain sits above the whole page in a blend mode, which makes the
+ *   browser re-blend the full screen whenever anything under it moves. Plain
+ *   opacity looks nearly the same and composites for free.
+ * - Frosted glass (backdrop-filter) on the sticky header, the bottom tabs and
+ *   the player re-blurs whatever scrolls beneath them, every frame. Their
+ *   backgrounds are 82-94% opaque already, so without the blur they read the
+ *   same, a little more solid.
+ */
+@media (hover: none), (pointer: coarse) {
+  .grain {
+    mix-blend-mode: normal;
+    opacity: 0.03;
+  }
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-xl {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
 }

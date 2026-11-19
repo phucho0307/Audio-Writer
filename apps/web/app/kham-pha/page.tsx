@@ -13,7 +13,7 @@ import Tilt, { Sheen } from '../Tilt';
 import RatingBadge from '../Rating';
 import { storyRating } from '@/lib/ratings';
 import { storyAuthorHandle } from '@/lib/chapter-author';
-import { calm, gsap, useGSAP } from '@/lib/motion';
+import { calm, gsap, lowPower, useGSAP } from '@/lib/motion';
 import AuthorByline from '@/app/AuthorByline';
 import { nativeStory } from '@/lib/native-catalog';
 import FamousWorkCard from './FamousWorkCard';
@@ -376,7 +376,9 @@ function Featured({ story }: { story: Story }) {
   useGSAP(
     () => {
       const el = backdrop.current;
-      if (!el?.parentElement || calm()) return;
+      // Not on a phone: moving a heavily blurred layer on every scroll frame
+      // is more than a phone GPU keeps up with, and it is decoration.
+      if (!el?.parentElement || calm() || lowPower()) return;
       gsap.to(el, {
         yPercent: 10,
         ease: 'none',

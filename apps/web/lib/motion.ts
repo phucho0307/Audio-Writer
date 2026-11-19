@@ -47,13 +47,29 @@ export function motionPref(): MotionPref {
   return 'system';
 }
 
-/** True when this reader should be left in stillness. */
+/**
+ * True when this reader should be left in stillness: only when they have
+ * switched effects off here.
+ *
+ * The operating system's reduced-motion setting used to decide the default.
+ * It was dropped because that switch is mostly flipped for other reasons -
+ * Windows' "best performance" preset turns it on - and it left a large share
+ * of visitors on a still page without ever knowing there was more. The
+ * header toggle (MotionToggle) is the way to ask for stillness here.
+ */
 export function calm(): boolean {
   if (typeof window === 'undefined') return true;
-  const pref = motionPref();
-  if (pref === 'full') return false;
-  if (pref === 'calm') return true;
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  return motionPref() === 'calm';
+}
+
+/**
+ * A phone or tablet: a touch screen, where the GPU is a fraction of a
+ * laptop's and every full-screen effect is paid for again on each scroll
+ * frame. Effects stay on there, in cheaper versions.
+ */
+export function lowPower(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.matchMedia('(hover: none), (pointer: coarse), (max-width: 640px)').matches;
 }
 
 /** Write the choice, mirror it onto <html>, and tell the page. */
