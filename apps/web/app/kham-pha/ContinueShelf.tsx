@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { forgetProgress, resumeHref, useProgress } from '@/lib/progress';
 import { thumbUrl } from '@/lib/thumb';
@@ -15,10 +16,17 @@ function mmss(s: number): string {
  * Top of Khám phá, because a returning listener's first question is "where
  * was I", not "what is new". Each one goes straight back to the chapter and
  * second where they stopped. Hidden until there is something to show.
+ *
+ * A wrapping grid rather than a sideways strip, so every story is in view
+ * without scrolling past the edge. Past two rows the rest fold behind a
+ * "show all" button, so a long history does not push the catalogue down.
  */
+const FOLDED = 8;
 export default function ContinueShelf() {
-  const items = useProgress().slice(0, 12);
-  if (items.length === 0) return null;
+  const all = useProgress();
+  const [open, setOpen] = useState(false);
+  if (all.length === 0) return null;
+  const items = open ? all : all.slice(0, FOLDED);
 
   return (
     <section className="flex flex-col gap-4" aria-labelledby="continue-title">
@@ -26,13 +34,13 @@ export default function ContinueShelf() {
         <h2 id="continue-title" className="label label-accent">
           Đang nghe dở
         </h2>
-        <span className="text-[11.5px] text-[var(--color-faint)]">{items.length} truyện</span>
+        <span className="text-[11.5px] text-[var(--color-faint)]">{all.length} truyện</span>
       </div>
-      <ul className="-mx-5 flex snap-x gap-3 overflow-x-auto px-5 pb-2 sm:mx-0 sm:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
         {items.map((p) => {
           const pct = p.totalChapters > 0 ? Math.min(100, ((p.chapter - 1) / p.totalChapters) * 100) : 0;
           return (
-            <li key={p.storyId} className="group relative w-[230px] flex-none snap-start">
+            <li key={p.storyId} className="group relative min-w-0">
               <Link
                 href={resumeHref(p)}
                 className="flex h-full gap-3 rounded-[8px] border border-[var(--color-line)] bg-[var(--color-surface)] p-2.5 pr-7 transition-colors hover:border-[var(--color-accent-line)]"
@@ -70,6 +78,11 @@ export default function ContinueShelf() {
           );
         })}
       </ul>
+      {all.length > FOLDED && (
+        <button type="button" onClick={() => setOpen((v) => !v)} className="btn btn-ghost btn-sm self-center">
+          {open ? 'Thu gọn' : `Xem tất cả ${all.length} truyện`}
+        </button>
+      )}
     </section>
   );
 }
