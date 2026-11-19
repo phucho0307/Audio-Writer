@@ -37,6 +37,7 @@ services:
         NEXT_PUBLIC_API_URL: /api
         NEXT_PUBLIC_MEDIA_BASE: ${MEDIA_BASE:-}
         NEXT_PUBLIC_CF_BEACON_TOKEN: ${CF_BEACON_TOKEN:-}
+        NEXT_PUBLIC_DEMO_RATINGS: ${NEXT_PUBLIC_DEMO_RATINGS:-true}
         API_URL: http://api:4000
     environment:
       # Read at request time by the server-rendered link previews.

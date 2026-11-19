@@ -95,6 +95,15 @@ docker compose -f infra/docker-compose.prod.yml --env-file .env up -d --build
 
 Migration luôn chạy trước API mới, nên code mới không bao giờ chạy trên schema cũ.
 
+Điểm sao và số lượt đánh giá demo mặc định bật như bản local, kể cả truyện nhập
+vào. Khi truyện có ít nhất 5 đánh giá thật, giao diện ưu tiên điểm và số lượt thật.
+Muốn tắt phần demo thì đặt `NEXT_PUBLIC_DEMO_RATINGS=false` trong `.env` rồi build
+lại web; biến này được đóng vào bundle lúc build. Chỉ cập nhật web:
+
+```
+docker compose -f infra/docker-compose.prod.yml --env-file .env up -d --build --no-deps web
+```
+
 ## Kiểm tra
 
 Mọi lệnh `docker compose` đều cần `--env-file .env`: Compose tìm `.env` cạnh file compose

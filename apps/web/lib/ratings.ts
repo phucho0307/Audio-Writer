@@ -1,15 +1,13 @@
 /**
  * Story ratings: real ones, and the demo placeholders.
  *
- * Real ratings come from readers (PUT /stories/:id/rating) and are shown
- * once a story has MIN_RATINGS_SHOWN of them. Until then a story shows no
- * score at all.
+ * Real ratings come from readers (PUT /stories/:id/rating) and take priority
+ * once a story has MIN_RATINGS_SHOWN of them.
  *
- * DEMO MODE ONLY: `placeholder*` below invents numbers so the layout can be
- * judged and demoed with ratings in it. It is on in development and off in
- * production builds (override with NEXT_PUBLIC_DEMO_RATINGS). A star rating
- * nobody gave must never reach a real reader: it is a false claim about the
- * story, and fake reviews are unlawful in many places.
+ * Until then, `placeholder*` supplies the demo scores and counts. These are
+ * enabled by default in both local and deployed builds so the same catalogue
+ * keeps its stars after deployment. Set NEXT_PUBLIC_DEMO_RATINGS=false at
+ * build time to show only real ratings.
  *
  * Placeholders are deterministic: derived from the id, so a story's number
  * does not jump between reloads or between the list and its own page.
@@ -17,10 +15,7 @@
 
 export const MIN_RATINGS_SHOWN = 5;
 
-export const DEMO_RATINGS =
-  process.env.NEXT_PUBLIC_DEMO_RATINGS !== undefined
-    ? process.env.NEXT_PUBLIC_DEMO_RATINGS === 'true'
-    : process.env.NODE_ENV !== 'production';
+export const DEMO_RATINGS = process.env.NEXT_PUBLIC_DEMO_RATINGS !== 'false';
 
 export type Rating = {
   /** 1.0 - 5.0, one decimal. */
@@ -89,8 +84,7 @@ export function storyRating(story: {
   if (count >= MIN_RATINGS_SHOWN) {
     return { score: Math.round(((story.ratingSum ?? 0) / count) * 10) / 10, count };
   }
-  // Never invent stars for a real author's published work, even in a demo.
-  return DEMO_RATINGS && !story.textSource ? placeholderStory(story.id) : null;
+  return DEMO_RATINGS ? placeholderStory(story.id) : null;
 }
 
 /** Branches have no real ratings yet; demo mode only. */
