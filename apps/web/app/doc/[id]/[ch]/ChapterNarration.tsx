@@ -983,7 +983,7 @@ export default function ChapterNarration({
               />
             </button>
             <span onClick={toggleAutoNext}>
-              Tự chuyển chương · nghe hết thì sang chương tiếp
+              Tự chuyển chương
             </span>
           </div>
         </div>
