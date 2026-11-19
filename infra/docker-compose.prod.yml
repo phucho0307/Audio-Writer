@@ -36,6 +36,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: /api
         NEXT_PUBLIC_MEDIA_BASE: ${MEDIA_BASE:-}
+        NEXT_PUBLIC_CF_BEACON_TOKEN: ${CF_BEACON_TOKEN:-}
         API_URL: http://api:4000
     environment:
       # Read at request time by the server-rendered link previews.
@@ -70,6 +71,10 @@ services:
       # One proxy (Caddy) in front, so client IPs for rate limiting come
       # from its X-Forwarded-For rather than being Caddy's own address.
       TRUST_PROXY: "1"
+      # Trúc Ly (VieNeu) is the house voice; Edge stands in while the
+      # sidecar is still loading or has been stopped.
+      TTS_DRIVER: ${TTS_DRIVER:-vieneu,edge}
+      VIENEU_URL: http://vieneu:5063
     depends_on:
       redis:
         condition: service_healthy
@@ -77,6 +82,31 @@ services:
         condition: service_completed_successfully
     # Give in-flight narration a moment to finish on deploy.
     stop_grace_period: 30s
+
+  # Self-hosted narration voices. Not a dependency of the API: the API polls
+  # it and offers its voices only while it answers, so a slow first start
+  # (the model downloads into the volume once) never holds the site up.
+  vieneu:
+    image: nhipbut-vieneu:${TAG:-latest}
+    build:
+      context: ../tools/vieneu
+      dockerfile: ../../infra/docker/vieneu.Dockerfile
+    restart: unless-stopped
+    volumes:
+      - vieneu_models:/models
+    # About 3.6 GB in use once loaded. A ceiling, so a runaway synthesis
+    # takes down this container rather than the whole machine.
+    mem_limit: ${VIENEU_MEM_LIMIT:-6g}
+
+  # Nightly database dump to R2. `docker compose run --rm backup now` takes
+  # one on demand.
+  backup:
+    image: nhipbut-backup:${TAG:-latest}
+    build:
+      context: ..
+      dockerfile: infra/docker/backup.Dockerfile
+    restart: unless-stopped
+    env_file: ../.env
 
   redis:
     image: redis:7-alpine
@@ -95,3 +125,4 @@ volumes:
   caddy_data:
   caddy_config:
   redis_data:
+  vieneu_models:

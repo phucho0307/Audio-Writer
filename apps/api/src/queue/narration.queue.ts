@@ -98,7 +98,7 @@ export class NarrationQueue implements OnModuleInit, OnModuleDestroy {
 
     await this.queue.add(NARRATE_CHAPTER, job, { jobId, priority });
     this.logger.log(
-      `queued ${jobId} [${job.voice}] (priority ${priority === PRIORITY.BULK ? 'bulk' : 'interactive'})`,
+      `queued ${jobId} [${job.voice}] (priority ${priority})`,
     );
     return jobId;
   }

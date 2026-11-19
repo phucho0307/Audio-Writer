@@ -17,6 +17,8 @@ import { CollabModule } from './collab/collab.module';
 import { TtsModule } from './tts/tts.module';
 import { UsersModule } from './users/users.module';
 import { RatingsModule } from './ratings/ratings.module';
+import { AdminModule } from './admin/admin.module';
+import { PremiumModule } from './premium/premium.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { RatingsModule } from './ratings/ratings.module';
     StoriesModule,
     UsersModule,
     RatingsModule,
+    AdminModule,
+    PremiumModule,
     LlmModule,
     EventsModule,
     StorageModule,

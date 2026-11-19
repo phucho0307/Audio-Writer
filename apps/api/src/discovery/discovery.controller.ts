@@ -1,3 +1,4 @@
+import { isPremium } from '../premium/premium';
 import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Req } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
@@ -52,7 +53,7 @@ export class DiscoveryController {
     // an unproven account is counted with its network, like a visitor.
     const own = user && (!this.needVerified || user.emailVerifiedAt);
     const who = own ? `u:${user.id}` : `ip:${req.ip ?? 'unknown'}`;
-    return this.discovery.search(dto.q, dto.previous, who);
+    return this.discovery.search(dto.q, dto.previous, who, Boolean(own) && isPremium(user));
   }
 
   /** Stories like this one, from the cards AI search already wrote. */

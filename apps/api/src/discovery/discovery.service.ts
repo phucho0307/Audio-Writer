@@ -67,6 +67,7 @@ export interface DiscoveryResponse {
 export class DiscoveryService {
   private readonly logger = new Logger(DiscoveryService.name);
   private readonly dailyPerReader: number;
+  private readonly dailyPremium: number;
   private genresCache: { at: number; list: string[] } | null = null;
 
   constructor(
@@ -78,9 +79,11 @@ export class DiscoveryService {
     private readonly cards: StoryCardsService,
   ) {
     this.dailyPerReader = Number(config.get('DISCOVERY_DAILY', 20));
+    this.dailyPremium = Number(config.get('DISCOVERY_PREMIUM_DAILY', 200));
   }
 
-  async search(raw: string, previous: string | undefined, who: string): Promise<DiscoveryResponse> {
+  async search(raw: string, previous: string | undefined, who: string, premium = false): Promise<DiscoveryResponse> {
+    const allowance = premium ? this.dailyPremium : this.dailyPerReader;
     const q = normalise(raw);
     if (q.length < 3) {
       throw new HttpException({ code: 'QUERY_TOO_SHORT', message: 'Tả thêm một chút về truyện bạn muốn nghe.' }, 400);
@@ -94,9 +97,14 @@ export class DiscoveryService {
     // Only answers that cost model calls count against the daily allowance.
     const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
     const used = await this.redis.incrementWindow(`discovery:daily:${who}:${day}`, 60 * 60 * 48);
-    if (used > this.dailyPerReader) {
+    if (used > allowance) {
       throw new HttpException(
-        { code: 'DISCOVERY_QUOTA', message: `Hôm nay bạn đã tìm ${this.dailyPerReader} lần. Mai tìm tiếp nhé, hoặc dùng bộ lọc thể loại.` },
+        {
+          code: 'DISCOVERY_QUOTA',
+          message: premium
+            ? `Hôm nay bạn đã tìm ${allowance} lần. Mai tìm tiếp nhé, hoặc dùng bộ lọc thể loại.`
+            : `Hôm nay bạn đã tìm ${allowance} lần. Mai tìm tiếp, dùng bộ lọc thể loại, hoặc lên Premium để tìm ${this.dailyPremium} lần mỗi ngày.`,
+        },
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }

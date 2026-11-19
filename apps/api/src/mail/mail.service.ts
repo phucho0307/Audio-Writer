@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createTransport, type Transporter } from 'nodemailer';
 
 export interface Mail {
   to: string;
@@ -10,7 +11,13 @@ export interface Mail {
 }
 
 /**
- * Outgoing email, through Resend's HTTP API.
+ * Outgoing email, through SMTP (SMTP_URL, e.g. a Gmail app password) or
+ * Resend's HTTP API.
+ *
+ * SMTP comes first because it needs no domain of our own: Resend delivers to
+ * strangers only from a verified domain, and a free subdomain (DuckDNS) cannot
+ * be verified. Gmail sends about 500 a day from a normal account, far more
+ * than sign-ups will need before there is a real domain.
  *
  * One fetch, no SDK: the API is a single POST, and a dependency for it would
  * be more code to keep current than the call itself.
@@ -26,21 +33,33 @@ export class MailService {
   private readonly key: string;
   private readonly from: string;
   private readonly production: boolean;
+  private readonly smtp: Transporter | null;
 
   constructor(config: ConfigService) {
+    const smtpUrl = config.get<string>('SMTP_URL', '');
+    this.smtp = smtpUrl ? createTransport(smtpUrl) : null;
     this.key = config.get<string>('RESEND_API_KEY', '');
     // Resend's shared sender works with no domain of our own, but only to
     // the address that owns the Resend account.
     this.from = config.get<string>('MAIL_FROM', 'Nhịp Bút <onboarding@resend.dev>');
     this.production = config.get<string>('NODE_ENV') === 'production';
-    if (!this.key) {
+    if (!this.key && !this.smtp) {
       const say = this.production ? this.logger.error.bind(this.logger) : this.logger.log.bind(this.logger);
-      say('RESEND_API_KEY is not set: emails are written to this log, not sent');
+      say('Neither SMTP_URL nor RESEND_API_KEY is set: emails are written to this log, not sent');
     }
   }
 
   /** Resolves false when the provider refused it; callers decide whether that matters. */
   async send(mail: Mail): Promise<boolean> {
+    if (this.smtp) {
+      try {
+        await this.smtp.sendMail({ from: this.from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html });
+        return true;
+      } catch (err) {
+        this.logger.warn(`SMTP refused mail to ${mask(mail.to)}: ${(err as Error).message}`);
+        return false;
+      }
+    }
     if (!this.key) {
       this.logger.log(`[mail not sent] to ${mail.to}: ${mail.subject}\n${mail.text}`);
       return true;

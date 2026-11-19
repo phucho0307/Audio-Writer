@@ -66,7 +66,7 @@ export type ChapterComment = {
   id: string;
   body: string;
   createdAt: string;
-  author: { handle: string; displayName: string; avatarUrl: string | null };
+  author: { handle: string; displayName: string; avatarUrl: string | null; premium?: boolean };
   mine: boolean;
   canDelete: boolean;
 };
@@ -229,6 +229,8 @@ export type Access = {
   unlocked: boolean;
   isOwner: boolean;
   lockedCount: number;
+  /** False while the site has paid chapters switched off (no checkout yet). */
+  paidChapters?: boolean;
 };
 
 export type Wallet = {
@@ -482,6 +484,7 @@ export type PublicProfile = {
   avatarUrl: string | null;
   bio: string | null;
   createdAt: string;
+  premium?: boolean;
   stories: {
     id: string;
     title: string;
@@ -492,6 +495,57 @@ export type PublicProfile = {
     viewCount: number;
   }[];
 };
+
+/** See apps/api/src/admin/admin.service.ts. Admins are never counted. */
+export interface AdminStats {
+  goal: number;
+  /** Active on two or more different days in the last 30. */
+  returning: number;
+  users: number;
+  newWeek: number;
+  verified: number;
+  active: { day: number; week: number; month: number };
+  week: { listeners: number; comments: number; follows: number; ratings: number };
+  signups: { handle: string; displayName: string; createdAt: string }[];
+}
+
+export type PremiumStatus = {
+  /** False until the owner has configured a bank account to be paid into. */
+  enabled: boolean;
+  price: number;
+  days: number;
+  perks: { aiFree: number; aiPremium: number; searchFree: number; searchPremium: number };
+  premium: boolean;
+  premiumUntil: string | null;
+};
+
+export type PremiumOrder = {
+  code: string;
+  amount: number;
+  days: number;
+  status: 'PENDING' | 'PAID' | 'UNDERPAID';
+  paidAmount: number;
+  expiresAt: string;
+  qrUrl: string;
+  bank: { code: string; account: string; name: string };
+  premiumUntil: string | null;
+};
+
+export interface AdminPayments {
+  active: number;
+  paidCount: number;
+  revenue: number;
+  orders: {
+    code: string;
+    status: 'PAID' | 'UNDERPAID' | 'PENDING';
+    amount: number;
+    paidAmount: number;
+    createdAt: string;
+    paidAt: string | null;
+    user: { handle: string; displayName: string; premiumUntil: string | null };
+  }[];
+  unmatched: { id: string; amount: number; content: string; receivedAt: string }[];
+}
 
 export const api = {
   /** The public shelf: PUBLIC stories only, works signed out. */
@@ -700,6 +754,19 @@ export const api = {
 
   /** Open a share link: joins the room at the link's level. */
   myProfile: () => call<MyProfile>('/me/profile'),
+
+  /** The owner's usage numbers. 404 for anyone who is not an admin. */
+  adminStats: () => call<AdminStats>('/admin/stats'),
+  adminPayments: () => call<AdminPayments>('/admin/payments'),
+  adminActivatePremium: (code: string, transferId?: string) =>
+    call<{ ok: true }>(`/admin/premium/${encodeURIComponent(code)}/activate`, {
+      method: 'POST',
+      body: JSON.stringify(transferId ? { transferId } : {}),
+    }),
+
+  premium: () => call<PremiumStatus>('/premium'),
+  createPremiumOrder: () => call<PremiumOrder>('/premium/orders', { method: 'POST' }),
+  premiumOrder: (code: string) => call<PremiumOrder>(`/premium/orders/${encodeURIComponent(code)}`),
 
   updateProfile: (patch: { displayName?: string; handle?: string; bio?: string | null }) =>
     call<MyProfile>('/me/profile', { method: 'PATCH', body: JSON.stringify(patch) }),

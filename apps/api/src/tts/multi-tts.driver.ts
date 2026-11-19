@@ -43,8 +43,14 @@ export class MultiTtsDriver implements TtsDriver {
     );
   }
 
+  /**
+   * VieNeu's Trúc Ly whenever its sidecar is up, whatever order TTS_DRIVER
+   * lists the engines in: it is the house voice. Otherwise the first engine
+   * that is reachable, so a reader is never handed a voice that can only fail.
+   */
   get defaultVoice(): string {
-    return (this.configured()[0] ?? this.drivers[0]).defaultVoice;
+    const live = this.configured();
+    return (live.find((d) => d.name === 'vieneu') ?? live[0] ?? this.drivers[0]).defaultVoice;
   }
 
   /** The driver that offers this voice, among those currently reachable. */

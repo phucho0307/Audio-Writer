@@ -30,7 +30,7 @@ async function main() {
     if (!tts.available) throw new Error('no TTS driver is configured');
     console.log(`voice: ${voice} (${voices.length} on offer)`);
     const r = await tts.backfillAll();
-    console.log(`${r.chapters} chapters, ${r.queued} queued, ${r.chapters - r.queued} already had audio`);
+    console.log(`${r.chapters} chapters, ${r.queued} queued, ${r.failed} failed (run again to retry them), ${r.chapters - r.queued - r.failed} already had audio`);
   } finally {
     await app.close();
   }

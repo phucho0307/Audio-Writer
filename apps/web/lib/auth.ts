@@ -10,6 +10,8 @@ export type AuthUser = {
   role: 'USER' | 'ADMIN';
   /** False for an email sign-up that has not clicked its link yet. */
   emailVerified?: boolean;
+  premium?: boolean;
+  premiumUntil?: string | null;
 };
 
 export type Providers = { google: boolean; password?: boolean; devUser: boolean };

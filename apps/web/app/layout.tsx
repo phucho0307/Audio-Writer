@@ -4,12 +4,15 @@ import Nav from './Nav';
 import { BRAND } from '@/lib/brand';
 import ThemeToggle from './ThemeToggle';
 import Atmosphere from './Atmosphere';
+import BackgroundMusic from './BackgroundMusic';
 import MotionToggle from './MotionToggle';
 import MobileTabs from './MobileTabs';
 import AuthDialog from './AuthDialog';
 import VerifyBanner from './VerifyBanner';
 import FollowBell from './FollowBell';
 import './globals.css';
+
+const CF_BEACON = process.env.NEXT_PUBLIC_CF_BEACON_TOKEN;
 
 export const viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' as const };
 
@@ -67,6 +70,7 @@ export default function RootLayout({
             of it for everyone else. */}
         <div className="vignette" aria-hidden />
         <Atmosphere />
+        <BackgroundMusic />
         <div className="grain" aria-hidden />
 
         {/* Sticky, because the player and the nav are both things you reach
@@ -117,6 +121,15 @@ export default function RootLayout({
         </footer>
         <MobileTabs />
         <AuthDialog />
+        {/* Cloudflare Web Analytics: page views without cookies, so no consent
+            banner. Off unless a token is compiled in. */}
+        {CF_BEACON && (
+          <script
+            defer
+            src="https://static.cloudflareinsights.com/beacon.min.js"
+            data-cf-beacon={JSON.stringify({ token: CF_BEACON })}
+          />
+        )}
       </body>
     </html>
   );

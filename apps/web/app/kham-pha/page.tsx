@@ -7,6 +7,7 @@ import { api, type Story } from '@/lib/api';
 import Reveal from '../Reveal';
 import AiFinder from './AiFinder';
 import ContinueShelf from './ContinueShelf';
+import ListeningPerks from './ListeningPerks';
 import SpiritText from '../SpiritText';
 import Tilt, { Sheen } from '../Tilt';
 import RatingBadge from '../Rating';
@@ -212,10 +213,12 @@ export default function Explore() {
             className="display text-[2.4rem] leading-[1.05] sm:text-[2.9rem]"
           />
           <p className="text-[15px] leading-relaxed text-[var(--color-muted)]">
-            {shelf === 'chinese' ? 'Trà xanh, hào môn, báo thù và những lần làm lại cuộc đời. Đọc và nghe trọn bộ ngay tại đây.' : <>Khám phá truyện trên {BRAND}, cùng tác phẩm và bản kể từ những tác giả bạn yêu thích.</>}
+            {shelf === 'chinese' ? 'Trà xanh, hào môn, báo thù và những lần làm lại cuộc đời. Đọc và nghe trọn bộ ngay tại đây, không quảng cáo.' : <>Khám phá truyện trên {BRAND}, cùng tác phẩm và bản kể từ những tác giả bạn yêu thích.</>}
           </p>
         </Reveal>
       )}
+
+      <ListeningPerks />
 
       <ContinueShelf />
 

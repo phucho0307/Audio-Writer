@@ -1,3 +1,4 @@
+import { isPremium } from '../premium/premium';
 import {
   BadRequestException,
   ConflictException,
@@ -207,6 +208,7 @@ export class UsersService {
         avatarUrl: true,
         bio: true,
         createdAt: true,
+        premiumUntil: true,
         stories: {
           where: { visibility: 'PUBLIC' },
           orderBy: { updatedAt: 'desc' },
@@ -223,8 +225,9 @@ export class UsersService {
       },
     });
     if (!u) throw new NotFoundException({ code: 'USER_NOT_FOUND', message: 'Không tìm thấy người dùng này.' });
-    const { id: _id, ...rest } = u;
-    return rest;
+    // Whether they are premium is public (the badge); until when is not.
+    const { id: _id, premiumUntil, ...rest } = u;
+    return { ...rest, premium: isPremium({ premiumUntil }) };
   }
 
   private nextChange(changedAt: Date | null): Date | null {

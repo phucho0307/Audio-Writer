@@ -14,21 +14,27 @@
  * still playing.
  */
 let playing = 0;
-const listeners = new Set<(live: boolean) => void>();
+const listeners = new Set<(live: boolean, gap: boolean) => void>();
 
-function emit(): void {
+function emit(gap: boolean): void {
   const live = playing > 0;
-  for (const fn of listeners) fn(live);
+  for (const fn of listeners) fn(live, gap);
 }
 
-/** Called by a player when it starts or stops. Idempotent per player. */
-export function setNarrating(id: string, live: boolean): void {
+/**
+ * Called by a player when it starts or stops. Idempotent per player.
+ *
+ * `gap` marks a stop the listener did not ask for - a chapter ran out, or the
+ * player is being swapped for the next chapter's - so whatever follows
+ * narration can wait a moment for it to pick up again. A pause is not a gap.
+ */
+export function setNarrating(id: string, live: boolean, gap = false): void {
   const was = active.has(id);
   if (live === was) return;
   if (live) active.add(id);
   else active.delete(id);
   playing = active.size;
-  emit();
+  emit(gap);
 }
 
 const active = new Set<string>();
@@ -37,7 +43,7 @@ export function isNarrating(): boolean {
   return playing > 0;
 }
 
-export function onNarrating(fn: (live: boolean) => void): () => void {
+export function onNarrating(fn: (live: boolean, gap: boolean) => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
 }

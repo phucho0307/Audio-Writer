@@ -1,5 +1,6 @@
 'use client';
 
+import PremiumBadge from '@/app/PremiumBadge';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { api, type ChapterComment } from '@/lib/api';
@@ -214,6 +215,7 @@ export default function Comments({ chapterId }: { chapterId: string }) {
                   <Link href={`/u/${c.author.handle}`} className="text-[13px] font-medium hover:text-[var(--color-accent)]">
                     {c.author.displayName}
                   </Link>
+                  {c.author.premium && <PremiumBadge />}
                   <time dateTime={c.createdAt} className="text-[var(--color-faint)]">
                     {ago(c.createdAt)}
                   </time>

@@ -1,3 +1,4 @@
+import { isPremium } from '../premium/premium';
 import {
   Body,
   Controller,
@@ -267,6 +268,7 @@ export class AuthController {
     locale: string;
     role: Role;
     emailVerifiedAt?: Date | null;
+    premiumUntil?: Date | null;
   }) {
     return {
       id: user.id,
@@ -277,6 +279,8 @@ export class AuthController {
       locale: user.locale,
       role: user.role,
       emailVerified: Boolean(user.emailVerifiedAt),
+      premium: isPremium(user),
+      premiumUntil: user.premiumUntil ?? null,
     };
   }
 }

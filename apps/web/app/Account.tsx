@@ -1,5 +1,6 @@
 'use client';
 
+import PremiumBadge from './PremiumBadge';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/lib/useAuth';
 import { takeReturnPath } from '@/lib/auth';
@@ -120,12 +121,13 @@ export default function Account() {
               </span>
               {/* Admin is worth calling out because it changes what the buttons
                   on the page will do; plain membership is not news. */}
+              {user.premium && <PremiumBadge />}
               {user.role === 'ADMIN' ? (
                 <span className="label shrink-0 rounded-full bg-[var(--color-accent)] px-1.5 py-px text-[9px] text-[var(--color-on-accent)]">
                   admin
                 </span>
               ) : (
-                <span className="label shrink-0 text-[9px]">thành viên</span>
+                !user.premium && <span className="label shrink-0 text-[9px]">thành viên</span>
               )}
             </div>
           </div>
@@ -135,6 +137,14 @@ export default function Account() {
             className="block px-3.5 py-2.5 text-[13px] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-ink)]"
           >
             Trang của tôi
+          </a>
+          <a
+            role="menuitem"
+            href="/premium"
+            className="flex items-center justify-between px-3.5 py-2.5 text-[13px] text-[var(--color-muted)] transition-colors hover:bg-[var(--color-raised)] hover:text-[var(--color-ink)]"
+          >
+            {user.premium ? 'Premium của tôi' : 'Lên Premium'}
+            {!user.premium && <span aria-hidden className="text-[var(--color-accent)]">★</span>}
           </a>
           <a
             role="menuitem"

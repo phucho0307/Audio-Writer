@@ -10,6 +10,10 @@ import { unsafeProductionSettings } from './production-guard';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     bufferLogs: true,
+    // Keeps the request's exact bytes beside the parsed JSON: the payment
+    // webhook's signature is over the raw body, and re-serialising the parsed
+    // object would not reproduce it byte for byte.
+    rawBody: true,
   });
   const config = app.get(ConfigService);
 

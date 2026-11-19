@@ -46,6 +46,11 @@ model User {
   byokProvider  String?
   byokKeyCipher String?
 
+  /// Premium is active while this is in the future. A paid month extends it
+  /// from whichever is later, now or the current end, so paying early never
+  /// loses days.
+  premiumUntil DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -63,6 +68,7 @@ model User {
   comments       Comment[]
   ledger         LedgerEntry[]
   collaborations BranchCollaborator[]
+  premiumOrders  PremiumOrder[]
 
   @@map("users")
 }
@@ -773,4 +779,58 @@ model OutboxEvent {
 
   @@index([publishedAt, id])
   @@map("outbox_events")
+}
+
+// ---------------------------------------------------------------------------
+// Premium, paid by bank transfer (VietQR) and confirmed by SePay's webhook.
+// ---------------------------------------------------------------------------
+
+enum PremiumOrderStatus {
+  /// Waiting for the transfer.
+  PENDING
+  /// Money arrived in full and premium was granted.
+  PAID
+  /// Money arrived with this code but short of the price. Not granted; an
+  /// admin settles it by hand.
+  UNDERPAID
+}
+
+/// One "upgrade" click: a code the reader puts in the transfer description,
+/// and the price at the time. A transfer that arrives after the QR's expiry
+/// still counts - the money is real either way.
+model PremiumOrder {
+  id         String             @id @default(uuid()) @db.Uuid
+  /// What goes in the transfer description, e.g. NBK7Q2XM.
+  code       String             @unique
+  userId     String             @db.Uuid
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amount     Int
+  days       Int
+  status     PremiumOrderStatus @default(PENDING)
+  /// Sum of transfers received against this code.
+  paidAmount Int                @default(0)
+  paidAt     DateTime?
+  createdAt  DateTime           @default(now())
+
+  transfers BankTransfer[]
+
+  @@index([userId, createdAt])
+  @@map("premium_orders")
+}
+
+/// Every incoming transfer SePay reports, matched or not. Keyed by SePay's
+/// own transaction id, so a webhook delivered twice is stored, and acted on,
+/// once.
+model BankTransfer {
+  id         String        @id @default(uuid()) @db.Uuid
+  sepayId    String        @unique
+  amount     Int
+  content    String
+  reference  String?
+  orderId    String?       @db.Uuid
+  order      PremiumOrder? @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  receivedAt DateTime      @default(now())
+
+  @@index([receivedAt])
+  @@map("bank_transfers")
 }

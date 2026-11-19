@@ -18,10 +18,12 @@
 		Referrer-Policy "strict-origin-when-cross-origin"
 		Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
 		# Where a page may load things from. Scripts: this site only, plus the
-		# inline theme script that runs before first paint. Images and audio
+		# inline theme script that runs before first paint, and Cloudflare's
+		# analytics beacon (it reports to cloudflareinsights.com over https:,
+		# which connect-src already allows). Images and audio
 		# also come from R2. Fonts from Google. frame-ancestors repeats the
 		# frame rule for browsers that only read CSP.
-		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; object-src 'none'"
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' blob: https:; connect-src 'self' wss: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://accounts.google.com; object-src 'none'"
 		-Server
 	}
 

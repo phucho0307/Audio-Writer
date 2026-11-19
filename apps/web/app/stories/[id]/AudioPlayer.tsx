@@ -64,7 +64,7 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
   // where it is up to.
   const [isPlaying, setIsPlaying] = useState(false);
   const ambienceId = `branch:${branchId}`;
-  useEffect(() => () => setNarrating(ambienceId, false), [ambienceId]);
+  useEffect(() => () => setNarrating(ambienceId, false, true), [ambienceId]);
   const [at, setAt] = useState(0);
   const [length, setLength] = useState<number | null>(null);
 
@@ -252,16 +252,16 @@ export default function AudioPlayer({ branchId }: { branchId: string }) {
           // chapter follows, its own `play` raises it again before the ease
           // has travelled far.
           setIsPlaying(false);
-          setNarrating(ambienceId, false);
+          setNarrating(ambienceId, false, true);
           onEnded();
         }}
         onPlay={() => {
           setIsPlaying(true);
           setNarrating(ambienceId, true);
         }}
-        onPause={() => {
+        onPause={(e) => {
           setIsPlaying(false);
-          setNarrating(ambienceId, false);
+          setNarrating(ambienceId, false, e.currentTarget.ended);
         }}
         onTimeUpdate={(e) => setAt(e.currentTarget.currentTime)}
         onLoadedMetadata={(e) =>

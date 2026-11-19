@@ -26,8 +26,11 @@ ARG NEXT_PUBLIC_API_URL=/api
 # Where cover art is served from (the R2 public URL). Empty serves public/.
 ARG NEXT_PUBLIC_MEDIA_BASE=
 ARG API_URL=http://api:4000
+# Cloudflare Web Analytics site token. Empty leaves analytics off.
+ARG NEXT_PUBLIC_CF_BEACON_TOKEN=
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL \
     NEXT_PUBLIC_MEDIA_BASE=$NEXT_PUBLIC_MEDIA_BASE \
+    NEXT_PUBLIC_CF_BEACON_TOKEN=$NEXT_PUBLIC_CF_BEACON_TOKEN \
     API_URL=$API_URL \
     NEXT_TELEMETRY_DISABLED=1
 RUN npm run build -w @aw/shared && npm run build -w @aw/web

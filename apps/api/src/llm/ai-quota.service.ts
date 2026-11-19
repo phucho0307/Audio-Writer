@@ -4,6 +4,7 @@ import { EntitlementKind, type User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { RedisService } from '../redis/redis.service';
 import { emailUnverified, requiresVerifiedEmail } from '../auth/verified';
+import { isPremium } from '../premium/premium';
 
 export interface QuotaStatus {
   /** Free turns included every day. */
@@ -38,6 +39,8 @@ export type Spend =
 @Injectable()
 export class AiQuotaService {
   private readonly dailyLimit: number;
+  /** Premium's daily allowance, instead of the free one. */
+  private readonly premiumDailyLimit: number;
   private readonly timeZone: string;
 
   private readonly needVerified: boolean;
@@ -48,6 +51,7 @@ export class AiQuotaService {
     private readonly prisma: PrismaService,
   ) {
     this.dailyLimit = Number(this.config.get('AI_FREE_DAILY', 3));
+    this.premiumDailyLimit = Number(this.config.get('AI_PREMIUM_DAILY', 30));
     this.needVerified = requiresVerifiedEmail(this.config);
     // The audience is Vietnamese, so the day should roll over at their
     // midnight, not UTC's.
@@ -76,14 +80,15 @@ export class AiQuotaService {
 
   async status(user: User): Promise<QuotaStatus> {
     const resetsAt = this.nextReset().toISOString();
+    const dailyLimit = isPremium(user) ? this.premiumDailyLimit : this.dailyLimit;
 
     // A user spending their own API key costs us nothing, so metering them
     // would be arbitrary. This is the pressure valve for heavy writers.
     if (user.byokKeyCipher) {
       return {
-        dailyLimit: this.dailyLimit,
+        dailyLimit: dailyLimit,
         usedToday: 0,
-        freeRemaining: this.dailyLimit,
+        freeRemaining: dailyLimit,
         creditsRemaining: 0,
         totalRemaining: Number.POSITIVE_INFINITY,
         unlimited: true,
@@ -93,11 +98,11 @@ export class AiQuotaService {
 
     const raw = await this.redis.client.get(this.dayKey(user.id));
     const usedToday = Number(raw ?? 0);
-    const freeRemaining = Math.max(0, this.dailyLimit - usedToday);
+    const freeRemaining = Math.max(0, dailyLimit - usedToday);
     const creditsRemaining = await this.credits(user.id);
 
     return {
-      dailyLimit: this.dailyLimit,
+      dailyLimit: dailyLimit,
       usedToday,
       freeRemaining,
       creditsRemaining,
@@ -149,9 +154,12 @@ export class AiQuotaService {
 
     throw new ForbiddenException({
       code: 'AI_QUOTA_EXCEEDED',
-      message: `Bạn đã dùng hết ${this.dailyLimit} lượt AI hôm nay.`,
-      hint: 'Tự viết tiếp, hoặc mua thêm lượt để dùng ngay.',
-      dailyLimit: this.dailyLimit,
+      message: `Bạn đã dùng hết ${status.dailyLimit} lượt AI hôm nay.`,
+      hint: isPremium(user)
+        ? 'Tự viết tiếp, lượt mới có lúc nửa đêm.'
+        : `Tự viết tiếp, hoặc lên Premium để có ${this.premiumDailyLimit} lượt mỗi ngày.`,
+      premium: isPremium(user),
+      dailyLimit: status.dailyLimit,
       resetsAt: status.resetsAt,
     });
   }

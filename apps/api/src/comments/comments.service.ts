@@ -1,3 +1,4 @@
+import { isPremium } from '../premium/premium';
 import {
   BadRequestException,
   ConflictException,
@@ -80,7 +81,7 @@ export class CommentsService {
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         take: PAGE + 1,
         ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
-        include: { user: { select: { handle: true, displayName: true, avatarUrl: true } } },
+        include: { user: { select: { handle: true, displayName: true, avatarUrl: true, premiumUntil: true } } },
       }),
       this.prisma.comment.count({ where: { contributionId } }),
     ]);
@@ -131,7 +132,7 @@ export class CommentsService {
 
     const created = await this.prisma.comment.create({
       data: { contributionId, userId: user.id, body },
-      include: { user: { select: { handle: true, displayName: true, avatarUrl: true } } },
+      include: { user: { select: { handle: true, displayName: true, avatarUrl: true, premiumUntil: true } } },
     });
     return this.shape(created, user.id, user.id === story.ownerId || user.role === Role.ADMIN);
   }
@@ -165,7 +166,7 @@ export class CommentsService {
       body: string;
       createdAt: Date;
       userId: string;
-      user: { handle: string; displayName: string; avatarUrl: string | null };
+      user: { handle: string; displayName: string; avatarUrl: string | null; premiumUntil: Date | null };
     },
     viewerId: string | null,
     moderator: boolean,
@@ -175,7 +176,12 @@ export class CommentsService {
       id: c.id,
       body: c.body,
       createdAt: c.createdAt,
-      author: c.user,
+      author: {
+        handle: c.user.handle,
+        displayName: c.user.displayName,
+        avatarUrl: c.user.avatarUrl,
+        premium: isPremium(c.user),
+      },
       mine,
       canDelete: mine || moderator,
     };

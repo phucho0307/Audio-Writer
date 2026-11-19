@@ -17,6 +17,8 @@ export interface AccessState {
   isOwner: boolean;
   /** Chapters withheld from this reader right now. */
   lockedCount: number;
+  /** False while paid chapters are switched off: the web hides pricing. */
+  paidChapters: boolean;
 }
 
 export interface Wallet {
@@ -30,6 +32,13 @@ export interface Wallet {
 export class PaywallService {
   /** Writer's cut of every unlock, as a percentage. */
   private readonly writerShare: number;
+  /**
+   * Paid chapters on or off. Off until there is a real checkout: without one
+   * a reader who meets a price has no way to pay it, so every chapter is
+   * free and writers are not offered a price to set. Prices already stored
+   * are kept, and apply again when this is switched on.
+   */
+  readonly paidChapters: boolean;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -37,6 +46,8 @@ export class PaywallService {
     config: ConfigService,
   ) {
     this.writerShare = Number(config.get('WRITER_REVENUE_SHARE', 70));
+    this.paidChapters =
+      config.get<string>('PAID_CHAPTERS', 'false').toLowerCase() === 'true';
   }
 
   // -------------------------------------------------------------------------
@@ -50,15 +61,16 @@ export class PaywallService {
    * unlocked nothing but can still read the free chapters. */
   async access(story: Story, userId: string | null): Promise<AccessState> {
     const isOwner = userId !== null && story.ownerId === userId;
-    const gated = story.unlockPrice > 0;
+    const gated = this.paidChapters && story.unlockPrice > 0;
 
     if (!gated || isOwner) {
       return {
         freeChapters: story.freeChapters,
-        unlockPrice: story.unlockPrice,
+        unlockPrice: this.paidChapters ? story.unlockPrice : 0,
         unlocked: true,
         isOwner,
         lockedCount: 0,
+        paidChapters: this.paidChapters,
       };
     }
 
@@ -79,6 +91,7 @@ export class PaywallService {
       unlocked: unlock !== null,
       isOwner,
       lockedCount: unlock ? 0 : locked,
+      paidChapters: true,
     };
   }
 
@@ -105,7 +118,7 @@ export class PaywallService {
       where: { id: storyId },
     });
     if (!story) throw new NotFoundException(`Story ${storyId} not found`);
-    if (story.unlockPrice <= 0) {
+    if (!this.paidChapters || story.unlockPrice <= 0) {
       throw new BadRequestException('This story is not gated.');
     }
     if (story.ownerId === reader.id) {

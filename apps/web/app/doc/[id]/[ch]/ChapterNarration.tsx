@@ -7,6 +7,7 @@ import { ApiError, api, forgetReads, type RenderStatus, type Voice } from '@/lib
 import { awaitNarration, NarrationFailed } from '@/lib/narration';
 import NarrationProgress from '@/app/NarrationProgress';
 import VoicePicker from '@/app/VoicePicker';
+import MusicPicker from '@/app/MusicPicker';
 import { setNarrating } from '@/lib/ambience';
 import { forgetProgress, progressOf, saveProgress } from '@/lib/progress';
 import { thumbUrl } from '@/lib/thumb';
@@ -181,7 +182,7 @@ export default function ChapterNarration({
   // to release it, or navigating away mid-sentence would leave the room lit
   // for a story nothing is playing.
   const ambienceId = `chapter:${branchId}:${depth}`;
-  useEffect(() => () => setNarrating(ambienceId, false), [ambienceId]);
+  useEffect(() => () => setNarrating(ambienceId, false, true), [ambienceId]);
 
   useEffect(() => {
     setAutoNext(load(AUTO_KEY) === '1');
@@ -639,14 +640,14 @@ export default function ChapterNarration({
         }}
         onPause={(e) => {
           setPlaying(false);
-          setNarrating(ambienceId, false);
+          setNarrating(ambienceId, false, e.currentTarget.ended);
           if ('mediaSession' in navigator) navigator.mediaSession.playbackState = 'paused';
           // Fires at the end of the track as well; `onEnded` then overrules it.
           remember(depth + 1, e.currentTarget.currentTime);
         }}
         onEnded={() => {
           setPlaying(false);
-          setNarrating(ambienceId, false);
+          setNarrating(ambienceId, false, true);
           // Finished: the place to come back to is the next chapter - or
           // nowhere, when that was the last one.
           if (next) remember(depth + 2, 0);
@@ -783,10 +784,12 @@ export default function ChapterNarration({
           <button
             onClick={() => setOpen((v) => !v)}
             aria-expanded={open}
+            aria-label="Tuỳ chỉnh: giọng đọc, tốc độ, âm lượng, nhạc nền, hẹn giờ"
             title={`${label} · ${rate}×${autoNext ? ' · tự chuyển chương' : ''}`}
-            className="btn btn-quiet flex-none text-[11.5px]"
+            className="btn btn-pill flex-none"
           >
-            <span className="tabular-nums">{rate}×</span>
+            <SettingsIcon />
+            <span className="hidden sm:inline">Tuỳ chỉnh</span>
             {sleepLabel && (
               <span className="flex items-center gap-1 text-[var(--color-accent)]" title="Hẹn giờ tắt đang bật">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
@@ -795,7 +798,6 @@ export default function ChapterNarration({
                 <span className="tabular-nums">{sleepLabel}</span>
               </span>
             )}
-            <span aria-hidden>{open ? '▴' : '▾'}</span>
           </button>
         </div>
       ) : (
@@ -819,10 +821,10 @@ export default function ChapterNarration({
               <button
                 onClick={() => setOpen((v) => !v)}
                 aria-expanded={open}
-                className="btn btn-quiet text-[11.5px]"
+                className="btn btn-pill"
               >
-                {label} · {rate}×{autoNext ? ' · tự chuyển' : ''}
-                {sleepLabel ? ` · tắt sau ${sleepLabel}` : ''} <span aria-hidden>{open ? '▴' : '▾'}</span>
+                <SettingsIcon />
+                Giọng {label} · {rate}×{sleepLabel ? ` · tắt sau ${sleepLabel}` : ''}
               </button>
             </>
           )}
@@ -866,7 +868,8 @@ export default function ChapterNarration({
       {open && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-[var(--color-line)] pt-3">
           <VoicePicker voices={voices} value={voice} onChange={chooseVoice} />
-          <div className="ml-auto flex items-center gap-1">
+          <div className="flex w-full items-center gap-1 text-[12.5px] text-[var(--color-muted)]" role="group" aria-label="Tốc độ đọc">
+            <span className="mr-1">Tốc độ</span>
             {[1, 1.25, 1.5, 1.75, 2].map((r) => (
               <button
                 key={r}
@@ -908,6 +911,8 @@ export default function ChapterNarration({
             />
             <span className="w-[4ch] text-right tabular-nums">{Math.round((muted ? 0 : volume) * 100)}%</span>
           </div>
+
+          <MusicPicker />
 
           <div className="flex w-full flex-wrap items-center gap-x-2 gap-y-1.5 text-[12.5px] text-[var(--color-muted)]" role="group" aria-label="Hẹn giờ tắt">
             <span className="flex items-center gap-1.5">
@@ -990,6 +995,17 @@ function VolumeIcon({ level }: { level: number }) {
       ) : (
         <path d={level > 0.5 ? WAVES : WAVES.split('M').slice(0, 2).join('M')} />
       )}
+    </svg>
+  );
+}
+
+/** Sliders: reads as "settings" without the gear's "system preferences" weight. */
+function SettingsIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" aria-hidden>
+      <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+      <circle cx="16" cy="7" r="2" />
+      <circle cx="10" cy="17" r="2" />
     </svg>
   );
 }

@@ -447,6 +447,88 @@ Supabase, socket phòng viết chung (HTTP 101), edge-tts sẵn sàng trong cont
   `CANCELLED` **trước** khi xoá khỏi hàng đợi (nếu làm ngược, bộ quét sẽ tự xếp lại),
   rồi chạy lại API bản mới.
 
+## 11d. Chạy thử 90 ngày trước khi trả tiền (18/11/2026)
+
+**Quyết định:** chưa trả tiền máy chủ. Deploy lên **gói dùng thử Google Cloud** (300 USD
+tín dụng, hạn 90 ngày), quảng bá, và chỉ trả tiền deploy thật khi có **20 người dùng quay
+lại** (đăng nhập ít nhất 2 ngày khác nhau trong 30 ngày).
+
+**Vì sao không chọn nơi rẻ nhất ngay:**
+- Mục 11 tính giá máy 4 GB, nhưng giọng mặc định nay là VieNeu Trúc Ly, riêng nó dùng
+  khoảng 3,6 GB RAM. Cần máy 8 GB trở lên.
+- Kiểm tra giá thật (18/11/2026): gói 8 GB rẻ của Contabo ở **Singapore hết hàng**. Gói
+  còn hàng ở Singapore khoảng 25,6 USD/tháng. Ở Nhật khoảng 9,75 USD nhưng database
+  Supabase nằm ở Singapore, mỗi truy vấn thêm khoảng 70 ms. Hetzner Singapore tăng giá lên
+  khoảng 49 EUR. Oracle miễn phí bị cắt còn 2 lõi ARM.
+- Chưa biết có người dùng không thì chưa nên cam kết tiền. 90 ngày tín dụng vừa đủ cho
+  một vòng quảng bá, máy đặt ở Singapore cùng chỗ với database, và **không tự trừ tiền**
+  khi hết hạn.
+- Laptop ở nhà qua Cloudflare Tunnel là phương án dự phòng (miễn phí), nhưng phụ thuộc
+  điện và mạng nhà.
+
+**Bản chạy thử không được kém bản thật:**
+- **Giọng: tạo khi có người bấm, chỉ tạo sẵn phần người mới thấy đầu tiên.** Ban đầu định
+  tạo trước toàn bộ 1.604 chương đã lên kế hoạch (khoảng 2,3 GB, 5 ngày laptop chạy liên
+  tục). Bỏ, vì phần lớn số chương đó có thể không ai mở, và không đáng đợi 5 ngày mới ra
+  mắt. Thay bằng: tạo sẵn chương 1 của 24 truyện trang đầu Khám phá (script
+  `narrate-stories`, khoảng 20 phút), còn lại tạo khi người nghe bấm, và bấm một chương
+  thì chương sau được xếp hàng luôn.
+- Lần đầu chạy, script xếp hàng dừng giữa chừng hai lần vì mạng tới Supabase chập chờn
+  (hết kết nối, rồi "Can't reach database server"). Sửa: chương nào lỗi thì bỏ qua và đếm
+  lại, chạy lại script là xếp nốt, thay vì một lỗi làm dừng cả nghìn chương.
+- **VieNeu chạy trong Docker** cạnh API, model tải về một volume ở lần chạy đầu. API
+  không phụ thuộc vào nó: trong lúc VieNeu chưa sẵn sàng thì Edge đọc thay.
+- **Sao lưu database mỗi đêm lên R2**, giữ 7 bản. Gói miễn phí của Supabase không có bản
+  sao lưu để tự khôi phục.
+- **Đo được người dùng:** trang `/quan-tri` (chỉ admin) đếm người quay lại so với mục tiêu
+  20, cùng Cloudflare Web Analytics (không dùng cookie nên không cần hỏi đồng ý).
+- Chuyển nơi khác chỉ là chép sang rồi chạy lại một lệnh, vì mọi thứ đã đóng gói Docker.
+
+**Không mua tên miền, không bán chương (19/11/2026):**
+- Google Cloud không cho tên miền miễn phí, chỉ cho IP. Dùng **DuckDNS**
+  (`nhipbut.duckdns.org`), Caddy vẫn tự lấy HTTPS. IP tĩnh nên chỉ trỏ một lần.
+- Resend chỉ gửi email tới người lạ từ tên miền đã xác minh, mà tên miền con DuckDNS không
+  xác minh được. Thêm đường **gửi qua Gmail (SMTP, App password)**, dùng trước Resend khi
+  có cấu hình. Gmail cho khoảng 500 email/ngày, quá đủ cho xác minh tài khoản giai đoạn này.
+- **Tắt chương trả phí** (`PAID_CHAPTERS=false`). Chưa có cổng thanh toán, nên tác giả đặt
+  giá thì người đọc gặp khoá mà không có cách nào trả. Tắt thì mọi chương miễn phí và ô đặt
+  giá ẩn đi. Giá đã đặt vẫn giữ trong database, bật lại là dùng được.
+
+## 11e. Premium trả bằng chuyển khoản, xác nhận qua SePay (19/11/2026)
+
+**Quyết định:** Premium **15.000đ / 30 ngày**: nhiều lượt AI hơn (3 → 30/ngày), tìm truyện
+bằng AI 20 → 200 lần/ngày, giọng đọc được ưu tiên trong hàng đợi, huy hiệu cạnh tên. Đọc và
+nghe vẫn miễn phí cho mọi người. Trả bằng **VietQR chuyển khoản**, **SePay** báo về khi tiền vào.
+
+**Vì sao không Stripe, không MoMo:**
+- Stripe không mở tài khoản cho người bán ở Việt Nam.
+- Cổng MoMo cần tài khoản doanh nghiệp (M4B), và từ 01/03/2026 tên tài khoản nhận tiền phải
+  khớp giấy đăng ký hộ kinh doanh. Không hợp với một dự án cá nhân đang chạy thử.
+- Chuyển khoản QR là cách người Việt quen trả nhất. SePay đọc giao dịch của **tài khoản
+  ngân hàng cá nhân** và gọi webhook, nên không cần cổng thanh toán hay giấy phép.
+
+**Cách làm đúng tiền:**
+- Mỗi lần bấm tạo một **mã đơn** (`NB` + 6 ký tự, bỏ ký tự dễ nhầm 0/O, 1/I/L). Mã nằm trong
+  nội dung chuyển khoản. Ngân hàng hay viết hoa, chèn tên người gửi, xoá hoặc thêm dấu cách,
+  nên mã được tìm cả trong bản gốc lẫn bản đã bỏ khoảng trắng, và từng ứng viên được đối
+  chiếu với đơn thật chứ không tin cái đầu tiên.
+- **Xác thực webhook bằng HMAC-SHA256** trên đúng byte của body (bật `rawBody` của Nest; parse
+  rồi serialize lại thì chữ ký không khớp). Lệch giờ quá 5 phút là từ chối, để không ai gửi
+  lại một request cũ. Không cấu hình khoá thì từ chối tất cả.
+- **Không bao giờ cộng hai lần:** mỗi giao dịch SePay lưu một dòng, id SePay là unique, và
+  việc cộng Premium nằm cùng transaction với dòng đó. SePay gửi lại thì insert lỗi, cả
+  transaction huỷ.
+- **Chuyển làm hai lần cùng lúc** vẫn cộng đủ: khoá dòng đơn hàng (`SELECT ... FOR UPDATE`)
+  trước khi cộng số tiền. Có test chạy hai webhook song song trên Postgres thật.
+- **Thiếu tiền** thì không kích hoạt, QR hiện số còn thiếu. **Quên ghi mã** thì giao dịch vẫn
+  được lưu, admin gắn tay vào đơn ở `/quan-tri`. Không đồng nào bị bỏ qua im lặng.
+- Gia hạn sớm cộng nối từ ngày hết hạn hiện tại, trong một câu SQL (`GREATEST(...) + 30 ngày`).
+
+Giải thích từ đầu cho người mới, kèm sơ đồ và câu hỏi phỏng vấn: [payments.md](payments.md).
+
+**Còn thiếu / sau này:** không tự gia hạn (chuyển khoản không trừ tự động được); hoàn tiền làm
+tay. Thu nhập từ Premium vẫn là thu nhập, có doanh thu đều thì phải tìm hiểu nghĩa vụ thuế.
+
 ## 12. Làm việc với hai AI agent trong cùng một repo
 
 Claude Code và Codex sửa code song song trong cùng thư mục.

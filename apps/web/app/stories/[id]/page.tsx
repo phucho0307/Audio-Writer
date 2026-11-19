@@ -388,6 +388,8 @@ export default function StoryPage({
   // server then refused. The server has always checked the branch owner; the
   // page now asks the same question.
   const ownsStory = read.access.isOwner;
+  // Paid chapters are switched off site-wide until there is a checkout.
+  const paid = read.access.paidChapters !== false;
   const currentBranch = story.branches.find((b) => b.id === branchId);
   const ownsBranch =
     !!user &&
@@ -730,6 +732,10 @@ export default function StoryPage({
           <section className="flex flex-col gap-2">
             <div className="flex flex-wrap items-center gap-3 font-mono text-[12px] text-[var(--color-muted)]">
               <span>{story.viewCount} lượt xem</span>
+              {/* Pricing is offered only while the site has paid chapters
+                  switched on: with no checkout, a price would only lock
+                  readers out. */}
+              {paid && (<>
               <span>·</span>
               <span>
                 {story.unlockPrice > 0
@@ -742,6 +748,7 @@ export default function StoryPage({
               >
                 {showPricing ? "đóng" : "đặt giá"}
               </button>
+              </>)}
               {(wallet?.balance ?? 0) > 0 && (
                 <span className="text-[var(--color-accent)]">
                   đã kiếm {wallet?.balance} credit
@@ -749,7 +756,7 @@ export default function StoryPage({
               )}
             </div>
 
-            {showPricing && (
+            {paid && showPricing && (
               <div className="flex flex-col gap-3 card p-4">
                 <p className="text-[13px] text-[var(--color-muted)]">
                   Truyện vẫn luôn lan truyền được: các chương đầu không bao giờ
@@ -1016,6 +1023,11 @@ export default function StoryPage({
               >
                 Tự viết tiếp
               </button>
+              {!user?.premium && (
+                <a href="/premium" className="btn btn-ghost">
+                  Lên Premium · nhiều lượt AI hơn
+                </a>
+              )}
               {DEV_UI && (
               <button
                 onClick={async () => {

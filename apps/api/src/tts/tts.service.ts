@@ -1,3 +1,4 @@
+import { isPremium } from '../premium/premium';
 import {
   BadRequestException,
   Injectable,
@@ -232,11 +233,14 @@ export class TtsService implements OnModuleInit {
       );
     }
 
+    // Premium readers go to the front of the queue. A job already queued
+    // keeps the priority it was queued with; this only orders new work.
+    const premium = isPremium(await this.currentUser.optional().catch(() => null));
     const ticket = await this.enqueueOne(
       branchId,
       chapter,
       voice,
-      PRIORITY.INTERACTIVE,
+      premium ? PRIORITY.PREMIUM : PRIORITY.INTERACTIVE,
     );
 
     // Somebody is about to listen to six minutes of audio. Start the next
@@ -244,7 +248,7 @@ export class TtsService implements OnModuleInit {
     // chapter of their own. Deliberately not awaited and deliberately silent:
     // a failure here costs a head start, not a narration, because asking for
     // that chapter later queues it the ordinary way.
-    void this.prefetchNext(branchId, contributions, depth, voice);
+    void this.prefetchNext(branchId, contributions, depth, voice, premium);
 
     return ticket;
   }
@@ -265,12 +269,13 @@ export class TtsService implements OnModuleInit {
     contributions: { id: string; depth: number; textPlain: string }[],
     depth: number,
     voice: string,
+    premium = false,
   ): Promise<void> {
     const next = contributions.find((c) => c.depth === depth + 1);
     if (!next) return;
 
     try {
-      await this.enqueueOne(branchId, next, voice, PRIORITY.BULK);
+      await this.enqueueOne(branchId, next, voice, premium ? PRIORITY.PREMIUM_PREFETCH : PRIORITY.BULK);
     } catch {
       // Nothing to report and nobody to report it to.
     }
@@ -393,8 +398,8 @@ export class TtsService implements OnModuleInit {
    * scripts/narrate-all.ts. Every chapter is visited once, on the branch that
    * owns it; a fork's inherited chapters are its parent's rows.
    */
-  async backfillAll(): Promise<{ chapters: number; queued: number }> {
-    if (!this.available) return { chapters: 0, queued: 0 };
+  async backfillAll(): Promise<{ chapters: number; queued: number; failed: number }> {
+    if (!this.available) return { chapters: 0, queued: 0, failed: 0 };
     const voice = this.driver.defaultVoice;
     const chapters = await this.prisma.contribution.findMany({
       where: { branch: { isDraft: false } },
@@ -402,11 +407,20 @@ export class TtsService implements OnModuleInit {
       orderBy: [{ branchId: 'asc' }, { depth: 'asc' }],
     });
     let queued = 0;
+    let failed = 0;
     for (const c of chapters) {
-      const ticket = await this.enqueueOne(c.branchId, c, voice, PRIORITY.BULK);
-      if (ticket.jobId) queued += 1;
+      // One dropped connection to the database used to end the whole run a
+      // thousand chapters in. A chapter that fails is skipped and counted;
+      // running again picks it up, since everything already queued is skipped.
+      try {
+        const ticket = await this.enqueueOne(c.branchId, c, voice, PRIORITY.BULK);
+        if (ticket.jobId) queued += 1;
+      } catch (err) {
+        failed += 1;
+        this.logger.warn(`could not queue chapter ${c.id}: ${(err as Error).message.trim().split('\n').pop()}`);
+      }
     }
-    return { chapters: chapters.length, queued };
+    return { chapters: chapters.length, queued, failed };
   }
 
   /**
@@ -418,8 +432,8 @@ export class TtsService implements OnModuleInit {
    * Rendering the whole catalogue would be about 28 GB at 64 kbps - three
    * times the 9 GB cap - and days of synthesis.
    */
-  async backfillPlanned(): Promise<{ chapters: number; queued: number }> {
-    if (!this.available) return { chapters: 0, queued: 0 };
+  async backfillPlanned(): Promise<{ chapters: number; queued: number; failed: number }> {
+    if (!this.available) return { chapters: 0, queued: 0, failed: 0 };
     const voice = this.driver.defaultVoice;
     const chapters = await this.prisma.contribution.findMany({
       where: {
@@ -438,11 +452,20 @@ export class TtsService implements OnModuleInit {
         Number(a.branch.story.textSource !== null) - Number(b.branch.story.textSource !== null),
     );
     let queued = 0;
+    let failed = 0;
     for (const c of chapters) {
-      const ticket = await this.enqueueOne(c.branchId, c, voice, PRIORITY.BULK);
-      if (ticket.jobId) queued += 1;
+      // One dropped connection to the database used to end the whole run a
+      // thousand chapters in. A chapter that fails is skipped and counted;
+      // running again picks it up, since everything already queued is skipped.
+      try {
+        const ticket = await this.enqueueOne(c.branchId, c, voice, PRIORITY.BULK);
+        if (ticket.jobId) queued += 1;
+      } catch (err) {
+        failed += 1;
+        this.logger.warn(`could not queue chapter ${c.id}: ${(err as Error).message.trim().split('\n').pop()}`);
+      }
     }
-    return { chapters: chapters.length, queued };
+    return { chapters: chapters.length, queued, failed };
   }
 
   /**

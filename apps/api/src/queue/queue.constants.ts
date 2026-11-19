@@ -24,8 +24,13 @@ export interface NarrationJob {
  * behind all two hundred.
  */
 export const PRIORITY = {
+  /** A premium reader waiting on this exact chapter: ahead of everyone. */
+  PREMIUM: 1,
   /** Somebody is looking at a spinner for this exact chapter. */
-  INTERACTIVE: 1,
+  INTERACTIVE: 2,
+  /** The chapter after the one a premium reader is listening to. Behind
+   * anyone actually waiting, ahead of bulk work. */
+  PREMIUM_PREFETCH: 5,
   /** Whole-branch narration, and later the prefetch of the next chapter. */
   BULK: 10,
 } as const;

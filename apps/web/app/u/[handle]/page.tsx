@@ -1,5 +1,6 @@
 'use client';
 
+import PremiumBadge from '@/app/PremiumBadge';
 import { thumbUrl } from '@/lib/thumb';
 import { use, useEffect, useState } from 'react';
 import Link from 'next/link';
@@ -84,7 +85,10 @@ export default function Profile({ params }: { params: Promise<{ handle: string }
           </span>
         )}
         <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <h1 className="display text-[2rem] leading-tight sm:text-[2.4rem]">{p.displayName}</h1>
+          <h1 className="display flex flex-wrap items-center gap-x-3 gap-y-1 text-[2rem] leading-tight sm:text-[2.4rem]">
+            {p.displayName}
+            {p.premium && <PremiumBadge size="md" />}
+          </h1>
           <p className="flex flex-wrap items-center gap-x-2.5 text-[13.5px] text-[var(--color-muted)]">
             <span className="text-[var(--color-accent)]">@{p.handle}</span>
             <span aria-hidden>·</span>

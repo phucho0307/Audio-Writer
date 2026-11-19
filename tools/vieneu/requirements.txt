@@ -4,3 +4,7 @@ vieneu==3.8.4
 soxr
 numpy
 truststore
+# The sidecar's own server. Also arrive through vieneu's gradio dependency,
+# named here so a gradio release that drops them cannot break the sidecar.
+fastapi
+uvicorn

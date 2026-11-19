@@ -2,18 +2,14 @@
 
 import type { Voice } from '@/lib/api';
 
-const GROUPS: { provider: string; title: string }[] = [
-  { provider: 'vieneu', title: 'VieNeu' },
-  { provider: 'edge-tts', title: 'Microsoft' },
-  { provider: 'gemini', title: 'Gemini' },
-  { provider: 'piper', title: 'Piper · thử nghiệm' },
-];
+const ORDER = ['vieneu', 'edge-tts', 'gemini', 'piper'];
 
 /**
- * Voices grouped by the engine that speaks them.
+ * Every voice in one row, house voices first.
  *
- * The list mixes a cloud provider with a self-hosted one while the second is
- * being judged, and a flat row of thirteen names gives no hint which is which.
+ * Grouped by engine (with "VieNeu" / "Microsoft" headings) while the engines
+ * were being compared; a listener chooses a voice, not a vendor, so the
+ * headings went and only the order is kept.
  */
 export default function VoicePicker({
   voices,
@@ -24,36 +20,24 @@ export default function VoicePicker({
   value: string;
   onChange: (id: string) => void;
 }) {
-  const known = new Set(GROUPS.map((g) => g.provider));
-  const groups = [
-    ...GROUPS,
-    // Anything from an engine this list does not know about still shows up.
-    ...[...new Set(voices.map((v) => v.provider ?? ''))]
-      .filter((p) => !known.has(p))
-      .map((p) => ({ provider: p, title: p || 'Khác' })),
-  ]
-    .map((g) => ({
-      ...g,
-      items: voices.filter((v) => (v.provider ?? '') === g.provider),
-    }))
-    .filter((g) => g.items.length > 0);
+  const rank = (v: Voice) => {
+    const i = ORDER.indexOf(v.provider ?? '');
+    return i < 0 ? ORDER.length : i;
+  };
+  // Stable sort: within an engine, the order the API gives.
+  const ordered = [...voices].sort((a, b) => rank(a) - rank(b));
 
   return (
-    <div className="flex flex-col gap-2">
-      {groups.map((g) => (
-        <div key={g.provider} className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-          <span className="label w-full sm:w-24">{g.title}</span>
-          {g.items.map((v) => (
-            <button
-              key={v.id}
-              onClick={() => onChange(v.id)}
-              aria-pressed={value === v.id}
-              className={`chip ${value === v.id ? 'chip-on' : ''}`}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5" role="group" aria-label="Giọng đọc">
+      {ordered.map((v) => (
+        <button
+          key={v.id}
+          onClick={() => onChange(v.id)}
+          aria-pressed={value === v.id}
+          className={`chip ${value === v.id ? 'chip-on' : ''}`}
+        >
+          {v.label}
+        </button>
       ))}
     </div>
   );

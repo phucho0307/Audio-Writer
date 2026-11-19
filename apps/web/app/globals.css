@@ -296,6 +296,23 @@ body {
   background: var(--color-raised);
 }
 
+/* The player's settings: outlined so it reads as a button, not as a caption. */
+.btn-pill {
+  background: transparent;
+  border-color: var(--color-line-strong);
+  border-radius: 999px;
+  color: var(--color-ink);
+  padding: 0.35rem 0.7rem;
+  gap: 0.4rem;
+  font-size: 12px;
+}
+
+.btn-pill:not(:disabled):hover,
+.btn-pill[aria-expanded='true'] {
+  border-color: var(--color-accent);
+  color: var(--color-accent);
+}
+
 .btn-danger {
   background: transparent;
   border-color: color-mix(in oklab, var(--color-son) 42%, transparent);
