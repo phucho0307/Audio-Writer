@@ -38,8 +38,9 @@ export const TRACKS: MusicTrack[] = [
 const TRACK_KEY = 'aw-music';
 const LEVEL_KEY = 'aw-music-volume';
 const EVENT = 'aw-music-change';
-/** Under a voice, music wants to be heard, not listened to. */
-export const DEFAULT_MUSIC_LEVEL = 0.25;
+/** Under a voice, music wants to be heard, not listened to. A reader who has
+ * moved the slider keeps their own level; this is only where it starts. */
+export const DEFAULT_MUSIC_LEVEL = 0.15;
 
 export interface MusicChoice {
   track: MusicTrack | null;

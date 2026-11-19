@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { isNarrating, onNarrating } from '@/lib/ambience';
 import { useMusicChoice } from '@/lib/background-music';
+import { pageVolumeIgnored } from '@/lib/page-volume';
 
 /**
  * The chosen music, playing whenever a story is being read aloud.
@@ -23,6 +24,27 @@ const FADE_OUT_MS = 1_200;
 /** Out on a pause: quick enough to feel like the same button, not a cut. */
 const PAUSE_FADE_MS = 200;
 
+/**
+ * On iPhone the page cannot set `audio.volume`, so the music would play as
+ * loud as the voice with the slider doing nothing. There, the element is
+ * routed through Web Audio and its level set on a gain node, which iOS does
+ * honour.
+ *
+ * Only the music goes this way, never the voice: iOS may suspend Web Audio
+ * behind a locked screen, and losing the music there is acceptable where
+ * losing the narration is not. It needs the files served with CORS (the R2
+ * bucket allows this site), or the routed element plays silence.
+ *
+ * The AudioContext is created on the first tap anywhere, because iOS only
+ * lets one start running inside a user gesture; the music itself starts
+ * later, from the narration signal, outside any gesture.
+ */
+interface Graph {
+  ctx: AudioContext;
+  gain: GainNode | null;
+  el: HTMLAudioElement | null;
+}
+
 export default function BackgroundMusic() {
   const { track, level } = useMusicChoice();
   const ref = useRef<HTMLAudioElement>(null);
@@ -31,6 +53,46 @@ export default function BackgroundMusic() {
   const gain = useRef(0);
   const ramp = useRef(0);
   const fadeOut = useRef(FADE_OUT_MS);
+  const [routed] = useState(pageVolumeIgnored);
+  const graph = useRef<Graph | null>(null);
+
+  useEffect(() => {
+    if (!routed) return;
+    const unlock = () => {
+      const Ctx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return;
+      if (!graph.current) graph.current = { ctx: new Ctx(), gain: null, el: null };
+      else if (graph.current.ctx.state !== 'running') void graph.current.ctx.resume();
+    };
+    document.addEventListener('pointerdown', unlock, { capture: true, passive: true });
+    document.addEventListener('touchend', unlock, { capture: true, passive: true });
+    return () => {
+      document.removeEventListener('pointerdown', unlock, { capture: true });
+      document.removeEventListener('touchend', unlock, { capture: true });
+    };
+  }, [routed]);
+
+  /** Sets the music's level, through the gain node where the page cannot set it directly. */
+  function setLevel(el: HTMLAudioElement, v: number) {
+    if (!routed) {
+      el.volume = v;
+      return;
+    }
+    const g = graph.current;
+    if (!g) return; // No tap yet, so no music either.
+    // An element can be connected to Web Audio once in its life; a new
+    // element (the track was cleared and chosen again) needs a new source.
+    if (g.el !== el) {
+      const gain = g.ctx.createGain();
+      g.ctx.createMediaElementSource(el).connect(gain).connect(g.ctx.destination);
+      g.gain = gain;
+      g.el = el;
+    }
+    if (g.ctx.state !== 'running') void g.ctx.resume();
+    g.gain!.gain.value = v;
+  }
 
   useEffect(() => {
     setLive(isNarrating());
@@ -57,12 +119,14 @@ export default function BackgroundMusic() {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const want = live && track !== null;
+    // On iPhone, no music until the gain node exists: unrouted, it would play
+    // at full volume over the voice.
+    const want = live && track !== null && (!routed || graph.current !== null);
     const target = want ? 1 : 0;
     clearInterval(ramp.current);
     if (want && el.paused) {
       gain.current = 0;
-      el.volume = 0;
+      setLevel(el, 0);
       void el.play().catch(() => {});
     }
     const from = gain.current;
@@ -74,7 +138,7 @@ export default function BackgroundMusic() {
     const step = () => {
       const t = Math.min(1, (performance.now() - start) / ms);
       gain.current = from + (target - from) * t;
-      el.volume = Math.max(0, Math.min(1, level * gain.current));
+      setLevel(el, Math.max(0, Math.min(1, level * gain.current)));
       if (t < 1) return;
       clearInterval(ramp.current);
       if (!want) el.pause();
@@ -82,8 +146,20 @@ export default function BackgroundMusic() {
     ramp.current = window.setInterval(step, 30);
     step();
     return () => clearInterval(ramp.current);
-  }, [live, track, level]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setLevel reads refs only
+  }, [live, track, level, routed]);
 
   if (!track) return null;
-  return <audio ref={ref} src={track.url} loop preload="none" aria-hidden />;
+  return (
+    <audio
+      ref={ref}
+      src={track.url}
+      loop
+      preload="none"
+      // Required for Web Audio to hear a file from another origin; without
+      // it the routed element would play silence.
+      crossOrigin={routed ? 'anonymous' : undefined}
+      aria-hidden
+    />
+  );
 }

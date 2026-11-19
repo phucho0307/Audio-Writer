@@ -1,5 +1,6 @@
 'use client';
 
+import { pageVolumeIgnored } from '@/lib/page-volume';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
@@ -144,6 +145,10 @@ export default function ChapterNarration({
    * back to where it was. What the element plays at is this times `fade`.
    */
   const [volume, setVolume] = useState(1);
+  // After mount: the server cannot know the device, and guessing would
+  // mismatch the first render.
+  const [volumeIgnored, setVolumeIgnored] = useState(false);
+  useEffect(() => setVolumeIgnored(pageVolumeIgnored()), []);
   const [muted, setMuted] = useState(false);
   /** The sleep timer's fade-out, 1 the rest of the time. It scales the level rather than replacing it. */
   const [fade, setFade] = useState(1);
@@ -897,19 +902,27 @@ export default function ChapterNarration({
               <VolumeIcon level={muted ? 0 : volume} />
               Âm lượng
             </button>
-            <input
-              type="range"
-              min={0}
-              max={1}
-              step={0.05}
-              value={muted ? 0 : volume}
-              aria-label="Âm lượng"
-              aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)}%`}
-              onChange={(e) => chooseVolume(Number(e.target.value))}
-              className="scrub w-full max-w-[220px]"
-              style={{ ['--pct' as string]: `${(muted ? 0 : volume) * 100}%` }}
-            />
-            <span className="w-[4ch] text-right tabular-nums">{Math.round((muted ? 0 : volume) * 100)}%</span>
+            {/* iPhone ignores a page's volume, so a slider there would move
+                and change nothing. Mute still works, so the button stays. */}
+            {volumeIgnored ? (
+              <span className="text-[12px] text-[var(--color-faint)]">Chỉnh bằng phím âm lượng của máy</span>
+            ) : (
+              <>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.05}
+                  value={muted ? 0 : volume}
+                  aria-label="Âm lượng"
+                  aria-valuetext={`${Math.round((muted ? 0 : volume) * 100)}%`}
+                  onChange={(e) => chooseVolume(Number(e.target.value))}
+                  className="scrub w-full max-w-[220px]"
+                  style={{ ['--pct' as string]: `${(muted ? 0 : volume) * 100}%` }}
+                />
+                <span className="w-[4ch] text-right tabular-nums">{Math.round((muted ? 0 : volume) * 100)}%</span>
+              </>
+            )}
           </div>
 
           <MusicPicker />
