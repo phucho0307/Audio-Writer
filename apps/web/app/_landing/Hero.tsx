@@ -7,6 +7,7 @@ import type { Story } from '@/lib/api';
 import { calm, gsap, useGSAP } from '@/lib/motion';
 import SpiritText from '../SpiritText';
 import Magnetic from './Magnetic';
+import Waveform from './Waveform';
 import { BRAND } from '@/lib/brand';
 import { dailyPick } from '@/lib/daily-pick';
 import { hasOpened } from '@/lib/progress';
@@ -244,15 +245,23 @@ export default function Hero({ stories }: { stories: Story[] }) {
 
         {pick && (
           <Link
-            href={`/doc/${pick.id}`}
-            className="card group relative z-20 flex w-full max-w-[420px] items-center gap-4 p-4 backdrop-blur-md transition-colors hover:border-[var(--color-accent-line)]"
+            href={`/doc/${pick.id}/1`}
+            className="card group relative z-20 flex w-full max-w-[420px] flex-col gap-3 p-4 backdrop-blur-md transition-colors hover:border-[var(--color-accent-line)]"
           >
-            {pick.coverUrl && (
-              <span className="cover aspect-[3/4] w-[64px] flex-none overflow-hidden rounded-[4px]">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={thumbUrl(pick.coverUrl)} alt="" className="h-full w-full object-cover" />
+            <div className="flex items-center gap-3">
+              <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-[var(--color-accent)] text-[var(--color-on-accent)] transition-transform group-hover:scale-110">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden className="ml-0.5">
+                  <path d="M8 5.5v13l11-6.5-11-6.5Z" />
+                </svg>
               </span>
-            )}
+              <span className="flex min-w-0 flex-col">
+                <span className="label">Truyện hay hôm nay</span>
+                <span className="display truncate text-[16px]">{pick.title} · Chương 1</span>
+              </span>
+            </div>
+            <Waveform height={44} bars={48} />
+          </Link>
+        )}
       </div>
     </section>
   );
