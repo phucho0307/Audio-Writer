@@ -7,8 +7,9 @@ import type { Story } from '@/lib/api';
 import { calm, gsap, useGSAP } from '@/lib/motion';
 import SpiritText from '../SpiritText';
 import Magnetic from './Magnetic';
-import Waveform from './Waveform';
 import { BRAND } from '@/lib/brand';
+import { dailyPick } from '@/lib/daily-pick';
+import { hasOpened } from '@/lib/progress';
 
 /** Where each cover sits in the fan: angle, offset, depth. */
 const FAN = [
@@ -25,15 +26,15 @@ const FAN = [
  * Left: what this is, said the way the people it is for talk. Right: the
  * stories themselves - real covers from the catalogue, fanned out in depth,
  * drifting on their own, leaning toward the pointer, and scattering as the
- * page scrolls away. A sample player sits under them, because the first thing
- * this product does is read to you.
+ * page scrolls away. Under them, today's recommended story: a different one
+ * each day, and one this reader has not opened yet.
  */
 export default function Hero({ stories }: { stories: Story[] }) {
   const root = useRef<HTMLElement>(null);
   const covers = stories.filter((s) => s.coverUrl).slice(0, 5);
-  // The story with the most branches is the one that shows what the product
-  // is for, so it is the one the sample player offers.
-  const sample = [...stories].sort((a, b) => b.branchCount - a.branchCount)[0];
+  // Stories load after mount, so reading which ones this device has opened
+  // cannot mismatch a server render.
+  const pick = dailyPick(stories, hasOpened);
 
   const chapters = stories.reduce((n, s) => n + s.contributionCount, 0);
   const forks = stories.reduce((n, s) => n + Math.max(0, s.branchCount - 1), 0);
@@ -241,25 +242,17 @@ export default function Hero({ stories }: { stories: Story[] }) {
           </div>
         </div>
 
-        {sample && (
+        {pick && (
           <Link
-            href={`/doc/${sample.id}/1`}
-            className="card group relative z-20 flex w-full max-w-[420px] flex-col gap-3 p-4 backdrop-blur-md transition-colors hover:border-[var(--color-accent-line)]"
+            href={`/doc/${pick.id}`}
+            className="card group relative z-20 flex w-full max-w-[420px] items-center gap-4 p-4 backdrop-blur-md transition-colors hover:border-[var(--color-accent-line)]"
           >
-            <div className="flex items-center gap-3">
-              <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-[var(--color-accent)] text-[var(--color-on-accent)] transition-transform group-hover:scale-110">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden className="ml-0.5">
-                  <path d="M8 5.5v13l11-6.5-11-6.5Z" />
-                </svg>
+            {pick.coverUrl && (
+              <span className="cover aspect-[3/4] w-[64px] flex-none overflow-hidden rounded-[4px]">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={thumbUrl(pick.coverUrl)} alt="" className="h-full w-full object-cover" />
               </span>
-              <span className="flex min-w-0 flex-col">
-                <span className="label">Nghe thử · chương 1</span>
-                <span className="display truncate text-[16px]">{sample.title}</span>
-              </span>
-            </div>
-            <Waveform height={44} bars={48} />
-          </Link>
-        )}
+            )}
       </div>
     </section>
   );

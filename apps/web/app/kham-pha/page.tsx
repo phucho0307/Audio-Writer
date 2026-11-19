@@ -25,6 +25,14 @@ import { BRAND } from '@/lib/brand';
 
 type Shelf = 'all' | 'library' | 'famous' | 'chinese';
 type SortBy = 'popular' | 'latest' | 'liked';
+
+/**
+ * The story that leads Khám phá, chosen by hand. When it is not on the shelf
+ * (unpublished, or the id is cleared) the most-listened story leads instead.
+ * The label says which it is: a hand-picked story is never called the most
+ * listened.
+ */
+const PINNED_FEATURE = '883e085f-9658-4276-94f5-d6b564649904'; // Căn Hộ 704
 type SearchMode = 'plain' | 'ai';
 
 const SORTS: { id: SortBy; label: string }[] = [
@@ -181,10 +189,11 @@ export default function Explore() {
   // under a genre the grid is the answer to the question that was asked, and
   // a hero would just be one of its own results, repeated at four times the
   // size.
-  const featured =
-    shelf === 'all' && sortBy === 'popular' && !authorId && !query.trim() && picked.length === 0 && stories && stories.length > 2
-      ? [...stories].filter((story) => !nativeStory(story.id)).sort((a, b) => b.viewCount - a.viewCount)[0]
-      : null;
+  const leads = shelf === 'all' && sortBy === 'popular' && !authorId && !query.trim() && picked.length === 0 && stories && stories.length > 2;
+  const pinned = leads ? stories!.find((story) => story.id === PINNED_FEATURE) ?? null : null;
+  const featured = leads
+    ? pinned ?? [...stories!].filter((story) => !nativeStory(story.id)).sort((a, b) => b.viewCount - a.viewCount)[0]
+    : null;
   const grid = featured ? shown.filter((s) => s.id !== featured.id) : shown;
   const entries: ShelfEntry[] = [
     ...grid.map((story) => ({ kind: 'story' as const, story })),
@@ -204,7 +213,7 @@ export default function Explore() {
         <p className="panel text-sm text-[var(--color-son)]">{error}</p>
       )}
 
-      {featured && <Featured story={featured} />}
+      {featured && <Featured story={featured} pinned={featured === pinned} />}
 
       {!featured && (
         <Reveal as="header" className="flex max-w-[48ch] flex-col gap-3">
@@ -361,7 +370,7 @@ export default function Explore() {
  * tinted by whatever is being featured rather than by a fixed brand gradient,
  * and a new cover redecorates it for free.
  */
-function Featured({ story }: { story: Story }) {
+function Featured({ story, pinned }: { story: Story; pinned: boolean }) {
   const backdrop = useRef<HTMLDivElement>(null);
 
   /**
@@ -428,7 +437,7 @@ function Featured({ story }: { story: Story }) {
         <div className="flex min-w-0 flex-col items-start gap-4">
           <span className="label label-accent flex items-center gap-2">
             <span className="dot dot-on" aria-hidden />
-            Được nghe nhiều nhất
+            {pinned ? 'Truyện nổi bật' : 'Được nghe nhiều nhất'}
           </span>
 
           <Link href={`/doc/${story.id}`}>
