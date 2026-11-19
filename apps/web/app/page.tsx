@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { api, type Story } from '@/lib/api';
+import { api, type HomeTotals, type Story } from '@/lib/api';
 import Hero from './_landing/Hero';
 import Marquee from './_landing/Marquee';
 import Features from './_landing/Features';
@@ -22,11 +22,18 @@ import { Faq, FinalCta } from './_landing/Closing';
  */
 export default function Home() {
   const [stories, setStories] = useState<Story[]>([]);
+  const [totals, setTotals] = useState<HomeTotals | undefined>();
 
+  // The front page's own slice of the shelf (covers, today's-pick pool,
+  // totals) rather than all 1,100 stories: waiting for the whole catalogue
+  // was why the hero covers arrived seconds after the page.
   useEffect(() => {
     api
-      .listStories()
-      .then((all) => setStories(all.filter((s) => s.contributionCount > 0)))
+      .homeShelf()
+      .then((home) => {
+        setStories(home.stories);
+        setTotals(home.totals);
+      })
       // The page reads fine without the catalogue: the hero loses its covers
       // and the counters stay hidden, and nothing claims a number it lacks.
       .catch(() => {});
@@ -34,11 +41,11 @@ export default function Home() {
 
   return (
     <main className="overflow-x-clip">
-      <Hero stories={stories} />
+      <Hero stories={stories} totals={totals} />
       <Marquee />
       <Features />
       <Journey />
-      <Bento stories={stories} />
+      <Bento stories={stories} totals={totals} />
       <Faq />
       <FinalCta />
     </main>

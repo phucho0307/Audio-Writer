@@ -31,6 +31,8 @@ export class ShelfCache implements OnApplicationBootstrap {
   private rebuilding: Promise<string> | null = null;
   /** Bumped on every invalidation, so a rebuild that raced a write is not marked fresh. */
   private generation = 0;
+  /** The front page's slice of the last shelf it was cut from. */
+  private home: { from: string; json: string } | null = null;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -58,6 +60,43 @@ export class ShelfCache implements OnApplicationBootstrap {
     if (!body) return this.rebuild();
     if (!fresh) void this.rebuild().catch(() => undefined);
     return body;
+  }
+
+  /**
+   * What the front page needs, and nothing else: the first five covers, the
+   * stories written here (today's pick is chosen from them), and the totals.
+   *
+   * The whole shelf is over a megabyte and the front page waited for all of
+   * it before drawing a single cover. This is a few dozen stories, cut from
+   * the same cached shelf, so it is never staler than Khám phá and costs one
+   * parse per shelf rebuild.
+   */
+  async homeJson(): Promise<string> {
+    const body = await this.json();
+    if (this.home?.from === body) return this.home.json;
+    const all = (JSON.parse(body) as Array<{
+      id: string;
+      coverUrl: string | null;
+      textSource: unknown;
+      contributionCount: number;
+      branchCount: number;
+      wordCount: number;
+    }>).filter((s) => s.contributionCount > 0);
+    const covers = all.filter((s) => s.coverUrl).slice(0, 5);
+    const own = all.filter((s) => s.textSource == null);
+    const ids = new Set([...covers, ...own].map((s) => s.id));
+    const json = JSON.stringify({
+      covers: covers.map((s) => s.id),
+      stories: all.filter((s) => ids.has(s.id)),
+      totals: {
+        stories: all.length,
+        chapters: all.reduce((n, s) => n + s.contributionCount, 0),
+        forks: all.reduce((n, s) => n + Math.max(0, s.branchCount - 1), 0),
+        words: all.reduce((n, s) => n + s.wordCount, 0),
+      },
+    });
+    this.home = { from: body, json };
+    return json;
   }
 
   /**

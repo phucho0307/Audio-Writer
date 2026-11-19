@@ -45,6 +45,13 @@ export class StoriesController {
     return this.shelf.json();
   }
 
+  /** The front page's slice of the shelf: covers, today's-pick pool, totals. */
+  @Get('stories/home')
+  async home(@Res({ passthrough: true }) res: Response) {
+    res.type('application/json');
+    return this.shelf.homeJson();
+  }
+
   @Post('stories')
   create(@Body() dto: CreateStoryDto) {
     return this.stories.create(dto);

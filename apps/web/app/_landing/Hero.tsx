@@ -3,7 +3,7 @@
 import { thumbUrl } from '@/lib/thumb';
 import { useRef } from 'react';
 import Link from 'next/link';
-import type { Story } from '@/lib/api';
+import type { HomeTotals, Story } from '@/lib/api';
 import { calm, gsap, useGSAP } from '@/lib/motion';
 import SpiritText from '../SpiritText';
 import Magnetic from './Magnetic';
@@ -30,15 +30,18 @@ const FAN = [
  * page scrolls away. Under them, today's recommended story: a different one
  * each day, and one this reader has not opened yet.
  */
-export default function Hero({ stories }: { stories: Story[] }) {
+export default function Hero({ stories, totals }: { stories: Story[]; totals?: HomeTotals }) {
   const root = useRef<HTMLElement>(null);
   const covers = stories.filter((s) => s.coverUrl).slice(0, 5);
   // Stories load after mount, so reading which ones this device has opened
   // cannot mismatch a server render.
   const pick = dailyPick(stories, hasOpened);
 
-  const chapters = stories.reduce((n, s) => n + s.contributionCount, 0);
-  const forks = stories.reduce((n, s) => n + Math.max(0, s.branchCount - 1), 0);
+  // Totals come from the server when the page loaded only its slice of the
+  // shelf; summing `stories` would then count just that slice.
+  const count = totals?.stories ?? stories.length;
+  const chapters = totals?.chapters ?? stories.reduce((n, s) => n + s.contributionCount, 0);
+  const forks = totals?.forks ?? stories.reduce((n, s) => n + Math.max(0, s.branchCount - 1), 0);
 
   useGSAP(
     () => {
@@ -55,7 +58,6 @@ export default function Hero({ stories }: { stories: Story[] }) {
         duration: 1.1,
         ease: 'power3.out',
         stagger: 0.09,
-        delay: 0.25,
       });
 
       // Each card breathes on its own period, so the fan never moves as one
@@ -189,9 +191,9 @@ export default function Hero({ stories }: { stories: Story[] }) {
         </div>
 
         {/* Real counts from the catalogue, not a marketing number. */}
-        {stories.length > 0 && (
+        {count > 0 && (
           <p className="text-[13px] text-[var(--color-faint)]">
-            <span className="text-[var(--color-ink)]">{stories.length}</span> truyện ·{' '}
+            <span className="text-[var(--color-ink)]">{count}</span> truyện ·{' '}
             <span className="text-[var(--color-ink)]">{chapters}</span> chương ·{' '}
             <span className="text-[var(--color-accent)]">⑂ {forks}</span> nhánh rẽ đang chờ bà
           </p>
@@ -228,7 +230,7 @@ export default function Hero({ stories }: { stories: Story[] }) {
                 >
                   <div className="cover aspect-[3/4] shadow-[0_30px_60px_-20px_rgb(0_0_0/0.8)]">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={thumbUrl(s.coverUrl!)} alt="" />
+                    <img src={thumbUrl(s.coverUrl!)} alt="" fetchPriority="high" decoding="async" />
                     <span className="scrim">
                       <span className="display line-clamp-2 block text-[14px] leading-tight text-white">
                         {s.title}

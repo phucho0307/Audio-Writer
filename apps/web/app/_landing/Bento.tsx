@@ -2,7 +2,7 @@
 
 import { useRef, type ReactNode } from 'react';
 import Link from 'next/link';
-import type { Story } from '@/lib/api';
+import type { HomeTotals, Story } from '@/lib/api';
 import { calm, gsap, useGSAP } from '@/lib/motion';
 import Reveal from '../Reveal';
 
@@ -129,10 +129,11 @@ function AskChips() {
   );
 }
 
-export default function Bento({ stories }: { stories: Story[] }) {
-  const chapters = stories.reduce((n, s) => n + s.contributionCount, 0);
-  const forks = stories.reduce((n, s) => n + Math.max(0, s.branchCount - 1), 0);
-  const words = stories.reduce((n, s) => n + s.wordCount, 0);
+export default function Bento({ stories, totals }: { stories: Story[]; totals?: HomeTotals }) {
+  const count = totals?.stories ?? stories.length;
+  const chapters = totals?.chapters ?? stories.reduce((n, s) => n + s.contributionCount, 0);
+  const forks = totals?.forks ?? stories.reduce((n, s) => n + Math.max(0, s.branchCount - 1), 0);
+  const words = totals?.words ?? stories.reduce((n, s) => n + s.wordCount, 0);
 
   return (
     <section className="mx-auto flex max-w-[1180px] flex-col gap-14 px-5 py-24 sm:px-8 sm:py-32">
@@ -201,9 +202,9 @@ export default function Bento({ stories }: { stories: Story[] }) {
         </Tile>
       </Reveal>
 
-      {stories.length > 0 && (
+      {count > 0 && (
         <div className="grid grid-cols-2 gap-y-10 md:grid-cols-4">
-          <Count value={stories.length} label="truyện đang có" />
+          <Count value={count} label="truyện đang có" />
           <Count value={chapters} label="chương đã đăng" />
           <Count value={forks} label="nhánh rẽ" />
           <Count value={words} label="chữ đã viết" />

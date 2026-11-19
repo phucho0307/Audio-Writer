@@ -509,6 +509,12 @@ export interface AdminStats {
   signups: { handle: string; displayName: string; createdAt: string }[];
 }
 
+/** Catalogue-wide counts, for the front page. */
+export type HomeTotals = { stories: number; chapters: number; forks: number; words: number };
+
+/** The front page's slice of the shelf (GET /stories/home). */
+export type HomeShelf = { covers: string[]; stories: Story[]; totals: HomeTotals };
+
 export type PremiumStatus = {
   /** False until the owner has configured a bank account to be paid into. */
   enabled: boolean;
@@ -763,6 +769,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(transferId ? { transferId } : {}),
     }),
+
+  /** Just what the front page draws: a few dozen stories instead of the whole shelf. */
+  homeShelf: () => call<HomeShelf>('/stories/home'),
 
   premium: () => call<PremiumStatus>('/premium'),
   createPremiumOrder: () => call<PremiumOrder>('/premium/orders', { method: 'POST' }),
