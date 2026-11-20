@@ -19,7 +19,7 @@ const PERKS = [
   },
   {
     title: 'Tự chọn nhạc nền',
-    body: `${TRACKS.length} bản nhạc nền phát dưới giọng đọc, âm lượng chỉnh riêng. Bật trong nút Tuỳ chỉnh của trình phát.`,
+    body: `${TRACKS.length} bản nhạc nền phát dưới giọng đọc, âm lượng chỉnh riêng. Đổi bài hoặc tắt trong nút Tuỳ chỉnh của trình phát.`,
     icon: (
       <>
         <path d="M9 18V5l11-2v13" />

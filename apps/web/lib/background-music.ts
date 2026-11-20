@@ -3,8 +3,10 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Music under the narration: the listener picks a track (or none) and a level
- * for it, separate from the voice's.
+ * Music under the narration: on by default with "Bóng lá rơi", at a level of
+ * its own, separate from the voice's. The listener can pick another track or
+ * switch the music off; switching it off keeps the chosen track for when it
+ * comes back on.
  *
  * The site owner's own tracks, stored on R2 (`background-music/`). Listed here
  * rather than fetched, so the picker shows at once and costs no request.
@@ -37,25 +39,38 @@ export const TRACKS: MusicTrack[] = [
 
 const TRACK_KEY = 'aw-music';
 const LEVEL_KEY = 'aw-music-volume';
+/** '0' when the listener has switched music off. Absent means on. */
+const ON_KEY = 'aw-music-on';
+/** What plays until the listener picks something else. */
+export const DEFAULT_TRACK_ID = 'zWbpgD8m4RM'; // Bóng lá rơi
 const EVENT = 'aw-music-change';
 /** Under a voice, music wants to be heard, not listened to. A reader who has
  * moved the slider keeps their own level; this is only where it starts. */
 export const DEFAULT_MUSIC_LEVEL = 0.15;
 
 export interface MusicChoice {
+  /** What is playing: the chosen track while music is on, otherwise null. */
   track: MusicTrack | null;
+  /** The chosen track, kept while music is off. */
+  chosen: MusicTrack;
+  on: boolean;
   level: number;
 }
+
+const fallback = (): MusicTrack => TRACKS.find((t) => t.id === DEFAULT_TRACK_ID) ?? TRACKS[0];
 
 function read(): MusicChoice {
   let id: string | null = null;
   let level = DEFAULT_MUSIC_LEVEL;
+  let on = true;
   try {
     id = localStorage.getItem(TRACK_KEY);
+    on = localStorage.getItem(ON_KEY) !== '0';
     const kept = Number(localStorage.getItem(LEVEL_KEY) ?? NaN);
     if (kept >= 0 && kept <= 1) level = kept;
   } catch {}
-  return { track: TRACKS.find((t) => t.id === id) ?? null, level };
+  const chosen = TRACKS.find((t) => t.id === id) ?? fallback();
+  return { track: on && chosen ? chosen : null, chosen, on, level };
 }
 
 function write(key: string, value: string | null) {
@@ -66,8 +81,13 @@ function write(key: string, value: string | null) {
   window.dispatchEvent(new Event(EVENT));
 }
 
-export function chooseTrack(id: string | null): void {
+export function chooseTrack(id: string): void {
   write(TRACK_KEY, id);
+}
+
+/** Music on or off. Off is remembered; on is the default, so it clears the flag. */
+export function setMusicOn(on: boolean): void {
+  write(ON_KEY, on ? null : '0');
 }
 
 export function chooseMusicLevel(level: number): void {
@@ -76,7 +96,7 @@ export function chooseMusicLevel(level: number): void {
 
 /** The current choice, kept in step across every component and tab that shows it. */
 export function useMusicChoice(): MusicChoice {
-  const [choice, setChoice] = useState<MusicChoice>({ track: null, level: DEFAULT_MUSIC_LEVEL });
+  const [choice, setChoice] = useState<MusicChoice>(() => ({ track: null, chosen: fallback(), on: true, level: DEFAULT_MUSIC_LEVEL }));
   useEffect(() => {
     const sync = () => setChoice(read());
     sync();
