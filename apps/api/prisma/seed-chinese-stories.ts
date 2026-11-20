@@ -65,7 +65,8 @@ async function main() {
         id: work.storyId, ownerId: owner.id, title: work.title, synopsis: work.synopsis,
         textSource: work.textSource, coverUrl: work.coverUrl, genres: work.genres,
         language: 'vi', status: StoryStatus.COMPLETE, visibility: Visibility.PUBLIC,
-        allowForks: false, unlockPrice: 0, freeChapters: chapters.length,
+        // Readers may write their own turn from any chapter; the original stays as it is.
+        allowForks: true, unlockPrice: 0, freeChapters: chapters.length,
         contributionCount: chapters.length, wordCount: work.wordCount,
       } });
       await tx.branch.create({ data: { id: work.branchId, storyId: work.storyId, ownerId: owner.id, name: 'main', isRoot: true, lineage: [] } });
