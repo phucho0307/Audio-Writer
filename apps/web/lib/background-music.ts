@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Music under the narration: on by default with "Bóng lá rơi", at a level of
- * its own, separate from the voice's. The listener can pick another track or
+ * Music under the narration: on by default with "Bóng lá rơi". It has a slider
+ * of its own and also follows the voice's: turning the voice down turns the
+ * music down with it, while the music slider leaves the voice alone. The listener can pick another track or
  * switch the music off; switching it off keeps the chosen track for when it
  * comes back on.
  *
@@ -38,15 +39,22 @@ export const TRACKS: MusicTrack[] = [
 ];
 
 const TRACK_KEY = 'aw-music';
-const LEVEL_KEY = 'aw-music-volume';
+/** The music slider, 0..1 of MUSIC_CEILING. A new key: the old one
+ * (`aw-music-volume`) held absolute levels on a different scale. */
+const LEVEL_KEY = 'aw-music-level';
+/** Where the chapter player keeps the voice level. */
+const VOICE_KEY = 'aw-volume';
 /** '0' when the listener has switched music off. Absent means on. */
 const ON_KEY = 'aw-music-on';
 /** What plays until the listener picks something else. */
 export const DEFAULT_TRACK_ID = 'zWbpgD8m4RM'; // Bóng lá rơi
 const EVENT = 'aw-music-change';
-/** Under a voice, music wants to be heard, not listened to. A reader who has
- * moved the slider keeps their own level; this is only where it starts. */
-export const DEFAULT_MUSIC_LEVEL = 0.15;
+/**
+ * Under a voice, music wants to be heard, not listened to. Both sliders read
+ * 100% by default, but music at "100%" plays at a tenth of full level while
+ * the voice plays at full. The listener never sees this number.
+ */
+export const MUSIC_CEILING = 0.1;
 
 export interface MusicChoice {
   /** What is playing: the chosen track while music is on, otherwise null. */
@@ -54,14 +62,32 @@ export interface MusicChoice {
   /** The chosen track, kept while music is off. */
   chosen: MusicTrack;
   on: boolean;
+  /** The music slider as the listener sees it, 0..1. */
   level: number;
+  /** What the music element is actually set to: ceiling x music slider x voice. */
+  output: number;
 }
 
 const fallback = (): MusicTrack => TRACKS.find((t) => t.id === DEFAULT_TRACK_ID) ?? TRACKS[0];
 
+/**
+ * The voice level the music follows: the voice slider, or 0 while the voice is
+ * muted. Set by the chapter player as it changes; until a player reports in,
+ * read from what it last saved.
+ */
+let voiceLevel: number | null = null;
+
+function storedVoice(): number {
+  try {
+    const kept = Number(localStorage.getItem(VOICE_KEY) ?? NaN);
+    if (kept >= 0 && kept <= 1) return kept;
+  } catch {}
+  return 1;
+}
+
 function read(): MusicChoice {
   let id: string | null = null;
-  let level = DEFAULT_MUSIC_LEVEL;
+  let level = 1;
   let on = true;
   try {
     id = localStorage.getItem(TRACK_KEY);
@@ -70,7 +96,8 @@ function read(): MusicChoice {
     if (kept >= 0 && kept <= 1) level = kept;
   } catch {}
   const chosen = TRACKS.find((t) => t.id === id) ?? fallback();
-  return { track: on && chosen ? chosen : null, chosen, on, level };
+  const voice = voiceLevel ?? storedVoice();
+  return { track: on && chosen ? chosen : null, chosen, on, level, output: MUSIC_CEILING * level * voice };
 }
 
 function write(key: string, value: string | null) {
@@ -94,9 +121,21 @@ export function chooseMusicLevel(level: number): void {
   write(LEVEL_KEY, String(Math.max(0, Math.min(1, level))));
 }
 
+/**
+ * The chapter player reports its voice level here, so the music turns down
+ * with the voice: voice at 80% puts music at 80% of its own setting. It does
+ * not move the music slider, and the music slider never moves the voice.
+ */
+export function followVoice(level: number): void {
+  const v = Math.max(0, Math.min(1, level));
+  if (v === voiceLevel) return;
+  voiceLevel = v;
+  window.dispatchEvent(new Event(EVENT));
+}
+
 /** The current choice, kept in step across every component and tab that shows it. */
 export function useMusicChoice(): MusicChoice {
-  const [choice, setChoice] = useState<MusicChoice>(() => ({ track: null, chosen: fallback(), on: true, level: DEFAULT_MUSIC_LEVEL }));
+  const [choice, setChoice] = useState<MusicChoice>(() => ({ track: null, chosen: fallback(), on: true, level: 1, output: MUSIC_CEILING }));
   useEffect(() => {
     const sync = () => setChoice(read());
     sync();

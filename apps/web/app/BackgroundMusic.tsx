@@ -46,10 +46,10 @@ interface Graph {
 }
 
 export default function BackgroundMusic() {
-  const { track, level } = useMusicChoice();
+  const { track, output: level } = useMusicChoice();
   const ref = useRef<HTMLAudioElement>(null);
   const [live, setLive] = useState(false);
-  // How much of `level` is let through: ramps to 0 before a pause and back up after a play.
+  // How much of the music level is let through: ramps to 0 before a pause and back up after a play.
   const gain = useRef(0);
   const ramp = useRef(0);
   const fadeOut = useRef(FADE_OUT_MS);

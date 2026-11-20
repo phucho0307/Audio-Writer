@@ -10,6 +10,7 @@ import NarrationProgress from '@/app/NarrationProgress';
 import VoicePicker from '@/app/VoicePicker';
 import MusicPicker from '@/app/MusicPicker';
 import { setNarrating } from '@/lib/ambience';
+import { followVoice } from '@/lib/background-music';
 import { forgetProgress, progressOf, saveProgress } from '@/lib/progress';
 import { thumbUrl } from '@/lib/thumb';
 import { BRAND } from '@/lib/brand';
@@ -383,6 +384,13 @@ export default function ChapterNarration({
     el.volume = volume * fade;
     el.muted = muted;
   }, [volume, muted, fade, url]);
+
+  // The music under the voice follows the voice slider (and its mute), so
+  // turning the voice to 80% puts the music at 80% of its own setting. On
+  // iPhone the voice slider is not offered, so only mute counts there.
+  useEffect(() => {
+    followVoice(muted ? 0 : volumeIgnored ? 1 : volume);
+  }, [volume, muted, volumeIgnored]);
 
   // The sleep timer. Wall-clock, so it runs whether or not sound is playing
   // - "30 minutes" means half an hour from now, as on any radio.
