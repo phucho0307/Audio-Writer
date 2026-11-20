@@ -529,6 +529,30 @@ Giải thích từ đầu cho người mới, kèm sơ đồ và câu hỏi ph�
 **Còn thiếu / sau này:** không tự gia hạn (chuyển khoản không trừ tự động được); hoàn tiền làm
 tay. Thu nhập từ Premium vẫn là thu nhập, có doanh thu đều thì phải tìm hiểu nghĩa vụ thuế.
 
+## 11f. Tự tấn công thử web (red team, 19/11/2026)
+
+**Cách làm:** chạy một bản API riêng trên database thử nghiệm ở máy (tắt mail, R2 và khoá AI để
+không gửi gì ra ngoài), rồi viết script đóng hai vai: Alice (chủ truyện) và Mallory (kẻ tấn công).
+Mallory thử sửa, xoá, đăng chương, xem truyện riêng tư, tự mời mình vào phòng viết, gọi API quản
+trị, gửi webhook SePay giả, tự gán `role=ADMIN`, dùng token `alg=none`. Trên web thật chỉ thử
+những lệnh không ghi gì: cổng mở (chỉ 22, 80, 443), header, API dev và API quản trị khi chưa đăng nhập.
+
+**Kết quả:** phần quyền sở hữu vững vì mọi kiểm tra nằm trong service, không nằm ở giao diện. Hỏng
+ở chỗ khác: **chi phí và tài nguyên**.
+
+- **Ai cũng gọi được "đọc cả truyện"** (`POST /audio/branches/:id`), kể cả người chưa đăng nhập.
+  Một request xếp hàng mọi chương của một truyện bất kỳ. Vài trăm request là máy đọc bận nhiều
+  ngày và kho 9 GB đầy. Sửa: chỉ chủ nhánh hoặc admin.
+- **Ảnh đại diện và ảnh bìa chỉ bị giới hạn theo phút** (6 lần/phút). Mỗi ảnh là một file mới
+  nằm chung kho với giọng đọc, và ảnh cũ không bị xoá. Sửa: tối đa 10 ảnh đại diện và 30 ảnh bìa
+  mỗi ngày cho mỗi tài khoản (bộ đếm trong Redis).
+- **Ai cũng xem được ai đang ở trong phòng viết riêng tư**, chỉ cần biết id. Sửa: cần quyền đọc.
+- **Header `X-Powered-By: Next.js`** cho kẻ quét biết nên thử lỗ của framework nào. Đã tắt.
+
+**Bài học (để kể khi phỏng vấn):** test phân quyền hay chỉ hỏi "người này có được làm việc này
+không". Câu hỏi bị bỏ sót là "việc này tốn bao nhiêu, và ai trả". Rate limit theo phút không thay
+được hạn mức theo ngày khi mỗi request ghi thêm dữ liệu vào một kho có trần.
+
 ## 12. Làm việc với hai AI agent trong cùng một repo
 
 Claude Code và Codex sửa code song song trong cùng thư mục.

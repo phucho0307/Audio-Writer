@@ -44,6 +44,8 @@ type PexelsPhoto = {
 };
 
 const MAX_BYTES = 8 * 1024 * 1024;
+/** Own pictures a writer may upload in a day, across all their stories. */
+const UPLOADS_PER_DAY = 30;
 const SEARCH_TTL = 3600;
 const PEXELS_LICENSE = 'https://www.pexels.com/license/';
 
@@ -61,7 +63,17 @@ export class StoryCoversService {
   ) {}
 
   async upload(storyId: string, bytes: Buffer) {
-    await this.stories.ownedStory(storyId);
+    const { user } = await this.stories.ownedStory(storyId);
+    // Every upload is a new object in the one storage budget that narration
+    // also lives in, and old covers are kept. The per-minute throttle alone
+    // still let one account store thousands a day.
+    const today = await this.redis.incrementWindow(`cover:uploads:${user.id}`, 24 * 3600).catch(() => 0);
+    if (today > UPLOADS_PER_DAY) {
+      throw new HttpException(
+        { code: 'UPLOAD_LIMIT', message: 'Hôm nay bạn đã tải lên nhiều ảnh bìa rồi. Thử lại vào ngày mai nhé.' },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
     const image = await this.normalise(bytes);
     return this.save(storyId, image, null);
   }

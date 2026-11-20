@@ -3,6 +3,8 @@ import path from 'node:path';
 
 const config: NextConfig = {
   reactStrictMode: true,
+  // No "X-Powered-By: Next.js": it tells a scanner which exploits to try first.
+  poweredByHeader: false,
   // `next build` also writes a self-contained server (.next/standalone) with
   // only the node_modules it imports - what the production image runs.
   output: 'standalone',

@@ -280,7 +280,10 @@ export class DraftService {
   }
 
   /** Who is in the room right now, from the server's own awareness state. */
-  presence(branchId: string) {
+  async presence(branchId: string) {
+    // Who is in a draft room is the room's business: without this, anyone
+    // with a branch id could watch which accounts were writing a private draft.
+    await this.access.require(branchId, 'read');
     const doc = this.gateway.server?.documents.get(this.room(branchId));
     if (!doc) return { count: 0, people: [] as { handle: string }[] };
 

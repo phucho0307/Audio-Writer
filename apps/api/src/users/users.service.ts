@@ -2,6 +2,8 @@ import { isPremium } from '../premium/premium';
 import {
   BadRequestException,
   ConflictException,
+  HttpException,
+  HttpStatus,
   Inject,
   Injectable,
   NotFoundException,
@@ -10,6 +12,7 @@ import {
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
+import { RedisService } from '../redis/redis.service';
 import { AUDIO_STORAGE, StorageFullError, type StorageDriver } from '../storage/storage-driver';
 
 /** Lowercase letters, digits and underscores; what sign-up already produces. */
@@ -23,6 +26,7 @@ export const NAME_MAX = 50;
  */
 // Under the JSON body limit (100 kB) once base64-encoded.
 export const AVATAR_MAX_BYTES = 64 * 1024;
+const AVATAR_UPLOADS_PER_DAY = 10;
 
 /** Accepted formats, recognised by their first bytes rather than a label. */
 const IMAGE_KINDS: { type: string; ext: string; is: (b: Buffer) => boolean }[] = [
@@ -59,6 +63,7 @@ export class UsersService {
     // The one object store the app has. Avatars sit beside the narration
     // under their own prefix; they are public, as narration is.
     @Inject(AUDIO_STORAGE) private readonly storage: StorageDriver,
+    private readonly redis: RedisService,
   ) {}
 
   /** Store a new picture (a data: URL) and make it the avatar. */
@@ -73,6 +78,15 @@ export class UsersService {
     const kind = IMAGE_KINDS.find((k) => k.is(bytes));
     if (!kind) {
       throw new BadRequestException({ code: 'AVATAR_TYPE', message: 'Chỉ nhận ảnh JPG, PNG hoặc WebP.' });
+    }
+    // Each new picture is a new object in the storage budget narration shares,
+    // and old ones are kept. Six a minute was the only limit: thousands a day.
+    const today = await this.redis.incrementWindow(`avatar:uploads:${me.id}`, 24 * 3600).catch(() => 0);
+    if (today > AVATAR_UPLOADS_PER_DAY) {
+      throw new HttpException(
+        { code: 'UPLOAD_LIMIT', message: 'Hôm nay bạn đã đổi ảnh đại diện nhiều lần rồi. Thử lại vào ngày mai nhé.' },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
     // Content-addressed, so a new picture is a new URL and no cache anywhere
     // keeps showing the old one. No slash: the local driver writes keys flat.

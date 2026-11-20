@@ -1,13 +1,14 @@
 import { isPremium } from '../premium/premium';
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
   type OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, RenderKind, RenderStatus } from '@prisma/client';
+import { Prisma, RenderKind, RenderStatus, Role } from '@prisma/client';
 import { Inject } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -483,7 +484,20 @@ export class TtsService implements OnModuleInit {
 
     // readBranch rather than list(), because enqueueOne now needs the text to
     // address a clip by content and list() only carries a preview.
-    const { contributions } = await this.stories.readBranch(branchId);
+    const { branch, contributions } = await this.stories.readBranch(branchId);
+
+    // The writer's "narrate everything" button, and only theirs. Open to
+    // anyone, one anonymous request queued every chapter of any public story:
+    // a few hundred of them would keep the CPU voice busy for days and fill
+    // the storage budget that readers' own chapters need.
+    const user = await this.currentUser.current();
+    if (branch.ownerId !== user.id && user.role !== Role.ADMIN) {
+      throw new ForbiddenException({
+        code: 'NOT_BRANCH_OWNER',
+        message: 'Chỉ chủ nhánh mới đọc sẵn cả nhánh được.',
+      });
+    }
+
     const clips = await this.prisma.audioClip.findMany({
       where: { voice, contributionId: { in: contributions.map((c) => c.id) } },
       select: { contributionId: true },
