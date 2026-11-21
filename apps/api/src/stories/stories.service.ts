@@ -2,6 +2,8 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -31,6 +33,9 @@ import type {
 /** One reader opening one story counts once in this long. */
 const VIEW_WINDOW_SECONDS = 30 * 60;
 
+/** Per account per day. See `assertDailyWrites`. */
+const DAILY_WRITES = { story: 20, chapter: 150, revise: 10 } as const;
+
 @Injectable()
 export class StoriesService {
   constructor(
@@ -58,6 +63,25 @@ export class StoriesService {
    * permanently unmanageable. The role is set by hand in the database; there
    * is no endpoint that grants it.
    */
+  /**
+   * A daily ceiling on what one account can add to the database.
+   *
+   * The per-minute throttle alone let a script write 120 chapters a minute,
+   * and the database is a free tier with a fixed size: one account could fill
+   * it in an hour and take the site down for everyone. The ceilings sit far
+   * above what a real writer does in a day. Fails open if Redis is down, like
+   * the other limiters - a lost counter is better than a blocked writer.
+   */
+  private async assertDailyWrites(userId: string, kind: keyof typeof DAILY_WRITES): Promise<void> {
+    const n = await this.redis.incrementWindow(`writes:${kind}:${userId}`, 24 * 3600).catch(() => 0);
+    if (n > DAILY_WRITES[kind]) {
+      throw new HttpException(
+        { code: 'DAILY_WRITE_LIMIT', message: 'Hôm nay bạn đã viết rất nhiều rồi. Nghỉ tay một chút, mai viết tiếp nhé.' },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+  }
+
   async ownedStory(id: string): Promise<{ story: Story; user: User }> {
     const user = await this.currentUser.current();
     const story = await this.prisma.story.findUnique({ where: { id } });
@@ -128,6 +152,7 @@ export class StoriesService {
 
   async create(dto: CreateStoryDto) {
     const user = await this.currentUser.current();
+    await this.assertDailyWrites(user.id, 'story');
 
     // A story is never useful without somewhere to write, so the root branch
     // is created in the same transaction rather than lazily on first write.
@@ -430,6 +455,7 @@ export class StoriesService {
    */
   async revise(storyId: string, dto: ReviseDto = {}) {
     const { story, user } = await this.ownedStory(storyId);
+    await this.assertDailyWrites(user.id, 'revise');
 
     return this.prisma.$transaction(async (tx) => {
       const branches = await tx.branch.findMany({ where: { storyId } });
@@ -988,6 +1014,7 @@ export class StoriesService {
 
   async commit(branchId: string, dto: CommitContributionDto) {
     const user = await this.currentUser.current();
+    await this.assertDailyWrites(user.id, 'chapter');
 
     const contribution = await this.prisma.$transaction(async (tx) => {
       const branch = await tx.branch.findUnique({ where: { id: branchId } });
@@ -1095,6 +1122,8 @@ export class StoriesService {
     } = {},
   ): Promise<Branch> {
     const user = await this.currentUser.current();
+    // A fork carries its first chapter, so it counts as one.
+    await this.assertDailyWrites(user.id, 'chapter');
 
     const branch = await this.prisma.$transaction(async (tx) => {
       const parent = await tx.branch.findUnique({ where: { id: branchId } });
