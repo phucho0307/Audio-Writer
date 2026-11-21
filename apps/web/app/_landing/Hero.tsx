@@ -152,32 +152,28 @@ export default function Hero({ stories, totals }: { stories: Story[]; totals?: H
       <div data-hero-copy className="relative flex flex-col items-start gap-7">
         <span className="label label-accent flex items-center gap-2">
           <span className="dot dot-live" aria-hidden />
-          dành cho hội mọt truyện đủ mọi gu
+          Đọc · Nghe · Viết
         </span>
 
         <h1 className="display flex flex-col text-[clamp(2.6rem,6.4vw,5.4rem)] leading-[0.98]">
-          <SpiritText as="span" text="Nghe truyện theo nhịp của bạn." className="block" />
+          <SpiritText as="span" text="Đọc và nghe truyện." className="block" />
           <SpiritText
             as="span"
-            text="Kết chán thì tự viết lại."
+            text="Viết câu chuyện của bạn."
             delay={0.55}
             className="block italic text-[var(--color-accent)] [font-variation-settings:'SOFT'_100,'WONK'_1]"
           />
         </h1>
 
         <p className="max-w-[50ch] text-[16px] leading-[1.7] text-[var(--color-muted)]">
-          {BRAND} là chỗ tụ tập của hội mê truyện, từ{' '}
-          <span className="text-[var(--color-ink)]">ngôn tình, trinh thám, kinh dị, tuổi học trò</span>{' '}
-          tới truyện Trung trà xanh, trọng sinh. Nghe bằng giọng đọc AI, gặp cái kết làm mình tức thì
-          rẽ nhánh viết kết mới,
-          rủ bạn thân viết chung một trang y như Google Docs. Hông cần văn hay, chỉ cần lắm
-          chuyện.
+          {BRAND} giúp bạn <span className="text-[var(--color-ink)]">đọc, nghe và viết truyện</span>.{' '}
+          Tạo nhánh mới, viết cùng bạn bè hoặc dùng AI gợi ý khi bạn cần.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
           <Magnetic>
             <Link href="/kham-pha" className="btn btn-primary btn-lg">
-              Nghe thử liền
+              Khám phá truyện
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="M8 5.5v13l11-6.5-11-6.5Z" />
               </svg>
@@ -185,7 +181,7 @@ export default function Hero({ stories, totals }: { stories: Story[]; totals?: H
           </Magnetic>
           <Magnetic strength={0.25}>
             <Link href="/cua-toi" className="btn btn-ghost btn-lg">
-              Tui muốn viết
+              Bắt đầu viết
             </Link>
           </Magnetic>
         </div>
@@ -195,7 +191,7 @@ export default function Hero({ stories, totals }: { stories: Story[]; totals?: H
           <p className="text-[13px] text-[var(--color-faint)]">
             <span className="text-[var(--color-ink)]">{count}</span> truyện ·{' '}
             <span className="text-[var(--color-ink)]">{chapters}</span> chương ·{' '}
-            <span className="text-[var(--color-accent)]">⑂ {forks}</span> nhánh rẽ đang chờ bà
+            <span className="text-[var(--color-accent)]">⑂ {forks}</span> nhánh rẽ
           </p>
         )}
       </div>

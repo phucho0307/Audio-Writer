@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     template: `%s · ${BRAND}`,
   },
   description:
-    'Nghe, đọc và viết truyện đủ mọi thể loại. Rẽ nhánh câu chuyện, viết chung với bạn bè, nghe bản audio miễn phí.',
+    'Đọc, nghe và viết truyện. Khám phá truyện bạn thích, tạo nhánh mới và viết cùng bạn bè.',
 };
 
 /**
@@ -122,8 +122,7 @@ export default function RootLayout({
               </a>
             </div>
             <p className="max-w-[46ch] text-[12.5px] leading-relaxed text-[var(--color-faint)]">
-              Truyện trên nền tảng do người dùng viết. Các trang nghe truyện
-              được dẫn nguồn để tham khảo, không sao chép nội dung.
+              Bạn có thể xem tác giả và nguồn trong từng truyện.
             </p>
           </div>
         </footer>

@@ -220,7 +220,7 @@ function DemoBranch() {
         <g data-leaf="b">
           <circle cx="270" cy="276" r="9" fill="var(--color-mist)" />
           <text x="270" y="279.5" textAnchor="middle" fontSize="9" fill="var(--color-ground)" fontFamily="var(--font-sans)">8</text>
-          <text x="288" y="280" fontSize="11.5" fill="var(--color-mist)" fontFamily="var(--font-sans)">@đứa_bạn_thân</text>
+          <text x="288" y="280" fontSize="11.5" fill="var(--color-mist)" fontFamily="var(--font-sans)">@bạn_viết_cùng</text>
         </g>
       </svg>
     </div>
@@ -273,7 +273,7 @@ function DemoHints() {
           </span>
         </div>
       ))}
-      <p className="text-[12px] text-[var(--color-faint)]">Bấm một hướng là AI viết tiếp theo hướng đó. Hông bấm thì thôi.</p>
+      <p className="text-[12px] text-[var(--color-faint)]">Chọn một gợi ý để AI viết tiếp.</p>
     </div>
   );
 }
@@ -282,7 +282,7 @@ function DemoHints() {
 
 const WRITERS = [
   { who: 'bạn', color: 'var(--color-accent)', text: 'Hằng đứng trước cửa căn 704, chìa khoá trong tay lạnh ngắt. ' },
-  { who: 'đứa bạn thân', color: 'var(--color-mist)', text: 'Bên trong có tiếng nước chảy, dù cô nhớ rõ đã khoá vòi trước khi đi. ' },
+  { who: 'bạn viết cùng', color: 'var(--color-mist)', text: 'Bên trong có tiếng nước chảy, dù cô nhớ rõ đã khoá vòi trước khi đi. ' },
   { who: 'AI', color: 'var(--color-son)', text: 'Rồi tiếng nước tắt. Ai đó vừa bước ra khỏi phòng tắm.' },
 ];
 
@@ -342,7 +342,7 @@ function DemoCollab() {
       </p>
 
       <div className="flex items-center gap-2 border-t border-[var(--color-line)] pt-3 text-[12px] text-[var(--color-faint)]">
-        <span>Chữ hiện ngay trên máy từng người · hông ai ghi đè ai</span>
+        <span>Nội dung cập nhật đồng thời cho mọi người</span>
       </div>
     </div>
   );
@@ -357,16 +357,14 @@ export default function Features() {
         kicker="Nghe"
         title={
           <>
-            Tai nghe vào, đèn tắt đi.{' '}
-            <span className="italic text-[var(--color-accent)]">Phần còn lại để tụi tui lo.</span>
+            Chọn giọng đọc.{' '}
+            <span className="italic text-[var(--color-accent)]">Điều chỉnh tốc độ.</span>
           </>
         }
-        chips={['Giọng đọc AI', 'Tua 1× – 2×', 'Nghe cả bộ liền một mạch', 'Sương mù dày lên khi truyện đang đọc']}
+        chips={['Giọng đọc AI', 'Tốc độ 1× – 2×', 'Nghe liên tục']}
         demo={<DemoListen />}
       >
-        Chương nào cũng có giọng đọc AI, giọng nữ trầm hay giọng nam khàn tuỳ bà chọn, tua 1× tới
-        2× cho hội nghe nhanh. Nằm im trong chăn nghe hết một bộ, khỏi cầm điện thoại đọc chữ tới
-        mỏi mắt.
+        Bạn có thể chọn giọng đọc, chỉnh tốc độ từ 1× đến 2× và nghe liên tục qua các chương.
       </Feature>
 
       <Feature
@@ -374,32 +372,28 @@ export default function Features() {
         kicker="Rẽ nhánh"
         title={
           <>
-            Kết gì kỳ vậy trời?{' '}
-            <span className="italic text-[var(--color-accent)]">Tự viết cái khác đi.</span>
+            Viết tiếp{' '}
+            <span className="italic text-[var(--color-accent)]">theo hướng của bạn.</span>
           </>
         }
-        chips={['Bản gốc giữ nguyên', 'Nhánh có @tên của bà', 'Rẽ từ chương nào cũng được']}
+        chips={['Bản gốc giữ nguyên', 'Ghi tên bạn', 'Chọn chương bắt đầu']}
         demo={<DemoBranch />}
       >
-        Đọc tới chương 7 mà thấy nhân vật quyết định ngu xỉu? Bấm rẽ nhánh: mấy chương trước giữ
-        nguyên, từ đó trở đi là của bà. Bản gốc hông mất miếng nào, nhánh của bà có tag tên bà, ai
-        đọc tới chương đó cũng thấy có một hướng khác đang chờ.
+        Tạo nhánh mới từ chương bạn chọn và viết tiếp theo ý bạn. Nhánh được ghi tên bạn, bản gốc được giữ nguyên.
       </Feature>
 
       <Feature
         kicker="AI gợi ý"
         title={
           <>
-            Bí ý tưởng?{' '}
-            <span className="italic text-[var(--color-accent)]">AI mớm vài hướng, bà chọn.</span>
+            Gợi ý từ AI.{' '}
+            <span className="italic text-[var(--color-accent)]">Bạn chọn hướng viết.</span>
           </>
         }
-        chips={['Đọc cả truyện trước khi gợi ý', 'Hiểu luật từng thể loại', 'Bà hông bấm thì nó hông viết']}
+        chips={['Theo mạch truyện', 'Gợi ý theo thể loại', 'Bạn quyết định nội dung']}
         demo={<DemoHints />}
       >
-        AI đọc mấy chương trước, đọc luôn tủ ghi chú về cách từng thể loại vận hành, rồi đưa ra vài
-        hướng đi tiếp. Ưng hướng nào bấm hướng đó, hông ưng thì kệ nó. Người cầm bút vẫn là bà, AI
-        chỉ ngồi kế bên nhắc bài.
+        AI dựa trên các chương trước và thể loại để gợi ý hướng viết. Bạn chọn ý tưởng và chỉnh sửa trước khi đăng.
       </Feature>
 
       <Feature
@@ -407,16 +401,14 @@ export default function Features() {
         kicker="Viết chung"
         title={
           <>
-            Rủ hội bạn thân viết chung một trang.{' '}
-            <span className="italic text-[var(--color-accent)]">Gõ là thấy liền.</span>
+            Viết cùng bạn bè.{' '}
+            <span className="italic text-[var(--color-accent)]">Cập nhật ngay khi gõ.</span>
           </>
         }
-        chips={['Thấy con trỏ của nhau', 'AI vào phòng viết cùng', 'Truyện chính hông bị ai chen']}
+        chips={['Sửa cùng lúc', 'Thấy con trỏ của nhau', 'AI hỗ trợ']}
         demo={<DemoCollab />}
       >
-        Kiểu Google Docs mà cho truyện: con trỏ của từng đứa chạy trên cùng một trang giấy, gõ cùng
-        lúc cũng hông mất chữ. AI cũng ngồi chung phòng, gõ tiếp cho cả đám xem. Bạn được mời mà đăng
-        chương thì thành nhánh riêng mang tên nó, truyện chính của bà vẫn yên ổn.
+        Mời bạn bè cùng sửa bản thảo trên một trang. Bạn có thể theo dõi thay đổi và nhờ AI viết tiếp.
       </Feature>
     </section>
   );

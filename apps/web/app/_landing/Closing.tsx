@@ -13,28 +13,28 @@ import Magnetic from './Magnetic';
  */
 const FAQ = [
   {
-    q: 'Có tốn tiền hông bà?',
-    a: 'Nghe với đọc mấy chương đầu là free, khỏi đăng nhập. Tác giả nào muốn khoá phần sau thì khoá, mở bằng credit. Viết truyện với rẽ nhánh thì hông tốn gì, AI gợi ý có lượt free mỗi ngày.',
+    q: 'Sử dụng có mất phí không?',
+    a: 'Bạn có thể đọc và nghe các chương miễn phí. Nội dung có thu phí được mở bằng credit.',
   },
   {
-    q: 'AI viết hết thì còn gì là truyện của mình?',
-    a: 'Bà chọn dùng AI tới đâu: gợi ý hướng đi, viết tiếp một đoạn, hoặc tự viết từ đầu. Bản đăng do bà đọc lại, sửa và quyết định.',
+    q: 'Bạn có cần dùng AI để viết truyện?',
+    a: 'Bạn có thể tự viết hoặc dùng AI gợi ý, viết tiếp. Bạn quyết định nội dung được đăng.',
   },
   {
-    q: 'Rẽ nhánh có làm hư truyện gốc hông?',
-    a: 'Khum. Bản gốc giữ nguyên tới từng dấu phẩy. Nhánh là của bà, có tag tên bà, nằm ngay dưới cái chương mà bà rẽ ra cho người sau thấy.',
+    q: 'Rẽ nhánh có thay đổi bản gốc không?',
+    a: 'Bản gốc được giữ nguyên. Nhánh mới bắt đầu từ chương bạn chọn và ghi tên bạn.',
   },
   {
-    q: 'Rủ bạn viết chung thì ai được đăng?',
-    a: 'Chủ truyện đăng vào truyện chính. Bạn được mời mà bấm đăng thì chương thành nhánh riêng mang tên nó, hông chen vô truyện của bà được. Hội bạn thân cũng phải có ranh giới chứ.',
+    q: 'Ai có thể đăng chương khi viết chung?',
+    a: 'Chủ truyện đăng vào truyện chính. Chương do người được mời đăng sẽ thành nhánh riêng mang tên người đó.',
   },
   {
-    q: 'Truyện trên đây có chôm từ kênh khác hông?',
-    a: 'Khum nha. Nội dung trong thư viện được viết riêng cho nền tảng. Tủ tham khảo chỉ dẫn link mấy kênh audio để bà đi nghe học nghề, tụi tui hông copy truyện của ai.',
+    q: 'Truyện trong thư viện lấy từ đâu?',
+    a: 'Thư viện gồm truyện gốc và tác phẩm được phép đăng lại. Bạn có thể xem tác giả và nguồn trong từng truyện.',
   },
   {
-    q: 'Đăng nhập kiểu gì?',
-    a: 'Bằng Google, một cú bấm. Muốn đọc với nghe thôi thì khỏi đăng nhập luôn.',
+    q: 'Bạn có thể đăng nhập bằng cách nào?',
+    a: 'Bạn có thể dùng email và mật khẩu hoặc tài khoản Google. Các chương miễn phí không yêu cầu đăng nhập.',
   },
 ];
 
@@ -83,9 +83,9 @@ export function Faq() {
   return (
     <section className="mx-auto grid max-w-[1180px] gap-12 px-5 py-24 sm:px-8 lg:grid-cols-[0.8fr_1.2fr]">
       <Reveal className="flex flex-col gap-4 lg:sticky lg:top-28 lg:self-start">
-        <span className="label label-accent">Hỏi lẹ đáp lẹ</span>
+        <span className="label label-accent">Hỗ trợ</span>
         <h2 className="display text-[clamp(2rem,4vw,3.2rem)] leading-[1.04]">
-          Mấy câu hội mình <span className="italic text-[var(--color-accent)]">hay hỏi</span>.
+          Câu hỏi <span className="italic text-[var(--color-accent)]">thường gặp</span>.
         </h2>
       </Reveal>
       <div>
@@ -135,15 +135,15 @@ export function FinalCta() {
           data-final
           className="display text-[clamp(3rem,10vw,8.5rem)] leading-[0.95] [font-variation-settings:'SOFT'_100,'WONK'_1]"
         >
-          Đêm nay <span className="italic text-[var(--color-accent)]">nghe gì?</span>
+          Bạn muốn <span className="italic text-[var(--color-accent)]">nghe gì?</span>
         </h2>
         <p className="max-w-[46ch] text-[16px] leading-relaxed text-[var(--color-muted)]">
-          Đeo tai nghe, chọn một bộ hợp gu. Kết mà dở thì… bà biết phải làm gì rồi đó.
+          Chọn truyện bạn thích và bắt đầu nghe.
         </p>
         <div className="flex flex-wrap justify-center gap-3">
           <Magnetic>
             <Link href="/kham-pha" className="btn btn-primary btn-lg">
-              Vào Khám phá
+              Khám phá truyện
               <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
                 <path d="M8 5.5v13l11-6.5-11-6.5Z" />
               </svg>

@@ -105,8 +105,8 @@ function Count({ value, label }: { value: number; label: string }) {
 
 /** What people actually type, drifting across the tile: it shows the feature by example. */
 const ASKS = [
-  'truyện buồn, chồng ngoại tình có con với bé ba',
-  'ma làng quê, đọc xong không dám ngủ',
+  'tâm lý gia đình, ngoại tình',
+  'kinh dị làng quê',
   'ngôn tình nhẹ nhàng, kết có hậu',
   'trọng sinh báo thù, nữ chính mạnh mẽ',
   'cổ đại cung đấu, kết mở',
@@ -138,10 +138,10 @@ export default function Bento({ stories, totals }: { stories: Story[]; totals?: 
   return (
     <section className="mx-auto flex max-w-[1180px] flex-col gap-14 px-5 py-24 sm:px-8 sm:py-32">
       <Reveal className="flex max-w-[60ch] flex-col gap-4">
-        <span className="label label-accent">Mấy cái lặt vặt mà xịn</span>
+        <span className="label label-accent">Tiện ích</span>
         <h2 className="display text-[clamp(2rem,4vw,3.2rem)] leading-[1.04]">
-          Làm kỹ từng góc nhỏ,{' '}
-          <span className="italic text-[var(--color-accent)]">vì hội mọt khó tính lắm.</span>
+          Các tiện ích{' '}
+          <span className="italic text-[var(--color-accent)]">khi đọc và viết.</span>
         </h2>
       </Reveal>
 
@@ -152,12 +152,10 @@ export default function Bento({ stories, totals }: { stories: Story[]; totals?: 
             <AskChips />
             <div className="mt-auto flex flex-col gap-3">
               <h3 className="display text-[clamp(1.6rem,3vw,2.4rem)] leading-tight">
-                Tả truyện bằng lời, <span className="italic text-[var(--color-accent)]">AI tìm giùm</span>
+                Mô tả truyện, <span className="italic text-[var(--color-accent)]">AI giúp bạn tìm</span>
               </h3>
               <p className="max-w-[46ch] text-[15px] leading-relaxed text-[var(--color-muted)]">
-                Hông nhớ tên, hông biết thể loại gì? Cứ gõ như kể cho bạn thân nghe: muốn buồn hay vui,
-                kết có hậu hay kết mở, có bé ba hay hông. AI đọc hết thư viện rồi nói luôn vì sao truyện
-                đó hợp với bà, truyện nào không hợp thì giấu đi.
+                Mô tả thể loại, tình tiết hoặc cái kết bạn muốn. AI gợi ý truyện trong thư viện và giải thích vì sao phù hợp.
               </p>
               <span className="text-[13px] text-[var(--color-accent)] transition-transform group-hover:translate-x-1">
                 Thử tìm bằng AI →
@@ -167,37 +165,37 @@ export default function Bento({ stories, totals }: { stories: Story[]; totals?: 
         </div>
         <Tile>
           <Glyph>☾</Glyph>
-          <h3 className="display text-[21px]">Đêm hay ngày tuỳ bà</h3>
+          <h3 className="display text-[21px]">Giao diện sáng và tối</h3>
           <p className="text-[14px] leading-relaxed text-[var(--color-muted)]">
-            Mặc định nền tối cho dịu mắt lúc đọc khuya. Muốn đọc giờ nghỉ trưa thì bấm cái trăng trên góc.
+            Bạn có thể chuyển giữa nền sáng và nền tối ở góc trên trang.
           </p>
         </Tile>
         <Tile>
           <Glyph>≈</Glyph>
-          <h3 className="display text-[21px]">Web biết nghe</h3>
+          <h3 className="display text-[21px]">Hiệu ứng khi nghe</h3>
           <p className="text-[14px] leading-relaxed text-[var(--color-muted)]">
-            Lớp sương phía sau trang dày lên, đèn sáng hơn khi truyện đang được đọc. Tắt tiếng là nó dịu lại.
+            Hiệu ứng nền thay đổi khi truyện phát hoặc dừng. Bạn có thể giảm chuyển động.
           </p>
         </Tile>
         <Tile>
           <Glyph>@</Glyph>
-          <h3 className="display text-[21px]">Ai viết ghi tên người đó</h3>
+          <h3 className="display text-[21px]">Ghi tên người viết</h3>
           <p className="text-[14px] leading-relaxed text-[var(--color-muted)]">
-            Chương nào, nhánh nào cũng có @username của người viết. Hông ai lấy công của ai.
+            Mỗi chương và nhánh truyện đều hiển thị tên người viết.
           </p>
         </Tile>
         <Tile>
           <Glyph>♪</Glyph>
           <h3 className="display text-[21px]">Đổi giọng đọc</h3>
           <p className="text-[14px] leading-relaxed text-[var(--color-muted)]">
-            Giọng nữ trầm ấm, giọng nam khàn khàn, chọn giọng hợp không khí truyện rồi nghe lại từ đầu.
+            Chọn giọng đọc phù hợp với truyện và sở thích của bạn.
           </p>
         </Tile>
         <Tile>
           <Glyph>✎</Glyph>
-          <h3 className="display text-[21px]">Bản gốc hông bao giờ mất</h3>
+          <h3 className="display text-[21px]">Lưu bản đã đăng</h3>
           <p className="text-[14px] leading-relaxed text-[var(--color-muted)]">
-            Truyện đã đăng thì khoá lại, muốn sửa phải tạo bản sửa. Hông ai lỡ tay xoá mất chương của bà.
+            Bạn tạo bản sửa khi cần cập nhật chương đã đăng.
           </p>
         </Tile>
       </Reveal>

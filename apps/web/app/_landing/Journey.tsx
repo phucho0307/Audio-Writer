@@ -6,26 +6,26 @@ import { calm, gsap, useGSAP } from '@/lib/motion';
 const STEPS = [
   {
     n: '01',
-    title: 'Lướt Khám phá',
-    body: 'Nhìn ảnh bìa là biết bộ nào rén. Mấy chương đầu đọc free, khỏi đăng nhập, khỏi suy nghĩ.',
+    title: 'Khám phá truyện',
+    body: 'Chọn truyện theo thể loại hoặc nội dung bạn muốn nghe.',
     glyph: '◐',
   },
   {
     n: '02',
-    title: 'Bấm nghe',
-    body: 'Giọng AI đọc cho, tua 1.5× cho đã. Trong lúc đọc, sương mù trên web tự dày lên theo.',
+    title: 'Nghe truyện',
+    body: 'Chọn giọng đọc và tốc độ phù hợp với bạn.',
     glyph: '▶',
   },
   {
     n: '03',
-    title: 'Tức cái kết? Rẽ nhánh',
-    body: 'Chọn chương cuối muốn giữ, viết tiếp theo hướng của bà. Bí thì có AI nhắc bài.',
+    title: 'Tạo nhánh mới',
+    body: 'Chọn chương bắt đầu và viết tiếp theo hướng bạn muốn.',
     glyph: '⑂',
   },
   {
     n: '04',
-    title: 'Rủ hội bạn vô viết',
-    body: 'Mời bằng @username, cả đám gõ chung một trang. Xong bấm đăng cho cả thread city đọc.',
+    title: 'Viết cùng bạn bè',
+    body: 'Mời bạn bè sửa bản thảo cùng bạn, rồi đăng khi hoàn tất.',
     glyph: '✦',
   },
 ];
@@ -96,10 +96,9 @@ export default function Journey() {
   return (
     <section ref={root} className="relative overflow-hidden lg:h-screen">
       <div className="mx-auto flex max-w-[1180px] flex-col gap-3 px-5 pt-16 sm:px-8 lg:absolute lg:inset-x-0 lg:top-0 lg:z-10 lg:pt-24">
-        <span className="label label-accent">Cách chơi</span>
+        <span className="label label-accent">Bắt đầu</span>
         <h2 className="display text-[clamp(2rem,4vw,3.2rem)] leading-[1.04]">
-          Bốn bước, từ <span className="italic text-[var(--color-accent)]">người nghe</span> thành{' '}
-          <span className="italic text-[var(--color-accent)]">người viết</span>.
+          Bốn bước <span className="italic text-[var(--color-accent)]">để bắt đầu.</span>
         </h2>
         <div className="mt-4 hidden h-px w-full bg-[var(--color-line)] lg:block">
           <div data-progress className="h-px origin-left bg-[var(--color-accent)]" />
