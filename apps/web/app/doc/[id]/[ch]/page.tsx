@@ -245,10 +245,25 @@ export default function Reader({
             </Link>
           </div>
 
+          {/* Previous / next at the top as well as the bottom: a reader who
+              opened the wrong chapter, or wants the next one without reading
+              this one through, should not have to scroll past it. */}
           <div className="flex items-center justify-between gap-3">
-            <span className="label label-accent">
-              Chương {depth + 1} / {total}
-            </span>
+            <div className="flex items-center gap-1">
+              <ChapterStep
+                href={prev !== null ? `/doc/${id}/${prev}${q}` : null}
+                label="Chương trước"
+                dir="prev"
+              />
+              <span className="label label-accent px-1 tabular-nums">
+                Chương {depth + 1} / {total}
+              </span>
+              <ChapterStep
+                href={next !== null ? `/doc/${id}/${next}${q}` : null}
+                label="Chương tiếp"
+                dir="next"
+              />
+            </div>
             <ReaderSettings />
           </div>
 
@@ -385,5 +400,32 @@ export default function Reader({
         <Comments chapterId={chapter.id} />
       </main>
     </>
+  );
+}
+
+/** A round arrow beside "Chương X / Y"; drawn but inert at either end. */
+function ChapterStep({ href, label, dir }: { href: string | null; label: string; dir: 'prev' | 'next' }) {
+  const arrow = (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d={dir === 'prev' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
+    </svg>
+  );
+  const shape = 'flex h-8 w-8 items-center justify-center rounded-full border';
+  if (!href) {
+    return (
+      <span aria-hidden className={`${shape} border-[var(--color-line)] text-[var(--color-line-strong)]`}>
+        {arrow}
+      </span>
+    );
+  }
+  return (
+    <Link
+      href={href}
+      aria-label={label}
+      title={label}
+      className={`${shape} border-[var(--color-line-strong)] text-[var(--color-muted)] transition-colors hover:border-[var(--color-accent)] hover:text-[var(--color-accent)]`}
+    >
+      {arrow}
+    </Link>
   );
 }
