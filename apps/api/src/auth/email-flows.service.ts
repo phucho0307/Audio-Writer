@@ -30,6 +30,14 @@ const sha = (s: string) => createHash('sha256').update(s).digest('hex');
  * on its own. Tokens are single-use (GETDEL), and asking for a new link
  * retires the previous one.
  */
+/**
+ * Every mail opens the same way, never with the account's display name. Anyone
+ * can sign up with a stranger's address, and the name is whatever they typed:
+ * "Chào <name>" turned a sign-up into a way to send any sentence, from the
+ * site's own domain, to any inbox.
+ */
+const GREETING = 'Chào bạn,';
+
 @Injectable()
 export class EmailFlowsService {
   private readonly logger = new Logger(EmailFlowsService.name);
@@ -90,7 +98,7 @@ export class EmailFlowsService {
       actionMail({
         to: user.email,
         subject: 'Xác minh email cho Nhịp Bút',
-        greeting: `Chào ${user.displayName},`,
+        greeting: GREETING,
         body: 'Bấm nút dưới đây để xác nhận đây là email của bạn. Liên kết có hiệu lực trong 24 giờ.',
         button: 'Xác minh email',
         url: `${this.web}/xac-minh?token=${token}`,
@@ -136,7 +144,7 @@ export class EmailFlowsService {
       actionMail({
         to: user.email,
         subject: 'Đặt lại mật khẩu Nhịp Bút',
-        greeting: `Chào ${user.displayName},`,
+        greeting: GREETING,
         body: 'Có người (hy vọng là bạn) vừa yêu cầu đặt lại mật khẩu. Bấm nút dưới đây để chọn mật khẩu mới. Liên kết có hiệu lực trong 1 giờ và chỉ dùng được một lần.',
         button: 'Đặt mật khẩu mới',
         url: `${this.web}/dat-lai-mat-khau?token=${token}`,

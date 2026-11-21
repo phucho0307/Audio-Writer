@@ -8,6 +8,7 @@ const { AuthService } = require('../src/auth/auth.service');
 
 function world(users = []) {
   const rows = users.map((u) => ({ avatarUrl: null, ...u }));
+  const sessions = [];
   const match = (where) => rows.find((r) => Object.entries(where).every(([k, v]) => r[k] === v));
   const prisma = {
     user: {
@@ -15,8 +16,15 @@ function world(users = []) {
       create: async ({ data }) => { const u = { id: `u${rows.length + 1}`, ...data }; rows.push(u); return u; },
       update: async ({ where, data }) => Object.assign(match(where), data),
     },
+    session: {
+      updateMany: async ({ where, data }) => {
+        const hit = sessions.filter((x) => x.userId === where.userId && x.revokedAt === null);
+        hit.forEach((x) => Object.assign(x, data));
+        return { count: hit.length };
+      },
+    },
   };
-  return { svc: new AuthService(prisma), rows };
+  return { svc: new AuthService(prisma), rows, sessions };
 }
 
 test('sign up stores a hash, never the password, and the email lower-cased', async () => {
@@ -63,12 +71,16 @@ test('a taken email says which way to sign in', async () => {
 test('Google arriving on an email someone registered drops that unverified password', async () => {
   const w = world();
   // A squatter registers the victim's address with a password they know ...
-  await w.svc.register({ email: 'victim@gmail.com', password: 'squatter-pass', displayName: 'X' });
+  const squatter = await w.svc.register({ email: 'victim@gmail.com', password: 'squatter-pass', displayName: 'X' });
+  // ... and was signed straight in, with a session that renews itself ...
+  w.sessions.push({ userId: squatter.id, revokedAt: null });
   // ... the real owner signs in with Google ...
   const u = await w.svc.fromGoogle({ googleSub: 'real', email: 'victim@gmail.com', emailVerified: true, displayName: 'V' });
   assert.equal(u.passwordHash, null);
   // ... and the squatter's password no longer opens the account.
   await assert.rejects(w.svc.login({ email: 'victim@gmail.com', password: 'squatter-pass' }));
+  // ... nor does the session they already had.
+  assert.ok(w.sessions[0].revokedAt instanceof Date, 'the squatter is signed out');
 });
 
 test('a verified account keeps its password when Google is linked', async () => {

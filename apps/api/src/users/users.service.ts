@@ -10,9 +10,11 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
+import { Role } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CurrentUserService } from '../auth/current-user.service';
 import { RedisService } from '../redis/redis.service';
+import { looksOfficial, reservedHandle } from './impersonation';
 import { AUDIO_STORAGE, StorageFullError, type StorageDriver } from '../storage/storage-driver';
 
 /** Lowercase letters, digits and underscores; what sign-up already produces. */
@@ -38,16 +40,6 @@ const IMAGE_KINDS: { type: string; ext: string; is: (b: Buffer) => boolean }[] =
 /** Long enough that a handle cannot be passed around to impersonate someone. */
 export const HANDLE_COOLDOWN_DAYS = 14;
 
-/**
- * Names that would read as the platform speaking, or collide with routes.
- * Checked after normalising, so `Admin` and `a_d_m_i_n` are not loopholes
- * for the first and are simply allowed for the second.
- */
-const RESERVED = new Set([
-  'admin', 'administrator', 'root', 'support', 'help', 'mod', 'moderator',
-  'staff', 'system', 'official', 'nhipbut', 'nhip_but', 'ronbut', 'ron_but', 'audiowriter',
-  'api', 'me', 'settings', 'cai_dat', 'login', 'logout', 'null', 'undefined',
-]);
 
 export interface ProfileUpdate {
   displayName?: string;
@@ -123,7 +115,7 @@ export class UsersService {
     if (!HANDLE_RE.test(handle)) {
       return 'Username chỉ gồm chữ thường không dấu, số và dấu _, dài 3–24 ký tự.';
     }
-    if (RESERVED.has(handle)) return 'Username này đã được giữ lại.';
+    if (reservedHandle(handle)) return 'Username này đã được giữ lại.';
     const owner = await this.prisma.user.findUnique({
       where: { handle },
       select: { id: true },
@@ -167,6 +159,11 @@ export class UsersService {
       if (!name) throw new BadRequestException({ code: 'NAME_EMPTY', message: 'Tên hiển thị không được để trống.' });
       if (name.length > NAME_MAX) {
         throw new BadRequestException({ code: 'NAME_TOO_LONG', message: `Tên hiển thị tối đa ${NAME_MAX} ký tự.` });
+      }
+      // The site's own name, or a staff title, is how a scam comment gets
+      // believed. Admins may use them; nobody else.
+      if (looksOfficial(name) && me.role !== Role.ADMIN) {
+        throw new BadRequestException({ code: 'NAME_RESERVED', message: 'Tên này dễ bị nhầm là tài khoản chính thức của Nhịp Bút. Hãy chọn tên khác.' });
       }
       data.displayName = name;
     }

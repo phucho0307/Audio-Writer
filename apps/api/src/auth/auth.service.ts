@@ -8,6 +8,7 @@ import {
 import type { User } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { PrismaService } from '../prisma/prisma.service';
+import { looksOfficial, reservedHandle } from '../users/impersonation';
 
 export interface GoogleProfile {
   googleSub: string;
@@ -27,6 +28,19 @@ function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .slice(0, 24);
+}
+
+/**
+ * A display name that does not pass for the site or its staff. Google's name
+ * cannot be refused - the person did nothing wrong - so it falls back to the
+ * address, then to a plain default.
+ */
+function safeName(name: string | undefined, email: string): string {
+  const local = email.split('@')[0];
+  for (const candidate of [name?.trim() ?? '', local]) {
+    if (candidate && !looksOfficial(candidate)) return candidate;
+  }
+  return 'Người đọc';
 }
 
 @Injectable()
@@ -63,6 +77,17 @@ export class AuthService {
     });
     if (byEmail) {
       this.logger.log(`Linking Google to existing account ${byEmail.handle}`);
+      // Dropping the password is not enough on its own. Whoever registered
+      // the unproven address was signed straight in, and that session's
+      // refresh token renews itself for as long as it is used - so they
+      // would still be inside the real owner's account. End every session
+      // the account had before its owner proved the address.
+      if (!byEmail.emailVerifiedAt) {
+        await this.prisma.session.updateMany({
+          where: { userId: byEmail.id, revokedAt: null },
+          data: { revokedAt: new Date() },
+        });
+      }
       return this.prisma.user.update({
         where: { id: byEmail.id },
         data: {
@@ -85,7 +110,7 @@ export class AuthService {
         googleSub: profile.googleSub,
         email: profile.email,
         handle: await this.freeHandle(profile.email, profile.displayName),
-        displayName: profile.displayName || profile.email.split('@')[0],
+        displayName: safeName(profile.displayName, profile.email),
         avatarUrl: profile.avatarUrl,
         locale: 'vi',
         emailVerifiedAt: new Date(),
@@ -113,7 +138,13 @@ export class AuthService {
       });
     }
 
-    const displayName = input.displayName.trim() || email.split('@')[0];
+    if (looksOfficial(input.displayName)) {
+      throw new BadRequestException({
+        code: 'NAME_RESERVED',
+        message: 'Tên này dễ bị nhầm là tài khoản chính thức của Nhịp Bút. Hãy chọn tên khác.',
+      });
+    }
+    const displayName = safeName(input.displayName, email);
     return this.prisma.user.create({
       data: {
         email,
@@ -159,8 +190,11 @@ export class AuthService {
    * signups would otherwise fail the insert.
    */
   private async freeHandle(email: string, displayName: string): Promise<string> {
+    // Reserved names are skipped at every step: a sign-up called "Admin" used
+    // to be handed @admin, since only the settings form checked the list.
+    const usable = (h: string) => (h.length >= 3 && !reservedHandle(h) ? h : '');
     const base =
-      slugify(displayName) || slugify(email.split('@')[0]) || 'nguoi_viet';
+      usable(slugify(displayName)) || usable(slugify(email.split('@')[0])) || 'nguoi_viet';
 
     for (let i = 0; i < 20; i++) {
       const candidate = i === 0 ? base : `${base}_${i + 1}`;

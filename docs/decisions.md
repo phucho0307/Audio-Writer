@@ -553,6 +553,34 @@ những lệnh không ghi gì: cổng mở (chỉ 22, 80, 443), header, API dev 
 không". Câu hỏi bị bỏ sót là "việc này tốn bao nhiêu, và ai trả". Rate limit theo phút không thay
 được hạn mức theo ngày khi mỗi request ghi thêm dữ liệu vào một kho có trần.
 
+## 11g. Red team lần hai, trước khi marketing (21/11/2026)
+
+Lần một tìm lỗ ở chi phí. Lần này đóng vai kẻ xấu muốn **chiếm tài khoản, mạo danh và lừa
+người dùng** khi web bắt đầu đông người.
+
+- **Chiếm tài khoản trước (pre-hijacking):** kẻ xấu đăng ký trước bằng email của nạn nhân. Khi
+  nạn nhân đăng nhập Google, code đã xoá mật khẩu của kẻ xấu, nhưng **phiên đăng nhập của kẻ xấu
+  vẫn còn**, và refresh token tự gia hạn mãi. Sửa: khi Google chứng minh chủ email, đăng xuất mọi
+  phiên có từ trước.
+- **Mạo danh:** danh sách tên cấm (`admin`, `nhipbut`…) chỉ được kiểm khi đổi tên trong cài đặt.
+  Đăng ký với tên "Admin" là được `@admin`. Sửa: một bộ lọc chung (`users/impersonation.ts`), bỏ
+  dấu rồi so theo từ, áp cho đăng ký, Google và cài đặt. Có test cho tên thật như "Hồ Trọng" để
+  không chặn nhầm.
+- **Mượn email của web để lừa đảo:** thư xác minh mở đầu bằng "Chào <tên hiển thị>", mà tên là
+  thứ kẻ đăng ký tự gõ, với email của người lạ. Ai cũng gửi được một câu tuỳ ý từ
+  `no-reply@nhipbut.com`. Sửa: thư chỉ chào "Chào bạn,".
+- **Thư viện:** `npm audit` có 2 lỗ critical (Next.js cache poisoning, `proxy-addr` giả IP) và
+  nhiều lỗ high. Đã vá những gì không phá tương thích, và nâng nodemailer lên 10. Phần còn lại
+  (Prisma CLI, PostCSS) chỉ chạy lúc build.
+
+**Đã thử mà không thủng:** lịch sử git (repo công khai) không lộ khoá nào. Giả `X-Forwarded-For`
+không lách được giới hạn request (Caddy ghi đè header). Link `javascript:` trong chương bị lọc.
+Không có SQL ghép chuỗi. Tải ảnh chỉ từ `images.pexels.com`, có trần số pixel. Token email
+256-bit, dùng một lần, lưu dạng băm. Webhook SePay không có khoá thì từ chối hết.
+
+**Bài học:** lỗ nguy hiểm nằm ở chỗ nối giữa hai tính năng đúng. Liên kết tài khoản Google đúng,
+phiên đăng nhập đúng, nhưng ghép lại thì kẻ xấu ở lại trong tài khoản người khác.
+
 ## 12. Làm việc với hai AI agent trong cùng một repo
 
 Claude Code và Codex sửa code song song trong cùng thư mục.
