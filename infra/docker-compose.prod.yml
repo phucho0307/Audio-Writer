@@ -18,6 +18,8 @@ services:
       - "${HTTPS_PORT:-443}:443/udp"
     environment:
       DOMAIN: ${DOMAIN:?set DOMAIN in .env, e.g. nhipbut.vn}
+      # Names that redirect to DOMAIN, comma-separated (www, an old domain).
+      REDIRECT_FROM: ${REDIRECT_FROM:-www.${DOMAIN}}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data

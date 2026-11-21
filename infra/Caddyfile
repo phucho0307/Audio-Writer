@@ -36,3 +36,10 @@
 		reverse_proxy web:3000
 	}
 }
+
+# Other names for the same site send the visitor to the one above, path and
+# all: www, and the free DuckDNS name the site started on, so old links and
+# shared chapters keep working. Comma-separated in REDIRECT_FROM.
+{$REDIRECT_FROM} {
+	redir https://{$DOMAIN}{uri} permanent
+}

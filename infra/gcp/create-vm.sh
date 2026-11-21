@@ -36,5 +36,5 @@ gcloud compute instances describe "$NAME" --zone "$ZONE" >/dev/null 2>&1 ||
 
 echo
 echo "Server IP: $IP"
-echo "1. Put this IP on your DuckDNS name (duckdns.org > your domain > current ip > update ip)."
+echo "1. Point your domain's A records (@ and www) at this IP at your registrar."
 echo "2. Open a shell on the server:  gcloud compute ssh $NAME --zone $ZONE"
