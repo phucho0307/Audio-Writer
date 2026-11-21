@@ -11,13 +11,14 @@ export interface Mail {
 }
 
 /**
- * Outgoing email, through SMTP (SMTP_URL, e.g. a Gmail app password) or
- * Resend's HTTP API.
+ * Outgoing email, through Resend's HTTP API from the site's own domain
+ * (no-reply@nhipbut.com), with SMTP (SMTP_URL, a Gmail app password) as the
+ * fallback.
  *
- * SMTP comes first because it needs no domain of our own: Resend delivers to
- * strangers only from a verified domain, and a free subdomain (DuckDNS) cannot
- * be verified. Gmail sends about 500 a day from a normal account, far more
- * than sign-ups will need before there is a real domain.
+ * SMTP came first while the site lived on a free DuckDNS subdomain: Resend
+ * delivers to strangers only from a verified domain, and that one could not
+ * be verified. With nhipbut.com it can, and mail from the site's own address
+ * is less likely to land in Spam than mail relayed through a personal Gmail.
  *
  * One fetch, no SDK: the API is a single POST, and a dependency for it would
  * be more code to keep current than the call itself.
@@ -49,21 +50,34 @@ export class MailService {
     }
   }
 
-  /** Resolves false when the provider refused it; callers decide whether that matters. */
+  /**
+   * Resend first, from the site's own domain; Gmail SMTP when Resend is not
+   * configured or refuses, so a Resend outage or a spent daily allowance still
+   * gets a password-reset mail out. Resolves false when nothing would take it.
+   */
   async send(mail: Mail): Promise<boolean> {
-    if (this.smtp) {
-      try {
-        await this.smtp.sendMail({ from: this.from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html });
-        return true;
-      } catch (err) {
-        this.logger.warn(`SMTP refused mail to ${mask(mail.to)}: ${(err as Error).message}`);
-        return false;
-      }
-    }
+    if (this.key && (await this.viaResend(mail))) return true;
+    if (this.smtp) return this.viaSmtp(mail);
     if (!this.key) {
-      this.logger.log(`[mail not sent] to ${mail.to}: ${mail.subject}\n${mail.text}`);
+      this.logger.log(`[mail not sent] to ${mail.to}: ${mail.subject}
+${mail.text}`);
       return true;
     }
+    return false;
+  }
+
+  private async viaSmtp(mail: Mail): Promise<boolean> {
+    try {
+      // Gmail rewrites the address to the signed-in account; the name stays.
+      await this.smtp!.sendMail({ from: this.from, to: mail.to, subject: mail.subject, text: mail.text, html: mail.html });
+      return true;
+    } catch (err) {
+      this.logger.warn(`SMTP refused mail to ${mask(mail.to)}: ${(err as Error).message}`);
+      return false;
+    }
+  }
+
+  private async viaResend(mail: Mail): Promise<boolean> {
     try {
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
